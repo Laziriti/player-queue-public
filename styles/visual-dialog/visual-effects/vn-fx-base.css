@@ -1,0 +1,109 @@
+/* ══════════════════════════════════════════════════════════
+   VN-FX-BASE — Базовые FX-слои, механики, переходы фонов
+   ══════════════════════════════════════════════════════════ */
+
+/* ── FX Layers (z-index между bg и персонажами) ── */
+
+.vn-fx-tint,
+.vn-fx-rays,
+.vn-fx-edges,
+.vn-fx-flash,
+.vn-fx-scan {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+}
+
+.vn-fx-tint  { z-index: 1; mix-blend-mode: overlay; }
+.vn-fx-rays  { z-index: 2; mix-blend-mode: screen; }
+.vn-fx-edges { z-index: 2; }
+.vn-fx-flash { z-index: 8; }
+.vn-fx-scan  { z-index: 3; mix-blend-mode: overlay; }
+
+
+/* ── Glitch-механика (используется eldritch, corruption) ── */
+
+.vn-glitch-active .vn-bg-layer {
+    animation: vnGlitchShake 0.1s linear infinite !important;
+}
+
+@keyframes vnGlitchShake {
+    0%   { transform: translate(2px, -1px) scale(1.03); }
+    25%  { transform: translate(-2px, 1px) scale(1.03); }
+    50%  { transform: translate(1px, 2px) scale(1.03); }
+    75%  { transform: translate(-1px, -2px) scale(1.03); }
+    100% { transform: translate(2px, 1px) scale(1.03); }
+}
+
+.vn-glitch-active .vn-fx-scan {
+    opacity: 1 !important;
+}
+
+
+/* ── Lightning-механика (используется storm) ── */
+
+.vn-fx-flash.vn-lightning-active {
+    background: rgba(210, 220, 255, 0.45);
+    animation: vnLightningFlash 0.15s ease-out forwards;
+}
+
+@keyframes vnLightningFlash {
+    0%   { opacity: 1; }
+    40%  { opacity: 0.4; }
+    60%  { opacity: 0.9; }
+    100% { opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ПЕРЕХОДЫ ФОНОВ
+   ══════════════════════════════════════════════════════════ */
+
+.vn-bg-transition-dissolve { animation: vnBgDissolve 1s ease both; }
+
+@keyframes vnBgDissolve {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.vn-bg-transition-zoom { animation: vnBgZoom 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+
+@keyframes vnBgZoom {
+    from { opacity: 0; scale: 1.15; filter: blur(6px); }
+    to   { opacity: 1; scale: 1.03; filter: blur(0); }
+}
+
+.vn-bg-transition-blur { animation: vnBgBlur 1.4s ease both; }
+
+@keyframes vnBgBlur {
+    0%   { opacity: 0; filter: blur(25px) brightness(1.3); }
+    40%  { opacity: 1; filter: blur(8px) brightness(1.1); }
+    100% { opacity: 1; filter: blur(0) brightness(1); }
+}
+
+.vn-bg-transition-flash { animation: vnBgFlash 1s ease both; }
+
+@keyframes vnBgFlash {
+    0%   { opacity: 1; filter: brightness(4) saturate(0); }
+    40%  { opacity: 1; filter: brightness(2) saturate(0.5); }
+    100% { opacity: 1; filter: brightness(1) saturate(1); }
+}
+
+.vn-bg-transition-black { animation: vnBgBlack 1.8s ease both; }
+
+@keyframes vnBgBlack {
+    0%   { opacity: 1; filter: brightness(0); }
+    45%  { opacity: 1; filter: brightness(0); }
+    100% { opacity: 1; filter: brightness(1); }
+}
+
+.vn-bg-transition-sweep {
+    animation: vnBgSweep 1s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+
+@keyframes vnBgSweep {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+}

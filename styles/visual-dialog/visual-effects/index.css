@@ -1,0 +1,16 @@
+/* ══════════════════════════════════════════════════════════
+   VN-ATMOSPHERE — Visual FX Engine v3.0
+
+   Порядок импортов важен:
+   1. Base — фундамент (слои, механики, переходы)
+   2. Effects — визуальные эффекты (зависят от base)
+   3. Particles — частицы (независимы)
+   4. Characters — персонажи (зависят от effects для дыхания)
+   5. Theming — UI-тематизация (зависит от effects для селекторов)
+   ══════════════════════════════════════════════════════════ */
+
+@import url('./vn-fx-base.css');
+@import url('./vn-fx-effects.css');
+@import url('./vn-particles.css');
+@import url('./vn-characters.css');
+@import url('./vn-fx-theming.css');

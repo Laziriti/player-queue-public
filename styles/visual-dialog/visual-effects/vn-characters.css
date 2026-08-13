@@ -1,0 +1,369 @@
+/* ══════════════════════════════════════════════════════════
+   VN-CHARACTERS — Flip, дыхание, расфокус, входы/выходы
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════
+   FLIP-СОВМЕСТИМОСТЬ
+
+   transform — это ОДНО свойство. Если animation ставит
+   transform: translateX(), оно убивает inline transform: scaleX(-1) (flip).
+
+   Решение: используем РАЗДЕЛЬНЫЕ CSS-свойства:
+     scale     → для flip (через --flip-x)
+     translate → для анимаций (дыхание, вход, расфокус)
+     filter    → для яркости/blur
+
+   Они НЕ перезаписывают друг друга!
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ── BASE: FLIP + TRANSITION ── */
+
+.vn-character-img {
+    will-change: translate, scale, filter, opacity;
+    scale: var(--flip-x, 1) 1;
+    transition:
+            scale 0.8s cubic-bezier(0.25, 0.1, 0.25, 1),
+            translate 0.8s cubic-bezier(0.25, 0.1, 0.25, 1),
+            filter 0.8s cubic-bezier(0.25, 0.1, 0.25, 1),
+            opacity 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ДЫХАНИЕ ПЕРСОНАЖЕЙ
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Стандартное ── */
+.vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreath 4s ease-in-out infinite;
+}
+
+@keyframes vnCharBreath {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -3px; }
+}
+
+/* ── Eldritch — нервное ── */
+.vn-vfx-eldritch .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathEldritch 3.5s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathEldritch {
+    0%, 100% { translate: 0 0; }
+    30%      { translate: 0 -2px; }
+    50%      { translate: 0 -4px; }
+    70%      { translate: 0 -1px; }
+}
+
+/* ── Divine / Sacred — парение ── */
+.vn-vfx-divine .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img,
+.vn-vfx-sacred .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathDivine 5s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathDivine {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -5px; }
+}
+
+/* ── Storm — ветер ── */
+.vn-vfx-storm .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathStorm 2.5s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathStorm {
+    0%, 100% { translate: 0 0; }
+    25%      { translate: 2px -1px; }
+    75%      { translate: -1px -2px; }
+}
+
+/* ── Corruption — подёргивание ── */
+.vn-vfx-corruption .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathCorrupt 3s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathCorrupt {
+    0%, 47%  { translate: 0 0; }
+    48%      { translate: 0 -2px; rotate: 0deg; }
+    50%      { translate: 0 -2px; rotate: 0.3deg; }
+    52%      { translate: 0 -2px; rotate: 0deg; }
+    53%, 100% { translate: 0 0; }
+}
+
+/* ── Dream — медленное парение ── */
+.vn-vfx-dream .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathDream 6s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathDream {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -6px; }
+}
+
+/* ── Underwater — покачивание ── */
+.vn-vfx-underwater .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathWater 5s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathWater {
+    0%, 100% { translate: 0 0; rotate: 0deg; }
+    25%      { translate: 2px -4px; rotate: 0.3deg; }
+    50%      { translate: -1px -2px; rotate: -0.2deg; }
+    75%      { translate: 1px -5px; rotate: 0.2deg; }
+}
+
+/* ── Fire — мерцание жара ── */
+.vn-vfx-fire .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathFire 3s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathFire {
+    0%, 100% { translate: 0 0; }
+    25%      { translate: 0 -2px; }
+    50%      { translate: 0 -1px; }
+    75%      { translate: 0 -3px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   РАСФОКУС НЕАКТИВНЫХ
+   ══════════════════════════════════════════════════════════ */
+
+.vn-character:not(.active):not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    scale: calc(var(--flip-x, 1) * 0.97) 0.97;
+    translate: 0 4px;
+    filter: brightness(0.45) saturate(0.25) blur(1px)
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.8)) !important;
+    animation: none !important;
+}
+
+/* Свечение у неактивных — приглушено */
+.vn-character:not(.active) .vn-character-glow {
+    opacity: 0.15 !important;
+    transition: opacity 0.8s ease;
+}
+
+.vn-character.active .vn-character-glow {
+    transition: opacity 0.6s ease;
+}
+
+/* Nameplate неактивных — полупрозрачная */
+.vn-character:not(.active) .vn-character-nameplate {
+    opacity: 0.4;
+    transition: opacity 0.8s ease;
+}
+
+.vn-character.active .vn-character-nameplate {
+    opacity: 1;
+    transition: opacity 0.6s ease;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ВХОДЫ ПЕРСОНАЖЕЙ
+   ══════════════════════════════════════════════════════════
+   Только translate + opacity. Filter НЕ ставим —
+   он управляется CSS через .active / :not(.active).
+   ══════════════════════════════════════════════════════════ */
+
+.vn-entering-left .vn-character-img {
+    animation: vnCharEnterLeft 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
+}
+
+.vn-entering-right .vn-character-img {
+    animation: vnCharEnterRight 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
+}
+
+@keyframes vnCharEnterLeft {
+    from { translate: -60px 0; opacity: 0; }
+    to   { translate: 0 0;     opacity: 1; }
+}
+
+@keyframes vnCharEnterRight {
+    from { translate: 60px 0; opacity: 0; }
+    to   { translate: 0 0;    opacity: 1; }
+}
+
+/* ── Драматичный ── */
+.vn-entering-dramatic .vn-character-img {
+    animation: vnCharEnterDramatic 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
+}
+
+@keyframes vnCharEnterDramatic {
+    0%   { translate: 0 0; opacity: 0; }
+    50%  { opacity: 1; }
+    75%  { translate: 0 2px; }
+    100% { translate: 0 0; }
+}
+
+/* ── Из тени ── */
+.vn-entering-shadow .vn-character-img {
+    animation: vnCharEnterShadow 1s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
+}
+
+@keyframes vnCharEnterShadow {
+    0%   { opacity: 0; }
+    60%  { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* ── Снизу ── */
+.vn-entering-rise .vn-character-img {
+    animation: vnCharEnterRise 1s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
+}
+
+@keyframes vnCharEnterRise {
+    from { translate: 0 80px; opacity: 0; }
+    to   { translate: 0 0;    opacity: 1; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ВЫХОД ПЕРСОНАЖЕЙ
+   ══════════════════════════════════════════════════════════ */
+
+.vn-exiting .vn-character-img {
+    animation: vnCharExit 0.6s cubic-bezier(0.55, 0, 1, 0.45) both !important;
+}
+
+@keyframes vnCharExit {
+    to { opacity: 0; translate: 0 10px; }
+}
+
+
+/* ── Glow/Nameplate при входе/выходе ── */
+
+.vn-entering-left .vn-character-glow,
+.vn-entering-right .vn-character-glow,
+.vn-entering-dramatic .vn-character-glow,
+.vn-entering-shadow .vn-character-glow,
+.vn-entering-rise .vn-character-glow {
+    animation: vnGlowAppear 1s ease both;
+}
+
+@keyframes vnGlowAppear {
+    from { opacity: 0; scale: 0.5; }
+    to   { opacity: 1; scale: 1; }
+}
+
+.vn-entering-left .vn-character-nameplate,
+.vn-entering-right .vn-character-nameplate,
+.vn-entering-dramatic .vn-character-nameplate,
+.vn-entering-shadow .vn-character-nameplate,
+.vn-entering-rise .vn-character-nameplate {
+    animation: vnNameAppear 0.6s ease 0.4s both;
+}
+
+@keyframes vnNameAppear {
+    from { opacity: 0; translate: 0 8px; }
+    to   { opacity: 1; translate: 0 0; }
+}
+
+.vn-exiting .vn-character-glow {
+    animation: vnGlowExit 0.4s ease both;
+}
+
+@keyframes vnGlowExit {
+    to { opacity: 0; scale: 0.3; }
+}
+
+.vn-exiting .vn-character-nameplate {
+    animation: vnNameExit 0.3s ease both;
+}
+
+@keyframes vnNameExit {
+    to { opacity: 0; translate: 0 8px; }
+}
+
+
+/* ── Apocalypse — дрожь ── */
+.vn-vfx-apocalypse .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathApocalypse 2s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathApocalypse {
+    0%, 100% { translate: 0 0; }
+    15%      { translate: 1px -1px; }
+    30%      { translate: -1px 0; }
+    45%      { translate: 0 -2px; }
+    60%      { translate: 1px -1px; }
+    75%      { translate: -1px -2px; }
+    90%      { translate: 0 -1px; }
+}
+
+/* ── Ethereal — невесомое парение ── */
+.vn-vfx-ethereal .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathEthereal 7s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathEthereal {
+    0%, 100% { translate: 0 0; }
+    25%      { translate: 2px -4px; }
+    50%      { translate: -1px -7px; }
+    75%      { translate: 1px -3px; }
+}
+
+/* ── Blood Moon — тяжёлое, тревожное ── */
+.vn-vfx-blood_moon .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathBloodMoon 3s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathBloodMoon {
+    0%, 100% { translate: 0 0; }
+    20%      { translate: 0 -3px; }
+    35%      { translate: 0 -1px; }
+    50%      { translate: 0 -4px; }
+    70%      { translate: 0 -2px; }
+}
+
+/* ── Void Breach — лёгкая нестабильность ── */
+.vn-vfx-void_breach .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathVoid 5s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathVoid {
+    0%, 100% { translate: 0 0; }
+    25%      { translate: 0 -2px; }
+    50%      { translate: 1px -3px; }
+    75%      { translate: -1px -1px; }
+}
+
+/* ── Cosmic Horror — медленное, неуютное ── */
+.vn-vfx-cosmic_horror .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathCosmic 7s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathCosmic {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -4px; }
+}
+
+/* ── Abyss — подавленное, тяжёлое ── */
+.vn-vfx-abyss .vn-character.active:not(.vn-entering):not(.vn-exiting) .vn-character-img {
+    animation: vnCharBreathAbyss 6s ease-in-out infinite;
+}
+
+@keyframes vnCharBreathAbyss {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 2px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HIDDEN / SILHOUETTE CHARACTER
+   ══════════════════════════════════════════════════════════ */
+
+/* Use #vn-scene-overlay (ID specificity 1-0-0) to beat all effect rules
+   which only use class chains (max 0-5-0). Covers active, inactive,
+   entering, exiting states and suppresses glow that would reveal position. */
+#vn-scene-overlay .vn-character.vn-character-hidden .vn-character-img {
+    filter: brightness(0) !important;
+    animation: none !important;
+}
+
+#vn-scene-overlay .vn-character.vn-character-hidden .vn-character-glow {
+    opacity: 0 !important;
+    animation: none !important;
+}

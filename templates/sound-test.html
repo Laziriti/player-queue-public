@@ -1,0 +1,40 @@
+<div class="sound-test-dialog">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h3>Тестирование звуков приоритетов</h3>
+        <p><small>Нажмите на кнопки чтобы проверить звуки с текущими настройками</small></p>
+    </div>
+
+    <div class="sound-test-buttons">
+        <button class="test-sound-btn priority-test-btn low" data-priority="0"
+                style="{{#unless currentSettings.enableLow}}opacity: 0.5; pointer-events: none;{{/unless}}">
+            <div class="priority-icon">!</div>
+            <div class="priority-name">Низкий приоритет</div>
+            <div class="sound-file">request0.wav</div>
+        </button>
+
+        <button class="test-sound-btn priority-test-btn medium" data-priority="1"
+                style="{{#unless currentSettings.enableMedium}}opacity: 0.5; pointer-events: none;{{/unless}}">
+            <div class="priority-icon">!!</div>
+            <div class="priority-name">Средний приоритет</div>
+            <div class="sound-file">request1.wav</div>
+        </button>
+
+        <button class="test-sound-btn priority-test-btn high" data-priority="2"
+                style="{{#unless currentSettings.enableHigh}}opacity: 0.5; pointer-events: none;{{/unless}}">
+            <div class="priority-icon">!!!</div>
+            <div class="priority-name">Высокий приоритет</div>
+            <div class="sound-file">request2.wav</div>
+        </button>
+    </div>
+
+    <div class="current-settings">
+        <h4>Текущие настройки:</h4>
+        <ul>
+            <li>Звуки включены: <strong>{{#if currentSettings.enableSounds}}Да{{else}}Нет{{/if}}</strong></li>
+            <li>Громкость: <strong>{{currentSettings.soundVolume}}%</strong></li>
+            <li>Низкий приоритет: <strong>{{#if currentSettings.enableLow}}Включен{{else}}Выключен{{/if}}</strong></li>
+            <li>Средний приоритет: <strong>{{#if currentSettings.enableMedium}}Включен{{else}}Выключен{{/if}}</strong></li>
+            <li>Высокий приоритет: <strong>{{#if currentSettings.enableHigh}}Включен{{else}}Выключен{{/if}}</strong></li>
+        </ul>
+    </div>
+</div>

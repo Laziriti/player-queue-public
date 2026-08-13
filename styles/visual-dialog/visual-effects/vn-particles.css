@@ -1,0 +1,818 @@
+/* ══════════════════════════════════════════════════════════
+   VN-PARTICLES — Стили всех типов частиц
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ── Базовые частицы (общий стиль) ── */
+
+.vn-particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SNOW (Снег)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-snow {
+    background: radial-gradient(
+            circle,
+            rgba(255, 255, 255, 0.9) 0%,
+            rgba(200, 220, 255, 0.4) 60%,
+            transparent 100%
+    );
+    animation-name: vnSnowFall !important;
+}
+
+@keyframes vnSnowFall {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.8; }
+    90%  { opacity: 0.4; }
+    100% { transform: translateY(110vh) translateX(var(--drift)); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   RAIN (Дождь)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-rain {
+    border-radius: 0;
+    background: linear-gradient(
+            to bottom,
+            rgba(180, 200, 255, 0.6) 0%,
+            rgba(150, 180, 240, 0.2) 100%
+    );
+    animation-name: vnRainFall !important;
+}
+
+@keyframes vnRainFall {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    5%   { opacity: 0.6; }
+    95%  { opacity: 0.3; }
+    100% { transform: translateY(110vh) translateX(var(--drift)); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   EMBERS (Угли)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-ember {
+    background: radial-gradient(
+            circle,
+            rgba(255, 200, 50, 1) 0%,
+            rgba(255, 120, 20, 0.7) 50%,
+            rgba(200, 50, 0, 0.3) 80%,
+            transparent 100%
+    );
+    box-shadow: 0 0 4px rgba(255, 150, 30, 0.8);
+    animation-name: vnEmberFloat !important;
+}
+
+@keyframes vnEmberFloat {
+    0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+    10%  { opacity: 0.9; }
+    60%  { opacity: 0.5; }
+    100% { transform: translateY(-110vh) translateX(var(--drift)) scale(0.3); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FIREFLIES (Светлячки)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-firefly {
+    background: radial-gradient(
+            circle,
+            rgba(200, 255, 100, 1) 0%,
+            rgba(150, 220, 50, 0.5) 50%,
+            transparent 100%
+    );
+    box-shadow: 0 0 8px rgba(180, 255, 80, 0.8);
+    animation-name: vnFireflyFloat !important;
+}
+
+@keyframes vnFireflyFloat {
+    0%   { transform: translate(0, 0) scale(0.5); opacity: 0; }
+    20%  { opacity: 0.8; transform: translate(calc(var(--drift) * 0.2), calc(var(--drift-y, 0) * 0.2)) scale(1); }
+    50%  { opacity: 0.3; transform: translate(calc(var(--drift) * 0.5), calc(var(--drift-y, 0) * 0.5)) scale(0.7); }
+    80%  { opacity: 0.9; transform: translate(calc(var(--drift) * 0.8), calc(var(--drift-y, 0) * 0.8)) scale(1.1); }
+    100% { transform: translate(var(--drift), var(--drift-y, 0)) scale(0.4); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   DIVINE MOTES (Божественные моты)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-divine {
+    background: radial-gradient(
+            circle,
+            rgba(255, 255, 220, 1) 0%,
+            rgba(255, 215, 100, 0.8) 40%,
+            rgba(255, 180, 60, 0.3) 70%,
+            transparent 100%
+    );
+    box-shadow: 0 0 8px rgba(255, 215, 100, 0.9), 0 0 20px rgba(255, 180, 60, 0.4);
+    animation-name: vnDivineMoteFloat !important;
+}
+
+@keyframes vnDivineMoteFloat {
+    0%   { transform: translateY(0) translateX(0) scale(0.5); opacity: 0; }
+    15%  { opacity: 0.9; transform: translateY(-15vh) translateX(calc(var(--drift) * 0.2)) scale(1); }
+    85%  { opacity: 0.5; }
+    100% { transform: translateY(110vh) translateX(var(--drift)) scale(0.3); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ELDRITCH SPORES (Элдритч споры)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-eldritch {
+    background: radial-gradient(
+            circle,
+            rgba(100, 255, 180, 0.9) 0%,
+            rgba(0, 200, 100, 0.5) 40%,
+            rgba(0, 100, 60, 0.2) 70%,
+            transparent 100%
+    );
+    box-shadow: 0 0 6px rgba(0, 200, 100, 0.7);
+    animation-name: vnEldritchSporeFloat !important;
+}
+
+@keyframes vnEldritchSporeFloat {
+    0%   { transform: translate(0, 0) scale(0.8); opacity: 0; }
+    20%  { opacity: 0.7; }
+    50%  { transform: translate(calc(var(--drift) * 0.5), calc(var(--drift-y) * 0.5)) scale(1.2); opacity: 0.5; }
+    80%  { opacity: 0.6; }
+    100% { transform: translate(var(--drift), var(--drift-y)) scale(0.6); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BUBBLES (Пузыри)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-bubble {
+    border-radius: 50%;
+    background: radial-gradient(
+            circle at 30% 30%,
+            rgba(200, 240, 255, 0.4) 0%,
+            rgba(100, 200, 255, 0.15) 40%,
+            rgba(60, 160, 220, 0.08) 70%,
+            transparent 100%
+    );
+    border: 1px solid rgba(150, 220, 255, 0.15);
+    animation-name: vnBubbleFloat !important;
+}
+
+@keyframes vnBubbleFloat {
+    0%   { transform: translateY(0) translateX(0) scale(0.8); opacity: 0; }
+    10%  { opacity: 0.6; }
+    85%  { opacity: 0.3; }
+    100% { transform: translateY(-110vh) translateX(var(--drift)) scale(1.1); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   DREAM ORBS (Сонные орбы)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-dream {
+    border-radius: 50%;
+    background: radial-gradient(
+            circle,
+            rgba(200, 160, 255, 0.3) 0%,
+            rgba(160, 120, 220, 0.15) 40%,
+            rgba(120, 80, 180, 0.05) 70%,
+            transparent 100%
+    );
+    border: 1px solid rgba(200, 160, 255, 0.08);
+    animation-name: vnDreamOrbFloat !important;
+    filter: blur(2px);
+}
+
+@keyframes vnDreamOrbFloat {
+    0%   { transform: translate(0, 0) scale(0.6); opacity: 0; }
+    30%  { opacity: 0.5; }
+    70%  { opacity: 0.4; }
+    100% { transform: translate(var(--drift), var(--drift-y)) scale(1.3); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BOKEH (Боке)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-bokeh {
+    border-radius: 50%;
+    background: radial-gradient(
+            circle,
+            rgba(255, 200, 100, 0.15) 0%,
+            rgba(255, 180, 80, 0.08) 50%,
+            transparent 70%
+    );
+    border: 1px solid rgba(255, 200, 100, 0.08);
+    animation-name: vnBokehFloat !important;
+    filter: blur(1px);
+}
+
+@keyframes vnBokehFloat {
+    0%   { transform: translate(0, 0) scale(0.8); opacity: 0; }
+    25%  { opacity: 0.4; }
+    75%  { opacity: 0.3; }
+    100% { transform: translate(var(--drift, 0), var(--drift-y, 0)) scale(1.2); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SAKURA (Сакура)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-sakura {
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+    background: radial-gradient(
+            circle,
+            rgba(255, 180, 200, 0.9) 0%,
+            rgba(255, 140, 170, 0.6) 50%,
+            rgba(255, 100, 140, 0.3) 80%,
+            transparent 100%
+    );
+    animation-name: vnSakuraFall !important;
+    filter: blur(0.3px);
+}
+
+@keyframes vnSakuraFall {
+    0%   { transform: translateY(0) translateX(0) rotate(0deg) scale(0.8); opacity: 0; }
+    10%  { opacity: 0.8; }
+    50%  { transform: translateY(55vh) translateX(calc(var(--drift) * 0.6)) rotate(calc(var(--rotation) * 0.5)); }
+    90%  { opacity: 0.5; }
+    100% { transform: translateY(110vh) translateX(var(--drift)) rotate(var(--rotation)) scale(0.6); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ASH (Пепел)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-ash {
+    border-radius: 50% 40% 60% 30%;
+    background: radial-gradient(
+            circle,
+            rgba(120, 110, 100, 0.8) 0%,
+            rgba(80, 70, 60, 0.5) 60%,
+            transparent 100%
+    );
+    animation-name: vnAshFall !important;
+}
+
+@keyframes vnAshFall {
+    0%   { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+    10%  { opacity: 0.5; }
+    50%  { transform: translateY(55vh) translateX(calc(var(--drift) * 0.5)) rotate(180deg); }
+    90%  { opacity: 0.3; }
+    100% { transform: translateY(110vh) translateX(var(--drift)) rotate(360deg); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SPARKS (Искры)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-spark {
+    border-radius: 50%;
+    background: radial-gradient(
+            circle,
+            rgba(255, 220, 150, 1) 0%,
+            rgba(255, 160, 50, 0.7) 50%,
+            transparent 100%
+    );
+    box-shadow: 0 0 4px rgba(255, 180, 80, 0.9);
+    animation-name: vnSparkFloat !important;
+}
+
+@keyframes vnSparkFloat {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    5%   { opacity: 1; }
+    50%  { opacity: 0.6; }
+    100% { transform: translateY(-110vh) translateX(var(--drift)); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DEBRIS (Обломки — Апокалипсис)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-debris {
+    border-radius: 20% 40% 30% 50%;
+    background: radial-gradient(
+            circle,
+            rgba(180, 80, 20, 0.9) 0%,
+            rgba(120, 40, 0, 0.7) 40%,
+            rgba(60, 20, 0, 0.4) 70%,
+            transparent 100%
+    );
+    box-shadow:
+            0 0 4px rgba(255, 100, 0, 0.6),
+            inset 0 0 3px rgba(255, 200, 50, 0.3);
+    animation-name: vnDebrisFloat !important;
+}
+
+@keyframes vnDebrisFloat {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+        opacity: 0;
+    }
+    5% {
+        opacity: 0.8;
+    }
+    30% {
+        transform: translate(calc(var(--drift) * 0.3), calc(var(--drift-y) * 0.3))
+        rotate(calc(var(--rotation) * 0.3)) scale(0.9);
+    }
+    60% {
+        opacity: 0.5;
+        transform: translate(calc(var(--drift) * 0.6), calc(var(--drift-y) * 0.6))
+        rotate(calc(var(--rotation) * 0.6)) scale(0.7);
+    }
+    100% {
+        transform: translate(var(--drift), var(--drift-y))
+        rotate(var(--rotation)) scale(0.3);
+        opacity: 0;
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ETHER WISPS (Эфирные сгустки)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-ether {
+    border-radius: 50%;
+    background: radial-gradient(
+            circle,
+            rgba(180, 200, 255, 0.25) 0%,
+            rgba(150, 100, 255, 0.15) 30%,
+            rgba(100, 200, 200, 0.08) 60%,
+            transparent 100%
+    );
+    border: 1px solid rgba(180, 200, 255, 0.06);
+    animation-name: vnEtherWispFloat !important;
+    filter: blur(3px);
+}
+
+@keyframes vnEtherWispFloat {
+    0% {
+        transform: translate(0, 0) scale(0.5);
+        opacity: 0;
+        filter: blur(3px) hue-rotate(0deg);
+    }
+    20% {
+        opacity: 0.5;
+        transform: translate(calc(var(--drift) * 0.2), calc(var(--drift-y) * 0.2)) scale(0.8);
+    }
+    50% {
+        opacity: 0.7;
+        transform: translate(calc(var(--drift) * 0.5), calc(var(--drift-y) * 0.5)) scale(1.2);
+        filter: blur(4px) hue-rotate(60deg);
+    }
+    80% {
+        opacity: 0.4;
+        transform: translate(calc(var(--drift) * 0.8), calc(var(--drift-y) * 0.8)) scale(0.9);
+    }
+    100% {
+        transform: translate(var(--drift), var(--drift-y)) scale(0.4);
+        opacity: 0;
+        filter: blur(5px) hue-rotate(120deg);
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BLOOD MOTES (Кровавые капли)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-blood {
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    background: radial-gradient(
+            circle,
+            rgba(200, 0, 0, 0.9) 0%,
+            rgba(150, 0, 0, 0.6) 40%,
+            rgba(80, 0, 0, 0.3) 70%,
+            transparent 100%
+    );
+    box-shadow: 0 0 4px rgba(200, 0, 0, 0.5);
+    animation-name: vnBloodMoteFall !important;
+}
+
+@keyframes vnBloodMoteFall {
+    0% {
+        transform: translateY(0) translateX(0) scale(0.8);
+        opacity: 0;
+    }
+    8% {
+        opacity: 0.7;
+    }
+    40% {
+        transform: translateY(45vh) translateX(calc(var(--drift) * 0.4)) scale(1);
+        opacity: 0.5;
+    }
+    70% {
+        opacity: 0.3;
+    }
+    100% {
+        transform: translateY(110vh) translateX(var(--drift)) scale(0.5);
+        opacity: 0;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   VOID SHARDS (Осколки реальности — v2)
+   Неправильные формы, светятся фиолетовым, медленно
+   дрейфуют и растворяются. Плавно.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-void-shard {
+    border-radius: 2px;
+    background: linear-gradient(
+            var(--rotation, 135deg),
+            rgba(180, 140, 255, 0.5) 0%,
+            rgba(100, 60, 200, 0.25) 30%,
+            rgba(0, 0, 0, 0.7) 60%,
+            rgba(0, 0, 0, 0.9) 100%
+    );
+    border: 1px solid rgba(160, 120, 255, 0.2);
+    box-shadow:
+            0 0 6px rgba(140, 60, 255, 0.4),
+            0 0 12px rgba(80, 0, 200, 0.2);
+    clip-path: polygon(
+            10% 0%, 85% 8%, 100% 45%,
+            92% 95%, 8% 88%, 0% 40%
+    );
+    animation-name: vnVoidShardDrift !important;
+}
+
+@keyframes vnVoidShardDrift {
+    0% {
+        translate: 0 0;
+        rotate: 0deg;
+        scale: 0.3;
+        opacity: 0;
+    }
+    15% {
+        scale: 0.8;
+        opacity: 0.6;
+    }
+    40% {
+        opacity: 0.5;
+    }
+    70% {
+        opacity: 0.35;
+    }
+    100% {
+        translate: var(--drift, 50px) var(--drift-y, -30px);
+        rotate: var(--rotation, 90deg);
+        scale: 0.2;
+        opacity: 0;
+        filter: blur(2px);
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   COSMIC DUST (Космическая пыль — v2)
+   Мелкие точки, мерцают, медленно дрейфуют.
+   Без сложных sin/cos — простое плавное движение.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-cosmic {
+    border-radius: 50%;
+    background: radial-gradient(
+            circle,
+            rgba(200, 150, 255, 0.9) 0%,
+            rgba(120, 60, 200, 0.4) 50%,
+            transparent 100%
+    );
+    box-shadow: 0 0 3px rgba(150, 100, 255, 0.5);
+    animation-name: vnCosmicDustDrift !important;
+}
+
+@keyframes vnCosmicDustDrift {
+    0% {
+        translate: 0 0;
+        scale: 0.5;
+        opacity: 0;
+    }
+    20% {
+        opacity: 0.6;
+        scale: 0.9;
+    }
+    40% {
+        opacity: 0.3;
+        translate: calc(var(--drift) * 0.3) calc(var(--drift-y) * 0.3);
+    }
+    60% {
+        opacity: 0.7;
+        scale: 1.1;
+        translate: calc(var(--drift) * 0.6) calc(var(--drift-y) * 0.6);
+    }
+    80% {
+        opacity: 0.4;
+        scale: 0.8;
+    }
+    100% {
+        translate: var(--drift) var(--drift-y);
+        scale: 0.3;
+        opacity: 0;
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ABYSS BUBBLES (Глубинные пузыри — v2)
+   Очень медленные, тяжёлые. Иногда подсвечиваются.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-abyss {
+    border-radius: 50%;
+    background: radial-gradient(
+            circle at 35% 35%,
+            rgba(0, 180, 220, 0.15) 0%,
+            rgba(0, 100, 150, 0.08) 30%,
+            rgba(0, 50, 80, 0.03) 60%,
+            transparent 100%
+    );
+    border: 1px solid rgba(0, 150, 200, 0.06);
+    box-shadow: 0 0 6px rgba(0, 120, 160, 0.1);
+    animation-name: vnAbyssBubbleSlow !important;
+}
+
+@keyframes vnAbyssBubbleSlow {
+    0% {
+        translate: 0 0;
+        scale: 0.5;
+        opacity: 0;
+    }
+    15% {
+        opacity: 0.3;
+        scale: 0.7;
+    }
+    35% {
+        translate: calc(var(--drift) * 0.2) -25vh;
+        opacity: 0.4;
+        box-shadow: 0 0 10px rgba(0, 180, 220, 0.2);
+    }
+    55% {
+        translate: calc(var(--drift) * 0.5) -50vh;
+        scale: 1;
+        opacity: 0.35;
+    }
+    75% {
+        translate: calc(var(--drift) * 0.7) -70vh;
+        opacity: 0.2;
+        box-shadow: 0 0 4px rgba(0, 120, 160, 0.05);
+    }
+    100% {
+        translate: var(--drift) -100vh;
+        scale: 0.6;
+        opacity: 0;
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SHADOW WISPS (Теневые клубы — Тени интриг)
+   Пыль и дым в свете свечи. Медленно поднимаются вверх.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-shadow-wisp {
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(90, 80, 65, 0.55) 0%,
+        rgba(55, 48, 38, 0.28) 50%,
+        transparent 100%
+    );
+    animation-name: vnShadowWispDrift !important;
+    filter: blur(1.5px);
+}
+
+@keyframes vnShadowWispDrift {
+    0% {
+        transform: translate(0, 0) scale(0.5);
+        opacity: 0;
+    }
+    12% {
+        opacity: 0.28;
+        transform: translate(calc(var(--drift) * 0.08), -6vh) scale(0.75);
+    }
+    35% {
+        opacity: 0.18;
+        transform: translate(calc(var(--drift) * 0.3), -28vh) scale(1.1);
+    }
+    60% {
+        opacity: 0.22;
+        transform: translate(calc(var(--drift) * 0.55), -52vh) scale(1.3);
+    }
+    82% {
+        opacity: 0.1;
+        transform: translate(calc(var(--drift) * 0.8), -75vh) scale(1.0);
+    }
+    100% {
+        transform: translate(var(--drift), -110vh) scale(0.5);
+        opacity: 0;
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   GLASS DUST (Стеклянная пыль)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-glass-dust {
+    border-radius: 1px;
+    background: rgba(210, 235, 255, 0.85);
+    box-shadow: 0 0 2px rgba(255, 255, 255, 0.9), 0 0 4px rgba(160, 210, 255, 0.5);
+    animation-name: vnGlassDustFloat !important;
+}
+
+@keyframes vnGlassDustFloat {
+    0%   { opacity: 0;    transform: translate(0, 0) rotate(0deg) scale(1); }
+    8%   { opacity: 0.8; }
+    50%  { opacity: 0.5;  transform: translate(calc(var(--drift) * 0.5), var(--drift-y)) rotate(120deg) scale(0.7); }
+    90%  { opacity: 0.3; }
+    100% { opacity: 0;    transform: translate(var(--drift), calc(var(--drift-y) * 2)) rotate(240deg) scale(0.3); }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SAND GRAINS (Песчинки — Песчаная буря)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-sand {
+    border-radius: 1px;
+    background: rgba(210, 155, 70, 0.8);
+    animation-name: vnSandFly !important;
+}
+
+@keyframes vnSandFly {
+    0%   { transform: translateX(0) translateY(0); opacity: 0; }
+    8%   { opacity: 0.65; }
+    92%  { opacity: 0.35; }
+    100% { transform: translateX(115vw) translateY(var(--drift-y, 0px)); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CONFETTI (Конфетти — Праздник / Карнавал)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-confetti {
+    border-radius: 1px;
+    animation-name: vnConfettiFall !important;
+}
+
+/* 8 праздничных цветов, cycling */
+.vn-particle-confetti:nth-child(8n+1) { background: rgba(255,  55,  55, 0.92); }
+.vn-particle-confetti:nth-child(8n+2) { background: rgba(255, 215,   0, 0.92); }
+.vn-particle-confetti:nth-child(8n+3) { background: rgba( 50, 170, 255, 0.92); }
+.vn-particle-confetti:nth-child(8n+4) { background: rgba( 34, 210,  68, 0.92); }
+.vn-particle-confetti:nth-child(8n+5) { background: rgba(255,  50, 200, 0.92); }
+.vn-particle-confetti:nth-child(8n+6) { background: rgba(255, 140,   0, 0.92); }
+.vn-particle-confetti:nth-child(8n+7) { background: rgba(160,  50, 255, 0.92); }
+.vn-particle-confetti:nth-child(8n)   { background: rgba(  0, 210, 200, 0.92); }
+
+/* Серпантин — более гибкий, другая анимация */
+.vn-particle-streamer {
+    border-radius: 2px;
+    animation-name: vnStreamerFall !important;
+}
+
+@keyframes vnConfettiFall {
+    0%   { transform: translateY(0) translateX(0) rotateZ(0deg) rotateY(0deg); opacity: 0; }
+    10%  { opacity: 0.92; }
+    50%  { transform: translateY(55vh) translateX(calc(var(--drift) * 0.5))
+                       rotateZ(calc(var(--rotation) * 0.5)) rotateY(180deg); opacity: 0.75; }
+    90%  { opacity: 0.55; }
+    100% { transform: translateY(112vh) translateX(var(--drift))
+                       rotateZ(var(--rotation)) rotateY(360deg); opacity: 0; }
+}
+
+@keyframes vnStreamerFall {
+    0%   { transform: translateY(0) translateX(0) rotateZ(0deg) scaleX(1); opacity: 0; }
+    10%  { opacity: 0.85; }
+    30%  { transform: translateY(28vh) translateX(calc(var(--drift) * 0.22))
+                       rotateZ(calc(var(--rotation) * 0.28)) scaleX(0.60); }
+    60%  { transform: translateY(62vh) translateX(calc(var(--drift) * 0.60))
+                       rotateZ(calc(var(--rotation) * 0.65)) scaleX(1.20); opacity: 0.65; }
+    85%  { transform: translateY(90vh) translateX(calc(var(--drift) * 0.88))
+                       rotateZ(calc(var(--rotation) * 0.90)) scaleX(0.72); opacity: 0.40; }
+    100% { transform: translateY(112vh) translateX(var(--drift))
+                       rotateZ(var(--rotation)) scaleX(0.85); opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   GHOST FORMS (Призрачные формы — крупные орбы)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-ghost-form {
+    border-radius: 50%;
+    background: radial-gradient(
+        ellipse at 45% 40%,
+        rgba(225, 242, 255, 0.90) 0%,
+        rgba(178, 212, 255, 0.58) 28%,
+        rgba(122, 168, 242, 0.22) 58%,
+        transparent 100%
+    );
+    filter: blur(12px);
+    animation-name: vnGhostFormDrift !important;
+}
+
+@keyframes vnGhostFormDrift {
+    0%   { transform: translate(0, 0) scale(0.8);
+           opacity: 0; }
+    12%  { transform: translate(calc(var(--drift)*0.08), calc(var(--drift-y)*0.08)) scale(1.0);
+           opacity: 0.65; }
+    30%  { transform: translate(calc(var(--drift)*0.28), calc(var(--drift-y)*0.28)) scale(1.08);
+           opacity: 0.60; }
+    55%  { transform: translate(calc(var(--drift)*0.55), calc(var(--drift-y)*0.55)) scale(0.92);
+           opacity: 0.44; }
+    78%  { transform: translate(calc(var(--drift)*0.78), calc(var(--drift-y)*0.78)) scale(1.02);
+           opacity: 0.28; }
+    100% { transform: translate(var(--drift), var(--drift-y)) scale(0.70);
+           opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   GHOST STREAMS (Энергетические потоки — горизонтальные)
+   Широкие горизонтальные стримеры, дрейфуют как реки энергии.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-ghost-stream {
+    border-radius: 50%;
+    background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(172, 210, 255, 0.38) 12%,
+        rgba(210, 235, 255, 0.72) 38%,
+        rgba(228, 244, 255, 0.82) 52%,
+        rgba(210, 235, 255, 0.72) 66%,
+        rgba(172, 210, 255, 0.38) 88%,
+        transparent 100%
+    );
+    filter: blur(8px);
+    animation-name: vnGhostStreamFlow !important;
+}
+
+@keyframes vnGhostStreamFlow {
+    0%   { transform: translate(0, 0) scaleY(1.0);
+           opacity: 0; }
+    12%  { transform: translate(calc(var(--drift)*0.10), calc(var(--drift-y)*0.10)) scaleY(1.25);
+           opacity: 0.58; }
+    40%  { transform: translate(calc(var(--drift)*0.38), calc(var(--drift-y)*0.38)) scaleY(0.82);
+           opacity: 0.50; }
+    65%  { transform: translate(calc(var(--drift)*0.65), calc(var(--drift-y)*0.65)) scaleY(1.35);
+           opacity: 0.44; }
+    85%  { transform: translate(calc(var(--drift)*0.85), calc(var(--drift-y)*0.85)) scaleY(0.88);
+           opacity: 0.26; }
+    100% { transform: translate(var(--drift), var(--drift-y)) scaleY(0.80);
+           opacity: 0; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   GHOST WISPS (Блуждающие огоньки — мелкие)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-particle-ghost-wisp {
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(238, 250, 255, 0.96) 0%,
+        rgba(192, 224, 255, 0.68) 30%,
+        rgba(150, 190, 250, 0.26) 62%,
+        transparent 100%
+    );
+    filter: blur(4px);
+    animation-name: vnGhostWispDrift !important;
+}
+
+@keyframes vnGhostWispDrift {
+    0%   { transform: translate(0, 0) scale(0.6);
+           opacity: 0; }
+    10%  { transform: translate(calc(var(--drift)*0.08), calc(var(--drift-y)*0.08)) scale(1.0);
+           opacity: 0.80; }
+    30%  { transform: translate(calc(var(--drift)*0.28), calc(var(--drift-y)*0.28)) scale(1.15);
+           opacity: 0.65; }
+    55%  { transform: translate(calc(var(--drift)*0.55), calc(var(--drift-y)*0.55)) scale(0.85);
+           opacity: 0.75; }
+    80%  { transform: translate(calc(var(--drift)*0.80), calc(var(--drift-y)*0.80)) scale(1.05);
+           opacity: 0.38; }
+    100% { transform: translate(var(--drift), var(--drift-y)) scale(0.5);
+           opacity: 0; }
+}

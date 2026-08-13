@@ -1,0 +1,46 @@
+{
+  "id": "player-queue",
+  "title": "Player Queue",
+  "description": "<p>Модуль для управления очередью игроков</p>",
+  "version": "14.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Laziriti",
+      "flags": {}
+    }
+  ],
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+"styles/styles.css",
+"styles/visual-novel-scene.css",
+    "styles/visual-dialog/visual-effects/index.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json",
+      "flags": {}
+    }
+  ],
+  "socket": true,
+  "packs": [
+    {
+      "name": "pack-1",
+      "label": "Макросы очереди",
+      "path": "packs/pack-1",
+      "type": "Macro",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "flags": {}
+}

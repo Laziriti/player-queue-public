@@ -1,0 +1,26 @@
+<div class="queue-dialog">
+    <div class="queue-container">
+        {{#if queue.length}}
+            {{#each queue}}
+                <div class="queue-player" title="{{this.name}}">
+                    <img src="{{this.avatar}}" alt="{{this.name}}">
+                    <span class="queue-number">{{add @index 1}}</span>
+                </div>
+            {{/each}}
+        {{else}}
+            <div class="queue-empty">Очередь пуста</div>
+        {{/if}}
+    </div>
+
+    <div class="queue-controls">
+        {{#if canJoin}}
+            <button id="join-queue" class="join-btn">Встать в очередь</button>
+        {{else}}
+            <button id="leave-queue" class="leave-btn">Покинуть очередь</button>
+        {{/if}}
+
+        {{#if isGM}}
+            <button id="clear-queue" class="clear-btn">Очистить очередь</button>
+        {{/if}}
+    </div>
+</div>

@@ -1,0 +1,9 @@
+{
+  "player-queue": {
+    "title": "Player Queue",
+    "join": "Join Queue",
+    "leave": "Leave Queue",
+    "clear": "Clear Queue",
+    "empty": "Queue is empty"
+  }
+}
