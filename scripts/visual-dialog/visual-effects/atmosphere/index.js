@@ -2,7 +2,7 @@
 // index.js — VNAtmosphere v3.0 (модульная архитектура)
 // ============================================================
 
-import { EFFECTS, EFFECT_LABELS, EFFECT_ICONS, PRESETS } from './config/effects.js';
+import { EFFECTS, EFFECT_LABELS, EFFECT_ICONS, PRESETS, EFFECT_GROUPS } from './config/effects.js';
 import { ParticleSystem } from './systems/particle-system.js';
 import { VisualFXSystem } from './systems/visual-fx.js';
 import { ParallaxSystem } from './systems/parallax.js';
@@ -13,6 +13,7 @@ class VNAtmosphere {
     static EFFECT_LABELS = EFFECT_LABELS;
     static EFFECT_ICONS = EFFECT_ICONS;
     static PRESETS = PRESETS;
+    static EFFECT_GROUPS = EFFECT_GROUPS;
 
     constructor() {
         this._active = false;

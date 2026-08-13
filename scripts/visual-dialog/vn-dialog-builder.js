@@ -16,6 +16,7 @@ export class VNDialogBuilder {
         this._presetSearchQuery = '';
         this._presetSceneFilter = false;
         this._presetViewMode = 'list';
+        this._presetSortMode = 'newest';
         this._ioViewMode = 'detailed';
         this._ioFoundModules = [];
         this._ioSelectedModuleId = null;
@@ -123,6 +124,7 @@ export class VNDialogBuilder {
         const overlay = root.querySelector('#background-overlay')?.checked ?? true;
         const effect = root.querySelector('#atmosphere-effect')?.value || 'particles';
         const musicUuid = root.querySelector('#vn-music-uuid')?.value || null;
+        const soundCues = this._gatherSoundCues(root);
 
         const hiddenIds = this._collectHiddenIds(root, allRaw, allDeduped);
 
@@ -141,14 +143,14 @@ export class VNDialogBuilder {
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
             flipped: pendingFlipped ?? null, atmosphereEffect: effect,
-            hidden: hiddenIds, musicUuid, portraitImages, portraitNames,
+            hidden: hiddenIds, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales ?? null, gmOnly,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
             flipped: pendingFlipped || {}, atmosphereEffect: effect,
-            hidden: hiddenIds, musicUuid, portraitImages, portraitNames,
+            hidden: hiddenIds, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales || {}, gmOnly,
         });
     }
@@ -167,6 +169,7 @@ export class VNDialogBuilder {
         this._setupTabs(root);
         this._setupHideButtons(root);
         this._setupMusicDrop(root);
+        this._setupCueDrop(root);
 
         if (isEdit && this._scene.state.isActive) {
             requestAnimationFrame(() => {
@@ -422,6 +425,7 @@ export class VNDialogBuilder {
         }
 
         if (state.musicUuid) this._setMusicInDialog(root, state.musicUuid);
+        this._applySoundCues(root, state.soundCues || []);
     }
 
     applyPreset(root, preset) {
@@ -479,6 +483,7 @@ export class VNDialogBuilder {
         }
 
         this._setMusicInDialog(root, preset.musicUuid || null);
+        this._applySoundCues(root, preset.soundCues || []);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -509,9 +514,15 @@ export class VNDialogBuilder {
                     <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'list' ? 'active' : ''}" data-view="list" title="Список"><i class="fas fa-list"></i></button>
                     <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'cards' ? 'active' : ''}" data-view="cards" title="Карточки"><i class="fas fa-th-large"></i></button>
                 </div>
-                <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter" title="Только пресеты сцены «${currentSceneName || 'текущую сцену'}»" data-scene-id="${currentSceneId || ''}">
+                <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter${this._presetSceneFilter ? ' active' : ''}" title="Только пресеты сцены «${currentSceneName || 'текущую сцену'}»" data-scene-id="${currentSceneId || ''}">
                     <i class="fas fa-map"></i> Эта сцена
                 </button>
+                <select class="vn-preset-sort" title="Сортировка">
+                    <option value="newest"${this._presetSortMode === 'newest' ? ' selected' : ''}>Новые</option>
+                    <option value="oldest"${this._presetSortMode === 'oldest' ? ' selected' : ''}>Старые</option>
+                    <option value="az"${this._presetSortMode === 'az' ? ' selected' : ''}>А→Я</option>
+                    <option value="za"${this._presetSortMode === 'za' ? ' selected' : ''}>Я→А</option>
+                </select>
                 <button type="button" class="vn-btn vn-btn-sm vn-btn-danger vn-preset-clear-all" title="Удалить все пресеты">
                     <i class="fas fa-trash-can"></i>
                 </button>
@@ -524,8 +535,19 @@ export class VNDialogBuilder {
         </div>`;
     }
 
+    _sortPresets(presets) {
+        const copy = [...presets];
+        switch (this._presetSortMode) {
+            case 'oldest': return copy.sort((a, b) => (a.createdAt || a.savedAt || 0) - (b.createdAt || b.savedAt || 0));
+            case 'az':     return copy.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
+            case 'za':     return copy.sort((a, b) => (b.name || '').localeCompare(a.name || '', 'ru'));
+            default:       return copy.sort((a, b) => (b.createdAt || b.savedAt || 0) - (a.createdAt || a.savedAt || 0));
+        }
+    }
+
     _buildPresetItemsHtml(sortedPresets) {
         if (!sortedPresets.length) return '';
+        sortedPresets = this._sortPresets(sortedPresets);
         const isCards = this._presetViewMode === 'cards';
         const hasAnyScene = sortedPresets.some(p => p.sceneName);
 
@@ -663,6 +685,7 @@ export class VNDialogBuilder {
             portraitScales: scene.state.isActive ? { ...scene.state.portraitScales } : {},
             hidden: hiddenIds,
             musicUuid: root.querySelector('#vn-music-uuid')?.value || null,
+            soundCues: this._gatherSoundCues(root),
             flipped: Object.fromEntries(
                 Object.entries(scene.state.flipped).filter(([, v]) => v)
                     .map(([tid, v]) => {
@@ -761,6 +784,11 @@ export class VNDialogBuilder {
                 this._refreshPresetList(root);
             }, { signal });
         });
+
+        root.querySelector('.vn-preset-sort')?.addEventListener('change', (e) => {
+            this._presetSortMode = e.target.value;
+            this._refreshPresetList(root);
+        }, { signal });
 
         root.querySelector('.vn-preset-clear-all')?.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -1015,6 +1043,81 @@ export class VNDialogBuilder {
         return parsePlaylistUuid(uuid)?.sound ?? null;
     }
 
+    _generateMusicTab(musicUuid, soundCues = []) {
+        const cuesHtml = soundCues.map(c => this._buildCueItemHtml(c)).join('');
+        return `<div class="vn-music-tab">
+            ${this._generateMusicSection(musicUuid)}
+            <div class="vn-cues-section">
+                <div class="vn-music-label"><i class="fas fa-play-circle"></i> Звуки сцены</div>
+                <p class="vn-cues-hint">Треки, которые ГМ может запускать прямо со сцены (кнопка в тулбаре).</p>
+                <div class="vn-cue-drop-zone" id="vn-cue-drop">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Перетащите треки из плейлиста</span>
+                </div>
+                <div class="vn-cue-list" id="vn-cue-list">${cuesHtml}</div>
+            </div>
+        </div>`;
+    }
+
+    _buildCueItemHtml(cue) {
+        return `<div class="vn-cue-item" data-cue-id="${cue.id}" data-cue-uuid="${cue.uuid}">
+            <i class="fas fa-music vn-cue-icon"></i>
+            <input type="text" class="vn-cue-label-input" value="${cue.label || ''}" placeholder="Название...">
+            <button type="button" class="vn-btn vn-btn-xs vn-cue-delete" title="Удалить"><i class="fas fa-times"></i></button>
+        </div>`;
+    }
+
+    _gatherSoundCues(root) {
+        return Array.from(root.querySelectorAll('#vn-cue-list .vn-cue-item')).map(el => ({
+            id: el.dataset.cueId || foundry.utils.randomID(),
+            uuid: el.dataset.cueUuid,
+            label: el.querySelector('.vn-cue-label-input')?.value?.trim() || '',
+        })).filter(c => c.uuid);
+    }
+
+    _applySoundCues(root, cues) {
+        const list = root.querySelector('#vn-cue-list');
+        if (!list) return;
+        list.innerHTML = cues.map(c => this._buildCueItemHtml(c)).join('');
+    }
+
+    _setupCueDrop(root) {
+        const dropZone = root.querySelector('#vn-cue-drop');
+        if (!dropZone) return;
+        const signal = this._dialogAbortCtrl?.signal;
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            dropZone.classList.add('drag-over');
+        }, { signal });
+        dropZone.addEventListener('dragleave', (e) => {
+            if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('drag-over');
+        }, { signal });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if (data.type !== 'PlaylistSound' || !data.uuid) return;
+                const sound = this._resolveSoundFromUuid(data.uuid);
+                if (!sound) return;
+                const cueId = foundry.utils.randomID();
+                const label = `${sound.parent.name} — ${sound.name}`;
+                const cueList = root.querySelector('#vn-cue-list');
+                if (cueList) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = this._buildCueItemHtml({ id: cueId, uuid: data.uuid, label });
+                    cueList.append(temp.firstElementChild);
+                }
+            } catch {}
+        }, { signal });
+
+        root.querySelector('#vn-cue-list')?.addEventListener('click', (e) => {
+            if (e.target.closest('.vn-cue-delete')) e.target.closest('.vn-cue-item')?.remove();
+        }, { signal });
+    }
+
     _generateMusicSection(musicUuid) {
         let nameText = '';
         let hasMusic = false;
@@ -1166,6 +1269,7 @@ export class VNDialogBuilder {
         const currentBg = sceneState?.background || null;
         const currentEffect = sceneState?.atmosphereEffect || 'particles';
         const currentMusicUuid = sceneState?.musicUuid || null;
+        const currentSoundCues = sceneState?.soundCues || [];
 
         const favHTML = scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean).map(a => VNDialogBuilder.generateActorToken(a)).join('');
         const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${t.id}" data-actor-id="${t.actor.id}" data-type="token" data-hidden="false">
@@ -1176,6 +1280,7 @@ export class VNDialogBuilder {
             <div class="vn-tabs">
                 <button type="button" class="vn-tab-btn active" data-tab="characters"><i class="fas fa-users"></i> Персонажи</button>
                 <button type="button" class="vn-tab-btn" data-tab="background"><i class="fas fa-image"></i> Фон</button>
+                <button type="button" class="vn-tab-btn" data-tab="music"><i class="fas fa-music"></i> Музыка</button>
                 <button type="button" class="vn-tab-btn" data-tab="presets"><i class="fas fa-bookmark"></i> Пресеты</button>
                 <button type="button" class="vn-tab-btn" data-tab="adventure-io"><i class="fas fa-boxes-stacked"></i> Приключения</button>
                 <label class="vn-gm-only-toggle" title="Сцена будет видна только вам. Нажмите «Показать игрокам» на самой сцене, чтобы открыть всем.">
@@ -1207,7 +1312,9 @@ export class VNDialogBuilder {
             </div>
             <div class="vn-tab-panel" data-tab="background">
                 ${scene._bgManager.generateSelector(currentBg, currentOverlay, currentEffect)}
-                ${this._generateMusicSection(currentMusicUuid)}
+            </div>
+            <div class="vn-tab-panel" data-tab="music">
+                ${this._generateMusicTab(currentMusicUuid, currentSoundCues)}
             </div>
             <div class="vn-tab-panel" data-tab="presets">${presetsHTML}</div>
             <div class="vn-tab-panel" data-tab="adventure-io">${ioHTML}</div>

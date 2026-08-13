@@ -104,6 +104,11 @@ class VisualNovelScene {
     _cleanupListeners() {
         $(document).off(VisualNovelScene.NS);
         this._removeAtmoOutsideListener();
+        this._removeSoundsOutsideListener();
+        if (this._soundHookId != null) {
+            Hooks.off('updatePlaylistSound', this._soundHookId);
+            this._soundHookId = null;
+        }
         this._atmosphere.destroy();
     }
 
@@ -111,6 +116,13 @@ class VisualNovelScene {
         if (this._atmoOutsideListener) {
             document.removeEventListener('click', this._atmoOutsideListener, true);
             this._atmoOutsideListener = null;
+        }
+    }
+
+    _removeSoundsOutsideListener() {
+        if (this._soundsOutsideListener) {
+            document.removeEventListener('click', this._soundsOutsideListener, true);
+            this._soundsOutsideListener = null;
         }
     }
 
@@ -419,6 +431,75 @@ class VisualNovelScene {
     }
 
     // ══════════════════════════════════════════════════════════
+    // Sound Cues
+    // ══════════════════════════════════════════════════════════
+
+    _buildSoundItemHtml(cue) {
+        const playing = parsePlaylistUuid(cue.uuid)?.sound?.playing ?? false;
+        const icon = playing ? 'fa-stop-circle' : 'fa-play-circle';
+        const cls = playing ? ' playing' : '';
+        return `<button type="button" class="vn-sound-item${cls}" data-uuid="${cue.uuid}" title="${cue.label || ''}">`
+            + `<i class="fas ${icon}"></i><span>${cue.label || 'Без названия'}</span></button>`;
+    }
+
+    _generateSoundsWrapHTML() {
+        const cues = this.state.soundCues || [];
+        const btn = (cls, icon, title) => `<button type="button" class="vn-toolbar-btn ${cls}" title="${title}"><i class="fas ${icon}"></i></button>`;
+        const items = cues.length
+            ? cues.map(c => this._buildSoundItemHtml(c)).join('')
+            : '<div class="vn-sounds-empty">Нет звуков</div>';
+        return `<div class="vn-sounds-wrap"${!cues.length ? ' hidden' : ''}>
+            ${btn('vn-sounds-btn', 'fa-volume-up', 'Звуки сцены')}
+            <div class="vn-sounds-picker" hidden>
+                <div class="vn-sounds-picker-header"><i class="fas fa-music"></i> Звуки</div>
+                <div class="vn-sounds-list">${items}</div>
+            </div>
+        </div>`;
+    }
+
+    _updateSoundsPanel() {
+        const overlay = this.$overlay?.[0];
+        const wrap = overlay?.querySelector('.vn-sounds-wrap');
+        if (!wrap) return;
+        const cues = this.state.soundCues || [];
+        wrap.hidden = !cues.length;
+        const picker = wrap.querySelector('.vn-sounds-picker');
+        if (!picker) return;
+        if (!cues.length) { picker.hidden = true; return; }
+        const list = picker.querySelector('.vn-sounds-list');
+        if (list) list.innerHTML = cues.map(c => this._buildSoundItemHtml(c)).join('');
+    }
+
+    _refreshSoundItemState(soundDoc) {
+        const list = this.$overlay?.[0]?.querySelector('.vn-sounds-list');
+        if (!list) return;
+        for (const cue of (this.state.soundCues || [])) {
+            // UUID format: Playlist.playlistId.PlaylistSound.soundId
+            if (cue.uuid?.split('.')?.[3] !== soundDoc.id) continue;
+            const btn = list.querySelector(`.vn-sound-item[data-uuid="${cue.uuid}"]`);
+            if (!btn) continue;
+            const playing = soundDoc.playing;
+            btn.classList.toggle('playing', playing);
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = `fas ${playing ? 'fa-stop-circle' : 'fa-play-circle'}`;
+        }
+    }
+
+    async playSoundCue(uuid) {
+        if (!game.user.isGM) return;
+        const parsed = parsePlaylistUuid(uuid);
+        const sound = parsed?.sound;
+        if (!sound) { ui.notifications.warn('Трек не найден'); return; }
+        const playlist = sound.parent;
+        if (sound.playing) {
+            await playlist.stopSound(sound);
+        } else {
+            await playlist.playSound(sound);
+        }
+        this._updateSoundsPanel();
+    }
+
+    // ══════════════════════════════════════════════════════════
     // GM-Only mode
     // ══════════════════════════════════════════════════════════
 
@@ -489,6 +570,7 @@ class VisualNovelScene {
             flipped: payload.flipped || {},
             hidden: payload.hidden || {},
             musicUuid: payload.musicUuid ?? null,
+            soundCues: payload.soundCues || [],
             portraitImages: payload.portraitImages || {},
             portraitNames: payload.portraitNames || {},
             portraitScales: payload.portraitScales || {},
@@ -558,6 +640,10 @@ class VisualNovelScene {
             const prevMusicUuid = this._sceneMusicUuid;
             this.state.musicUuid = payload.musicUuid;
             if (prevMusicUuid !== payload.musicUuid) this._handleMusicTransition(payload.musicUuid);
+        }
+        if (payload.soundCues !== undefined && payload.soundCues !== null) {
+            this.state.soundCues = [...payload.soundCues];
+            if (emit) this._updateSoundsPanel();
         }
 
         if ('gmOnly' in payload && emit && game.user.isGM) this._gmOnly = !!payload.gmOnly;
@@ -801,8 +887,11 @@ class VisualNovelScene {
 
         const atmoEffect = this.state.atmosphereEffect || 'particles';
 
-        const pickerItems = VNAtmosphere.EFFECTS.map(e =>
-            `<button type="button" class="vn-atmo-item${e === atmoEffect ? ' active' : ''}" data-effect="${e}" title="${VNAtmosphere.EFFECT_LABELS[e]}"><i class="fas ${VNAtmosphere.EFFECT_ICONS[e]}"></i><span>${VNAtmosphere.EFFECT_LABELS[e]}</span></button>`
+        const pickerItems = VNAtmosphere.EFFECT_GROUPS.map(group =>
+            `<div class="vn-atmo-group-header">${group.label}</div>`
+            + group.effects.map(e =>
+                `<button type="button" class="vn-atmo-item${e === atmoEffect ? ' active' : ''}" data-effect="${e}" title="${VNAtmosphere.EFFECT_LABELS[e]}"><i class="fas ${VNAtmosphere.EFFECT_ICONS[e]}"></i><span>${VNAtmosphere.EFFECT_LABELS[e]}</span></button>`
+            ).join('')
         ).join('');
 
         const btn = (cls, icon, title) => `<button type="button" class="vn-toolbar-btn ${cls}" title="${title}"><i class="fas ${icon}"></i></button>`;
@@ -817,6 +906,7 @@ class VisualNovelScene {
                         <div class="vn-atmosphere-picker-grid">${pickerItems}</div>
                     </div>
                 </div>
+                ${this._generateSoundsWrapHTML()}
                 ${btn('vn-minimize-all-button', 'fa-window-minimize', 'Свернуть для всех')}
                 ${btn('vn-minimize-self-button', 'fa-eye-slash', 'Свернуть для себя')}
                 ${btn('vn-epicrolls-button', 'fa-dice-d20', 'Epic Rolls')}
@@ -895,6 +985,29 @@ class VisualNovelScene {
 
         $(document).on(`click${ns}`, '.vn-broadcast-button', () => this.broadcastToPlayers());
 
+        $(document).on(`click${ns}`, '.vn-sounds-btn', (e) => {
+            e.stopPropagation();
+            const wrap = e.currentTarget.closest('.vn-sounds-wrap');
+            const picker = wrap?.querySelector('.vn-sounds-picker');
+            if (!picker) return;
+            if (!picker.hidden) { picker.hidden = true; return; }
+            picker.hidden = false;
+            this._updateSoundsPanel();
+            this._removeSoundsOutsideListener();
+            this._soundsOutsideListener = (ev) => {
+                if (!wrap.contains(ev.target)) {
+                    picker.hidden = true;
+                    this._removeSoundsOutsideListener();
+                }
+            };
+            setTimeout(() => document.addEventListener('click', this._soundsOutsideListener, true), 0);
+        });
+
+        $(document).on(`click${ns}`, '.vn-sound-item', (e) => {
+            const uuid = e.currentTarget.dataset.uuid;
+            if (uuid) this.playSoundCue(uuid);
+        });
+
         $(document).on(`click${ns}`, '.vn-atmo-item', (e) => {
             const effect = e.currentTarget.dataset.effect;
             if (!effect) return;
@@ -910,6 +1023,10 @@ class VisualNovelScene {
 
         $(document).on(`click${ns}`, VisualNovelScene.SEL.QUEUE_ITEM, (e) => { e.stopPropagation(); QueueBridge.announceAndRemove($(e.currentTarget).data('user-id')); });
         $(document).on(`contextmenu${ns}`, VisualNovelScene.SEL.QUEUE_ITEM, (e) => { e.preventDefault(); e.stopPropagation(); QueueBridge.removeFromQueue($(e.currentTarget).data('user-id')); });
+
+        this._soundHookId = Hooks.on('updatePlaylistSound', (soundDoc) => {
+            this._refreshSoundItemState(soundDoc);
+        });
     }
 
     _setupCharacterListeners() {

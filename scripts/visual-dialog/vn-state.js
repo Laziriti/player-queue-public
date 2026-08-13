@@ -25,6 +25,7 @@ class VNSceneState {
         this.flipped = {};
         this.hidden = {};
         this.musicUuid = null;
+        this.soundCues = [];
         this.portraitImages = {};
         this.portraitNames = {};
         this.portraitScales = {};
@@ -44,6 +45,7 @@ class VNSceneState {
             flipped: { ...this.flipped },
             hidden: { ...this.hidden },
             musicUuid: this.musicUuid,
+            soundCues: [...(this.soundCues || [])],
             portraitImages: { ...this.portraitImages },
             portraitNames: { ...this.portraitNames },
             portraitScales: { ...this.portraitScales },
@@ -61,6 +63,7 @@ class VNSceneState {
         this.flipped = { ...(p.flipped ?? {}) };
         this.hidden = { ...(p.hidden ?? {}) };
         this.musicUuid = p.musicUuid ?? null;
+        this.soundCues = [...(p.soundCues ?? [])];
         this.portraitImages = { ...(p.portraitImages ?? {}) };
         this.portraitNames = { ...(p.portraitNames ?? {}) };
         this.portraitScales = { ...(p.portraitScales ?? {}) };

@@ -3,6 +3,18 @@
 // ============================================================
 
 /**
+ * Группы эффектов для UI (picker + optgroup в select)
+ */
+export const EFFECT_GROUPS = [
+    { id: 'basic',   label: 'Базовые',   effects: ['none', 'particles', 'snow', 'rain', 'embers', 'fireflies'] },
+    { id: 'nature',  label: 'Природа',   effects: ['storm', 'underwater', 'moonlit', 'sakura', 'sandstorm', 'ash_wasteland'] },
+    { id: 'magic',   label: 'Магия',     effects: ['divine', 'sacred', 'warm', 'dream', 'ethereal_plane', 'frozen'] },
+    { id: 'dark',    label: 'Тьма',      effects: ['dark_ritual', 'eldritch', 'corruption', 'abyss', 'shadow_intrigue'] },
+    { id: 'chaos',   label: 'Хаос',      effects: ['inferno', 'apocalypse', 'blood_moon', 'cosmic_horror', 'void_breach', 'glass_shatter'] },
+    { id: 'special', label: 'Особые',    effects: ['carnival', 'ghosts'] },
+];
+
+/**
  * Список всех доступных эффектов (ID)
  */
 export const EFFECTS = [

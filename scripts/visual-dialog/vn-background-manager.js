@@ -160,8 +160,10 @@ export class VNBackgroundManager {
 
     generateSelector(currentBg = null, currentOverlay = true, currentEffect = 'particles') {
         const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
-        const effectOptions = VNAtmosphere.EFFECTS
-            .map(e => `<option value="${e}" ${e === currentEffect ? 'selected' : ''}>${VNAtmosphere.EFFECT_LABELS[e]}</option>`)
+        const effectOptions = VNAtmosphere.EFFECT_GROUPS
+            .map(g => `<optgroup label="${g.label}">${
+                g.effects.map(e => `<option value="${e}" ${e === currentEffect ? 'selected' : ''}>${VNAtmosphere.EFFECT_LABELS[e]}</option>`).join('')
+            }</optgroup>`)
             .join('');
         const customFolder = VNBackgroundManager.getCustomFolder();
         const folderLabel = customFolder

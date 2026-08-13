@@ -98,6 +98,7 @@ export class VNSocketHandler {
                     atmosphereEffect: p.atmosphereEffect ?? null,
                     hidden: p.hidden ?? null,
                     portraitScales: p.portraitScales ?? null,
+                    soundCues: p.soundCues ?? null,
                 }, false);
                 break;
             case 'minimize':             s.setMinimized(true, false, true, true); break;
