@@ -124,7 +124,7 @@
 
 /* Портреты игроков */
 .floating-queue .queue-player,
-#player-queue-dialog .queue-player {
+.queue-dialog .queue-player {
     position: relative;
     width: var(--queue-size, 50px);
     height: var(--queue-size, 50px);
@@ -136,12 +136,12 @@
 }
 
 .floating-queue .queue-player.gm-clickable,
-#player-queue-dialog .queue-player.gm-clickable {
+.queue-dialog .queue-player.gm-clickable {
     cursor: pointer;
 }
 
 .floating-queue .queue-player.gm-clickable:hover,
-#player-queue-dialog .queue-player.gm-clickable:hover {
+.queue-dialog .queue-player.gm-clickable:hover {
     opacity: 0.8;
     transform: scale(1.05);
     transition: all 0.2s ease;
@@ -149,7 +149,7 @@
 }
 
 .floating-queue .queue-player img,
-#player-queue-dialog .queue-player img {
+.queue-dialog .queue-player img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -157,7 +157,7 @@
 
 /* Бейдж приоритета */
 .floating-queue .priority-badge,
-#player-queue-dialog .priority-badge {
+.queue-dialog .priority-badge {
     position: absolute;
     top: -5px;
     left: -5px;
@@ -174,20 +174,20 @@
     text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
 }
 
-/* Диалог очереди */
-#player-queue-dialog .dialog-content {
+/* Диалог очереди — хром окна */
+.dialog:has(.queue-dialog) .dialog-content {
     padding: 15px;
     background: var(--pq-bg-primary);
     color: var(--pq-text-primary);
 }
 
-#player-queue-dialog .window-header {
+.dialog:has(.queue-dialog) .window-header {
     background: var(--pq-bg-secondary);
     color: var(--pq-text-primary);
     border-bottom: 1px solid var(--pq-border-light);
 }
 
-#player-queue-dialog .queue-container {
+.queue-dialog .queue-container {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
@@ -199,7 +199,7 @@
     background: var(--pq-container-bg);
 }
 
-#player-queue-dialog .queue-empty {
+.queue-dialog .queue-empty {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -209,14 +209,14 @@
 }
 
 /* Контролы очереди */
-#player-queue-dialog .queue-controls {
+.queue-dialog .queue-controls {
     display: flex;
     flex-direction: column;
     gap: 10px;
     margin-bottom: 15px;
 }
 
-#player-queue-dialog .queue-controls button {
+.queue-dialog .queue-controls button {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
@@ -225,19 +225,19 @@
     transition: all 0.2s ease;
 }
 
-#player-queue-dialog .join-btn {
+.queue-dialog .join-btn {
     background: linear-gradient(135deg, #28a745, #20c997);
     color: white;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-#player-queue-dialog .join-btn:hover {
+.queue-dialog .join-btn:hover {
     background: linear-gradient(135deg, #20c997, #28a745);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-#player-queue-dialog .leave-btn {
+.queue-dialog .leave-btn {
     background: linear-gradient(135deg, #6c757d, #868e96);
     color: white;
     border: none;
@@ -248,12 +248,12 @@
     transition: all 0.2s ease;
 }
 
-#player-queue-dialog .leave-btn:hover {
+.queue-dialog .leave-btn:hover {
     background: linear-gradient(135deg, #868e96, #6c757d);
     transform: translateY(-1px);
 }
 
-#player-queue-dialog .clear-btn {
+.queue-dialog .clear-btn {
     background: linear-gradient(135deg, #ffc107, #ffca2c);
     color: #333;
     border: none;
@@ -265,24 +265,24 @@
     margin-top: 5px;
 }
 
-#player-queue-dialog .clear-btn:hover {
+.queue-dialog .clear-btn:hover {
     background: linear-gradient(135deg, #ffca2c, #ffc107);
     transform: translateY(-1px);
 }
 
-#player-queue-dialog .change-priority-btn {
+.queue-dialog .change-priority-btn {
     background: linear-gradient(135deg, #17a2b8, #20c997);
     color: white;
     margin-left: 10px;
 }
 
-#player-queue-dialog .change-priority-btn:hover {
+.queue-dialog .change-priority-btn:hover {
     background: linear-gradient(135deg, #20c997, #17a2b8);
     transform: translateY(-1px);
 }
 
 /* Текущий приоритет */
-#player-queue-dialog .current-priority {
+.queue-dialog .current-priority {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -290,19 +290,19 @@
     justify-content: center;
 }
 
-#player-queue-dialog .current-priority span {
+.queue-dialog .current-priority span {
     color: var(--pq-text-primary);
     font-size: 14px;
 }
 
 /* Информация об очереди */
-#player-queue-dialog .queue-info {
+.queue-dialog .queue-info {
     text-align: center;
     font-size: 12px;
     color: var(--pq-text-secondary);
 }
 
-#player-queue-dialog .priority-legend {
+.queue-dialog .priority-legend {
     margin-top: 8px;
     padding: 8px;
     background: var(--pq-settings-bg);
@@ -311,7 +311,7 @@
 }
 
 /* Селектор приоритета */
-#player-queue-dialog .priority-btn {
+.queue-dialog .priority-btn {
     background: var(--pq-button-bg);
     border: 2px solid var(--pq-button-border);
     color: var(--pq-text-primary);
@@ -324,24 +324,24 @@
     text-align: center;
 }
 
-#player-queue-dialog .priority-btn:hover {
+.queue-dialog .priority-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-#player-queue-dialog .priority-btn:active {
+.queue-dialog .priority-btn:active {
     transform: translateY(0px);
 }
 
 /* Кнопки приоритета для вступления в очередь */
-#player-queue-dialog .priority-buttons {
+.queue-dialog .priority-buttons {
     display: flex;
     gap: 8px;
     justify-content: center;
     flex-wrap: wrap;
 }
 
-#player-queue-dialog .priority-join-btn {
+.queue-dialog .priority-join-btn {
     display: flex;
     max-width: 100px;
     max-height: 100px;
@@ -358,70 +358,70 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-#player-queue-dialog .priority-join-btn:hover {
+.queue-dialog .priority-join-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-#player-queue-dialog .priority-join-btn:active {
+.queue-dialog .priority-join-btn:active {
     transform: translateY(0px);
 }
 
-#player-queue-dialog .priority-join-btn.low {
+.queue-dialog .priority-join-btn.low {
     background: linear-gradient(135deg, #28a745, #20c997);
     color: white;
 }
 
-#player-queue-dialog .priority-join-btn.medium {
+.queue-dialog .priority-join-btn.medium {
     background: linear-gradient(135deg, #ffc107, #ffca2c);
     color: #333;
 }
 
-#player-queue-dialog .priority-join-btn.high {
+.queue-dialog .priority-join-btn.high {
     background: linear-gradient(135deg, #dc3545, #e74c3c);
     color: white;
 }
 
-#player-queue-dialog .priority-join-btn .priority-icon {
+.queue-dialog .priority-join-btn .priority-icon {
     font-size: 16px;
     margin-bottom: 2px;
 }
 
-#player-queue-dialog .priority-join-btn .priority-text {
+.queue-dialog .priority-join-btn .priority-text {
     font-size: 11px;
 }
 
 /* Управление для игроков уже в очереди */
-#player-queue-dialog .current-player-controls {
+.queue-dialog .current-player-controls {
     display: flex;
     flex-direction: column;
     gap: 10px;
     align-items: center;
 }
 
-#player-queue-dialog .current-priority-info {
+.queue-dialog .current-priority-info {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 14px;
 }
 
-#player-queue-dialog .current-priority-label {
+.queue-dialog .current-priority-label {
     color: var(--pq-text-primary);
 }
 
-#player-queue-dialog .current-priority-value {
+.queue-dialog .current-priority-value {
     font-weight: bold;
     font-size: 16px;
 }
 
 /* Кнопки изменения приоритета */
-#player-queue-dialog .priority-change-buttons {
+.queue-dialog .priority-change-buttons {
     display: flex;
     gap: 5px;
 }
 
-#player-queue-dialog .priority-change-btn {
+.queue-dialog .priority-change-btn {
     width: 35px;
     height: 35px;
     border: 2px solid;
@@ -436,41 +436,41 @@
     justify-content: center;
 }
 
-#player-queue-dialog .priority-change-btn.low {
+.queue-dialog .priority-change-btn.low {
     border-color: #28a745;
     color: #28a745;
 }
 
-#player-queue-dialog .priority-change-btn.medium {
+.queue-dialog .priority-change-btn.medium {
     border-color: #ffc107;
     color: #ffc107;
 }
 
-#player-queue-dialog .priority-change-btn.high {
+.queue-dialog .priority-change-btn.high {
     border-color: #dc3545;
     color: #dc3545;
 }
 
-#player-queue-dialog .priority-change-btn:hover {
+.queue-dialog .priority-change-btn:hover {
     transform: scale(1.1);
 }
 
-#player-queue-dialog .priority-change-btn.active {
+.queue-dialog .priority-change-btn.active {
     background: currentColor;
     color: white;
     box-shadow: 0 0 10px currentColor;
 }
 
-#player-queue-dialog .priority-change-btn.low.active {
+.queue-dialog .priority-change-btn.low.active {
     background: #28a745;
 }
 
-#player-queue-dialog .priority-change-btn.medium.active {
+.queue-dialog .priority-change-btn.medium.active {
     background: #ffc107;
     color: #333;
 }
 
-#player-queue-dialog .priority-change-btn.high.active {
+.queue-dialog .priority-change-btn.high.active {
     background: #dc3545;
 }
 
@@ -575,17 +575,17 @@
 
 /* Адаптивность */
 @media (max-width: 768px) {
-    #player-queue-dialog .queue-container {
+    .queue-dialog .queue-container {
         padding: 10px;
         min-height: 100px;
     }
 
-    #player-queue-dialog .queue-controls {
+    .queue-dialog .queue-controls {
         flex-direction: column;
         align-items: center;
     }
 
-    #player-queue-dialog .current-priority {
+    .queue-dialog .current-priority {
         flex-direction: column;
         text-align: center;
     }
@@ -593,41 +593,49 @@
 
 /* Адаптивность для мобильных */
 @media (max-width: 480px) {
-    #player-queue-dialog .priority-buttons {
+    .queue-dialog .priority-buttons {
         flex-direction: column;
         align-items: center;
     }
 
-    #player-queue-dialog .priority-join-btn {
+    .queue-dialog .priority-join-btn {
         min-width: 100px;
     }
 
-    #player-queue-dialog .priority-change-buttons {
+    .queue-dialog .priority-change-buttons {
         gap: 8px;
     }
 
-    #player-queue-dialog .priority-change-btn {
+    .queue-dialog .priority-change-btn {
         width: 40px;
         height: 40px;
     }
 }
 
 /* Стили для тёмной темы в диалогах FoundryVTT */
-.player-queue-dark-theme #player-queue-dialog {
+.player-queue-dark-theme .dialog:has(.queue-dialog) {
     background: var(--pq-bg-primary);
 }
 
-.player-queue-dark-theme #player-queue-dialog .window-header {
+.player-queue-dark-theme .dialog:has(.queue-dialog) .window-header {
     background: var(--pq-bg-secondary);
     border-bottom-color: var(--pq-border-light);
 }
 
-.player-queue-dark-theme #player-queue-dialog .window-title {
+.player-queue-dark-theme .dialog:has(.queue-dialog) .window-title {
     color: var(--pq-text-primary);
 }
 
-.player-queue-dark-theme #player-queue-dialog .window-content {
-    background: var(--pq-bg-primary);
+body.player-queue-dark-theme .dialog:has(.queue-dialog) .window-content,
+body.player-queue-dark-theme .dialog:has(.queue-dialog) .dialog-form,
+body.player-queue-dark-theme .dialog:has(.queue-dialog) .dialog-content {
+    background: var(--pq-bg-primary) !important;
+    color: var(--pq-text-primary) !important;
+}
+
+body.player-queue-dark-theme .dialog:has(.queue-dialog) .form-footer {
+    background: var(--pq-bg-secondary) !important;
+    border-top: 1px solid var(--pq-border-light);
 }
 
 

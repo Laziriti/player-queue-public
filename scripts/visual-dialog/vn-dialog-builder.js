@@ -110,7 +110,7 @@ export class VNDialogBuilder {
 
     _handleSubmit(root, isEdit, backgroundOnly = false) {
         const getRawIds = (sel) => Array.from(root.querySelectorAll(`${sel} .vn-token-option`))
-            .map(el => el.dataset.tokenId || (el.dataset.actorId ? `actor-${el.dataset.actorId}` : null)).filter(Boolean);
+            .map(el => el.dataset.actorId ? `actor-${el.dataset.actorId}` : (el.dataset.tokenId || null)).filter(Boolean);
 
         const allRaw = backgroundOnly ? [] : [...getRawIds('#left-tokens'), ...getRawIds('#center-tokens'), ...getRawIds('#right-tokens')];
         const allDeduped = VNDialogBuilder._deduplicateIds(allRaw);
@@ -682,7 +682,7 @@ export class VNDialogBuilder {
             backgroundOverlay: root.querySelector('#background-overlay')?.checked ?? true,
             atmosphereEffect: root.querySelector('#atmosphere-effect')?.value || 'particles',
             portraitScale: scene.state.portraitScale,
-            portraitScales: scene.state.isActive ? { ...scene.state.portraitScales } : {},
+            portraitScales: scene.state.isActive ? { ...scene.state.portraitScales } : { ...(root._vnPendingScales ?? {}) },
             hidden: hiddenIds,
             musicUuid: root.querySelector('#vn-music-uuid')?.value || null,
             soundCues: this._gatherSoundCues(root),

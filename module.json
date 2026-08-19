@@ -2,7 +2,7 @@
   "id": "player-queue",
   "title": "Player Queue",
   "description": "<p>Модуль для управления очередью игроков. А также механизм создания и управления сценами для диалогов.</p>",
-  "version": "14.2.2",
+  "version": "14.3.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

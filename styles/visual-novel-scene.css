@@ -379,6 +379,209 @@
     50%       { box-shadow: 0 0 18px rgba(163, 190, 140, 0.7); }
 }
 
+.vn-chat-button:hover {
+    background: rgba(136, 192, 208, 0.2);
+    border-color: var(--vn-accent);
+    color: var(--vn-accent);
+}
+
+.vn-chat-button.active {
+    background: rgba(136, 192, 208, 0.15);
+    border-color: var(--vn-accent);
+    color: var(--vn-accent);
+    box-shadow: 0 0 12px rgba(136, 192, 208, 0.3);
+}
+
+.vn-chat-button.active:hover {
+    background: rgba(136, 192, 208, 0.25);
+    box-shadow: 0 0 18px rgba(136, 192, 208, 0.4);
+}
+
+/* ── VN Chat Panel ── */
+.vn-chat-panel {
+    position: absolute;
+    top: 62px;
+    right: 14px;
+    width: 310px;
+    max-height: calc(100vh - 100px);
+    z-index: 103;
+    display: flex;
+    flex-direction: column;
+    background: rgba(8, 12, 20, 0.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: vn-chat-panel-in 0.25s ease both;
+}
+
+@keyframes vn-chat-panel-in {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+}
+
+.vn-chat-panel[hidden] { display: none !important; }
+
+.vn-chat-panel-header {
+    flex-shrink: 0;
+    padding: 9px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.45);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.vn-chat-panel-header i { color: var(--vn-accent); font-size: 13px; }
+
+/* Foundry #chat relocated inside the VN panel */
+.vn-chat-panel #chat {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden;
+}
+
+/* Hide any sidebar tab chrome that comes along */
+.vn-chat-panel #chat > header,
+.vn-chat-panel #chat > nav {
+    display: none !important;
+}
+
+.vn-chat-panel #chat-log {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    background: transparent !important;
+    padding: 4px;
+}
+
+.vn-chat-panel #chat-log::-webkit-scrollbar { width: 4px; }
+.vn-chat-panel #chat-log::-webkit-scrollbar-track { background: transparent; }
+.vn-chat-panel #chat-log::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+}
+
+/* Message container */
+.vn-chat-panel .chat-message {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 8px;
+    margin: 2px 0 !important;
+    /* Flip Foundry's CSS variables for dark-on-light text */
+    --color-text-dark-primary: rgba(215, 215, 225, 0.92);
+    --color-text-dark-secondary: rgba(180, 180, 195, 0.8);
+    --color-text-dark-heading: rgba(225, 225, 235, 1);
+    --color-text-dark-inactive: rgba(150, 150, 170, 0.7);
+    --color-dark-text: rgba(215, 215, 225, 0.92);
+    color: rgba(215, 215, 225, 0.92);
+}
+
+/* Force light text on everything — catches hardcoded color: #000 / color: #191813 */
+.vn-chat-panel .chat-message * { color: rgba(215, 215, 225, 0.92) !important; }
+
+/* Clear backgrounds — but skip elements with inline background (token portraits, etc.) */
+.vn-chat-panel .chat-message div:not([style*="background"]),
+.vn-chat-panel .chat-message section,
+.vn-chat-panel .chat-message article,
+.vn-chat-panel .chat-message header,
+.vn-chat-panel .chat-message footer,
+.vn-chat-panel .chat-message aside,
+.vn-chat-panel .chat-message table,
+.vn-chat-panel .chat-message tbody,
+.vn-chat-panel .chat-message tr,
+.vn-chat-panel .chat-message td,
+.vn-chat-panel .chat-message th,
+.vn-chat-panel .chat-message ol,
+.vn-chat-panel .chat-message ul,
+.vn-chat-panel .chat-message li:not(.chat-message) {
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Restore links and dice accents */
+.vn-chat-panel .chat-message a,
+.vn-chat-panel .chat-message a.inline-roll,
+.vn-chat-panel .chat-message a.roll { color: var(--vn-accent) !important; }
+.vn-chat-panel .chat-message .dice-total { color: var(--vn-accent) !important; }
+
+/* Chat input area (v14: form.chat-form) */
+.vn-chat-panel .chat-form,
+.vn-chat-panel #chat-form {
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.4) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px !important;
+}
+
+.vn-chat-panel #chat-controls {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 2px 6px;
+}
+
+.vn-chat-panel #chat-controls button {
+    color: rgba(215, 215, 225, 0.7) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 4px !important;
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+}
+
+.vn-chat-panel #chat-controls button[aria-pressed="true"] {
+    color: var(--vn-accent) !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: var(--vn-accent) !important;
+}
+
+.vn-chat-panel #chat-controls .control-buttons {
+    margin-left: auto;
+}
+
+.vn-chat-panel #chat-message {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(215, 215, 225, 0.92) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 6px !important;
+}
+
+.vn-chat-panel #chat-message .editor-content {
+    color: rgba(215, 215, 225, 0.92) !important;
+    min-height: 32px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 4px 8px;
+}
+
+.vn-chat-panel #chat-message .editor-menu {
+    background: rgba(20, 24, 35, 0.95) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.vn-chat-panel #chat-message .editor-menu button {
+    color: rgba(215, 215, 225, 0.7) !important;
+}
+
+.vn-chat-panel .jump-to-bottom {
+    color: var(--vn-accent) !important;
+}
+
 /* GM-only mode: subtle top-left badge */
 #vn-scene-overlay.vn-gm-only::before {
     content: '👁 Только ГМ';
@@ -2913,3 +3116,43 @@
 .vn-io-copy-btn:hover {
     opacity: 1;
 }
+
+
+.vn-chat-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.vn-chat-panel[hidden] {
+    display: none !important;
+}
+
+.vn-chat-panel > #chat {
+    position: relative;
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.vn-chat-panel #chat-log,
+.vn-chat-panel .chat-log,
+.vn-chat-panel .chat-scroll,
+.vn-chat-panel .chat-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.vn-chat-panel #chat-form,
+.vn-chat-panel .chat-form {
+    flex: 0 0 auto;
+}
+

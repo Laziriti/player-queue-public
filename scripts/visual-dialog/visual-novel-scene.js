@@ -50,6 +50,16 @@ class VisualNovelScene {
         this._sceneMusicUuid = null;
         this._pausedSounds = null; // null = scene music never started; array = it has
         this._gmOnly = false;      // true = scene hidden from players until "broadcast"
+
+        this._chatVisible = false;
+        this._chatBusy = false;
+        this._chatOpenToken = 0;
+
+        this._movedChat = null;
+        this._chatPlaceholder = null;
+        this._chatOriginalParent = null;
+        this._chatOriginalNextSibling = null;
+        this._chatRestoreState = null;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -588,6 +598,8 @@ class VisualNovelScene {
             this._sceneMusicUuid = musicUuid;
         }
 
+        this._closeChatPanel();
+
         $(VisualNovelScene.SEL.OVERLAY).remove();
         this._invalidateOverlayCache();
         this._cleanupListeners();
@@ -729,6 +741,7 @@ class VisualNovelScene {
     closeScene(emit = true) {
         if (emit && !game.user.isGM) return;
         if (emit) this.stopSceneMusic(true);
+        this._closeChatPanel();
         this._cleanupListeners();
 
         const $ov = this.$overlay;
@@ -911,9 +924,13 @@ class VisualNovelScene {
                 ${btn('vn-minimize-self-button', 'fa-eye-slash', 'Свернуть для себя')}
                 ${btn('vn-epicrolls-button', 'fa-dice-d20', 'Epic Rolls')}
                 <button type="button" class="vn-toolbar-btn vn-broadcast-button" title="Показать игрокам" style="display:none"><i class="fas fa-broadcast-tower"></i></button>
+                ${btn('vn-chat-button', 'fa-comments', 'Показать чат')}
                 ${btn('vn-close-button', 'fa-times', 'Закрыть сцену')}
             </div>`
-            : '<button type="button" class="vn-toolbar-btn vn-close-button vn-close-standalone" title="Закрыть"><i class="fas fa-times"></i></button>';
+            : `<div class="vn-toolbar">
+                ${btn('vn-chat-button', 'fa-comments', 'Показать чат')}
+                ${btn('vn-close-button', 'fa-times', 'Закрыть')}
+            </div>`;
 
         const maxBar = isGM ? `<div class="vn-maximized-actions">
             <button type="button" class="vn-toolbar-btn vn-maximize-all-button" title="Развернуть для всех"><i class="fas fa-window-maximize"></i></button>
@@ -928,6 +945,9 @@ class VisualNovelScene {
             <div class="vn-queue-display">${this._generateQueueDisplay(qd)}</div>
             ${sides}${toolbar}
             <div class="vn-maximized-bar"><span class="vn-scene-title"><i class="fas fa-theater-masks"></i> Диалоговая сцена</span>${maxBar}</div>
+            <div class="vn-chat-panel" hidden>
+                <div class="vn-chat-panel-header"><i class="fas fa-comments"></i> Чат</div>
+            </div>
         </div>`;
     }
 
@@ -940,6 +960,8 @@ class VisualNovelScene {
         const ns = VisualNovelScene.NS;
 
         $(document).on(`click${ns}`, '.vn-close-button', () => this.closeScene(true));
+        $(document).on(`click${ns}`, '.vn-chat-button', () => this._toggleChat());
+
         $(document).on(`keydown${ns}`, (e) => {
             if (e.key === 'Escape') {
                 const picker = document.querySelector('#vn-scene-overlay .vn-atmosphere-picker');
@@ -1027,6 +1049,515 @@ class VisualNovelScene {
         this._soundHookId = Hooks.on('updatePlaylistSound', (soundDoc) => {
             this._refreshSoundItemState(soundDoc);
         });
+    }
+
+    _getChatElement() {
+        const byId = document.getElementById('chat');
+        if (byId) return byId;
+
+        const element = ui.chat?.element;
+        if (element instanceof HTMLElement) return element;
+        if (element?.[0] instanceof HTMLElement) return element[0];
+
+        return null;
+    }
+
+    _chatHasComposer(chat) {
+        if (!chat) return false;
+
+        return !!chat.querySelector([
+            '#chat-form',
+            '.chat-form',
+            '#chat-message',
+            'textarea[name="message"]',
+            'form'
+        ].join(','));
+    }
+
+    _getActiveSidebarTab() {
+        return ui.sidebar?.tabGroups?.primary
+            ?? ui.sidebar?.activeTab
+            ?? document.querySelector(
+                '#sidebar-content > .tab.active, #sidebar-content [data-tab].active'
+            )?.dataset?.tab
+            ?? null;
+    }
+
+    _captureSidebarState() {
+        const sidebar = ui.sidebar;
+        const sidebarEl = document.getElementById('sidebar');
+        const sidebarContent = document.getElementById('sidebar-content');
+
+        let expanded;
+
+        if (typeof sidebar?._collapsed === 'boolean') {
+            expanded = !sidebar._collapsed;
+        } else if (typeof sidebar?.collapsed === 'boolean') {
+            expanded = !sidebar.collapsed;
+        } else if (sidebarContent) {
+            expanded = sidebarContent.classList.contains('expanded');
+        } else {
+            expanded = !sidebarEl?.classList.contains('collapsed');
+        }
+
+        return {
+            activeTab: this._getActiveSidebarTab(),
+            expanded
+        };
+    }
+
+    async _setSidebarExpanded(expanded) {
+        const sidebar = ui.sidebar;
+        const method = expanded ? sidebar?.expand : sidebar?.collapse;
+
+        if (typeof method === 'function') {
+            try {
+                await Promise.resolve(method.call(sidebar));
+                return;
+            } catch (error) {
+                console.warn('[VN] Sidebar expand/collapse failed:', error);
+            }
+        }
+
+        // Fallback для версий/сборок, где публичного метода нет.
+        const sidebarContent = document.getElementById('sidebar-content');
+        if (sidebarContent) {
+            sidebarContent.classList.toggle('expanded', expanded);
+        }
+
+        const sidebarEl = document.getElementById('sidebar');
+        if (sidebarEl) {
+            sidebarEl.classList.toggle('collapsed', !expanded);
+        }
+    }
+
+    async _activateSidebarTab(tabName) {
+        if (!tabName) return;
+
+        const sidebar = ui.sidebar;
+
+        try {
+            // ApplicationV2 / Foundry v14.
+            if (typeof sidebar?.changeTab === 'function') {
+                await Promise.resolve(
+                    sidebar.changeTab(tabName, 'primary')
+                );
+            }
+            // Совместимость со старым API.
+            else if (typeof sidebar?.activateTab === 'function') {
+                await Promise.resolve(
+                    sidebar.activateTab(tabName)
+                );
+            }
+            // Последний fallback — нажатие на кнопку вкладки.
+            else {
+                const buttons = document.querySelectorAll(
+                    '#sidebar-tabs [data-tab], [data-group="primary"][data-tab]'
+                );
+
+                const button = Array.from(buttons).find(
+                    el => el.dataset.tab === tabName
+                );
+
+                button?.click();
+            }
+        } catch (error) {
+            console.warn(`[VN] Failed to activate sidebar tab "${tabName}":`, error);
+        }
+
+        // Даём Foundry завершить смену вкладки.
+        await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+
+    _waitForChatReady(timeout = 2500) {
+        const getReadyChat = () => {
+            const chat = this._getChatElement();
+            return this._chatHasComposer(chat) ? chat : null;
+        };
+
+        const ready = getReadyChat();
+        if (ready) return Promise.resolve(ready);
+
+        return new Promise(resolve => {
+            let observer = null;
+            let timer = null;
+            let finished = false;
+
+            const finish = chat => {
+                if (finished) return;
+                finished = true;
+
+                observer?.disconnect();
+                clearTimeout(timer);
+
+                resolve(chat);
+            };
+
+            observer = new MutationObserver(() => {
+                const chat = getReadyChat();
+                if (chat) finish(chat);
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            timer = setTimeout(() => {
+                finish(getReadyChat());
+            }, timeout);
+        });
+    }
+
+    async _forceRenderChat() {
+        if (typeof ui.chat?.render !== 'function') return;
+
+        try {
+            /*
+             * В ApplicationV2 это render({ force: true }).
+             * В старом Application объект также является truthy-значением
+             * параметра force, поэтому остаётся совместимость.
+             */
+            await Promise.resolve(
+                ui.chat.render({ force: true })
+            );
+        } catch (error) {
+            console.warn('[VN] Forced chat render failed:', error);
+        }
+
+        // Позволяет renderChatLog и Dice Tray закончить вставку элементов.
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+
+    async _restoreSidebarAfterChatInit(state) {
+        if (!state) return;
+
+        // Возвращаем вкладку, которая была открыта до временной
+        // инициализации чата.
+        if (state.activeTab && state.activeTab !== 'chat') {
+            await this._activateSidebarTab(state.activeTab);
+        }
+
+        // Если sidebar был свёрнут, снова сворачиваем его.
+        if (!state.expanded) {
+            await this._setSidebarExpanded(false);
+        }
+    }
+
+    async _toggleChat() {
+        if (this._chatBusy) return;
+
+        const panel = this.$overlay?.[0]?.querySelector('.vn-chat-panel');
+        if (!panel) return;
+
+        if (this._chatVisible || this._movedChat) {
+            this._closeChatPanel();
+            return;
+        }
+
+        this._chatBusy = true;
+        const token = ++this._chatOpenToken;
+
+        panel.hidden = false;
+        panel.style.visibility = 'hidden';
+
+        try {
+            const opened = await this._openChatPanel(panel, token);
+
+            if (!opened || token !== this._chatOpenToken) {
+                panel.hidden = true;
+                panel.style.visibility = '';
+                return;
+            }
+
+            this._chatVisible = true;
+            panel.style.visibility = '';
+
+            this.$overlay
+                .find('.vn-chat-button')
+                .addClass('active');
+        } catch (error) {
+            console.error('[VN] Failed to open chat panel:', error);
+
+            panel.hidden = true;
+            panel.style.visibility = '';
+
+            ui.notifications?.warn(
+                'Не удалось открыть чат. Проверьте консоль браузера.'
+            );
+        } finally {
+            this._chatBusy = false;
+        }
+    }
+
+    async _openChatPanel(panelEl, token) {
+        const sidebarState = this._captureSidebarState();
+        const initialChat = this._getChatElement();
+
+        /*
+         * Состояние вкладки сохраняем до временной активации чата.
+         * Нельзя сохранять className после activateTab("chat"),
+         * иначе при возврате в sidebar чат останется active.
+         */
+        const restoreState = {
+            wasActive: initialChat?.classList.contains('active')
+                ?? sidebarState.activeTab === 'chat',
+
+            hadHidden: initialChat?.hasAttribute('hidden') ?? false,
+            ariaHidden: initialChat?.getAttribute('aria-hidden') ?? null
+        };
+
+        let chat = initialChat;
+        let sidebarWasTemporarilyChanged = false;
+
+        try {
+            /*
+             * Если формы сообщения нет, чат ещё не был полноценно
+             * отрендерен. Временно раскрываем sidebar и активируем чат.
+             */
+            if (!this._chatHasComposer(chat)) {
+                sidebarWasTemporarilyChanged = true;
+
+                if (!sidebarState.expanded) {
+                    await this._setSidebarExpanded(true);
+                }
+
+                if (token !== this._chatOpenToken) return false;
+
+                await this._activateSidebarTab('chat');
+
+                if (token !== this._chatOpenToken) return false;
+
+                // После активации обязательно заново получаем #chat:
+                // Foundry мог заменить старый DOM-элемент новым.
+                chat = await this._waitForChatReady(1200);
+
+                /*
+                 * activateTab обычно достаточно. Принудительный render
+                 * используется только как fallback, чтобы не вызывать
+                 * повторные renderChatLog и дубли Dice Tray.
+                 */
+                if (!this._chatHasComposer(chat)) {
+                    await this._forceRenderChat();
+                    chat = await this._waitForChatReady(2500);
+                }
+            }
+
+            if (token !== this._chatOpenToken) return false;
+
+            // Ещё раз берём актуальный элемент после всех рендеров.
+            chat = this._getChatElement();
+
+            if (!chat || !this._chatHasComposer(chat)) {
+                throw new Error(
+                    'Foundry rendered the chat without its message form'
+                );
+            }
+
+            /*
+             * Даём сторонним модулям обработать renderChatLog.
+             * В частности, Dice Tray успевает вставить свой нижний блок
+             * до перемещения чата.
+             */
+            await new Promise(resolve => setTimeout(resolve, 0));
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            if (token !== this._chatOpenToken) return false;
+
+            // Комментарий надёжнее nextElementSibling: сохраняет точное место.
+            const placeholder = document.createComment(
+                'VN chat original position'
+            );
+
+            const originalParent = chat.parentNode;
+            if (!originalParent) {
+                throw new Error('Chat has no parent element');
+            }
+
+            originalParent.insertBefore(placeholder, chat);
+
+            this._chatPlaceholder = placeholder;
+            this._chatOriginalParent = originalParent;
+            this._chatOriginalNextSibling = chat.nextSibling;
+            this._chatRestoreState = restoreState;
+            this._movedChat = chat;
+
+            panelEl.appendChild(chat);
+
+            // Вне sidebar класс вкладки всё равно должен быть активным.
+            chat.classList.add('active');
+            chat.removeAttribute('hidden');
+            chat.setAttribute('aria-hidden', 'false');
+        } finally {
+            /*
+             * Возвращаем пользователю исходную вкладку и состояние sidebar
+             * только после того, как чат уже перенесён.
+             */
+            if (sidebarWasTemporarilyChanged) {
+                await this._restoreSidebarAfterChatInit(sidebarState);
+            }
+        }
+
+        if (token !== this._chatOpenToken || this._movedChat !== chat) {
+            return false;
+        }
+
+        // Смена вкладки могла попытаться снять active.
+        chat.classList.add('active');
+        chat.removeAttribute('hidden');
+        chat.setAttribute('aria-hidden', 'false');
+
+        panelEl.style.visibility = '';
+
+        await new Promise(resolve => requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+        }));
+
+        this._scrollChatToBottom(chat);
+
+        return true;
+    }
+
+    _scrollChatToBottom(chat) {
+        if (!chat) return;
+
+        const scroll = () => {
+            // Не прокручиваем sidebar, если чат уже был возвращён обратно.
+            if (this._movedChat !== chat) return;
+
+            try {
+                const result = ui.chat?.scrollBottom?.({
+                    waitImages: true
+                });
+
+                Promise.resolve(result).catch(() => {});
+            } catch {
+                // В некоторых версиях сигнатура scrollBottom отличается.
+            }
+
+            const selectors = [
+                '#chat-log',
+                '.chat-log',
+                '.chat-scroll',
+                '.chat-messages',
+                '[data-application-part="log"]'
+            ];
+
+            const scrollElements = new Set();
+
+            for (const selector of selectors) {
+                chat.querySelectorAll(selector).forEach(el => {
+                    scrollElements.add(el);
+                });
+            }
+
+            for (const element of scrollElements) {
+                element.scrollTop = element.scrollHeight;
+
+                if (typeof element.scrollTo === 'function') {
+                    element.scrollTo({
+                        top: element.scrollHeight,
+                        behavior: 'instant'
+                    });
+                }
+            }
+        };
+
+        // Первый вызов — после расчёта размеров панели.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(scroll);
+        });
+
+        // Повторные вызовы нужны для Dice Tray, шрифтов и изображений.
+        setTimeout(scroll, 80);
+        setTimeout(scroll, 250);
+
+        chat.querySelectorAll('img').forEach(image => {
+            if (image.complete) return;
+
+            image.addEventListener('load', scroll, {
+                once: true
+            });
+        });
+    }
+
+    _closeChatPanel() {
+        // Отменяет ещё не завершившийся _openChatPanel.
+        ++this._chatOpenToken;
+
+        const chat = this._movedChat;
+        const placeholder = this._chatPlaceholder;
+        const restoreState = this._chatRestoreState;
+
+        if (chat) {
+            if (placeholder?.parentNode) {
+                placeholder.parentNode.replaceChild(chat, placeholder);
+            } else if (
+                this._chatOriginalParent
+                && document.contains(this._chatOriginalParent)
+            ) {
+                if (
+                    this._chatOriginalNextSibling
+                    && this._chatOriginalNextSibling.parentNode
+                    === this._chatOriginalParent
+                ) {
+                    this._chatOriginalParent.insertBefore(
+                        chat,
+                        this._chatOriginalNextSibling
+                    );
+                } else {
+                    this._chatOriginalParent.appendChild(chat);
+                }
+            } else {
+                // Редкий fallback, если Foundry полностью перерисовал sidebar.
+                document.getElementById('sidebar-content')?.appendChild(chat);
+            }
+
+            if (restoreState) {
+                chat.classList.toggle(
+                    'active',
+                    !!restoreState.wasActive
+                );
+
+                if (restoreState.hadHidden) {
+                    chat.setAttribute('hidden', '');
+                } else {
+                    chat.removeAttribute('hidden');
+                }
+
+                if (restoreState.ariaHidden == null) {
+                    chat.removeAttribute('aria-hidden');
+                } else {
+                    chat.setAttribute(
+                        'aria-hidden',
+                        restoreState.ariaHidden
+                    );
+                }
+            }
+        } else {
+            placeholder?.remove();
+        }
+
+        this._movedChat = null;
+        this._chatPlaceholder = null;
+        this._chatOriginalParent = null;
+        this._chatOriginalNextSibling = null;
+        this._chatRestoreState = null;
+        this._chatVisible = false;
+
+        const panel = document.querySelector(
+            '#vn-scene-overlay .vn-chat-panel'
+        );
+
+        if (panel) {
+            panel.hidden = true;
+            panel.style.visibility = '';
+        }
+
+        document.querySelectorAll(
+            '#vn-scene-overlay .vn-chat-button'
+        ).forEach(button => button.classList.remove('active'));
     }
 
     _setupCharacterListeners() {
