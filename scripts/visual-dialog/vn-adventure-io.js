@@ -2,7 +2,7 @@
 // vn-adventure-io.js — Export/Import presets to/from adventure modules
 // ============================================================
 
-const MODULE_ID = 'player-queue';
+import { MODULE_ID } from './vn-state.js';
 const PRESETS_FILE = 'vn-presets.json';
 const INTEGRATION_SUBPATH = 'integrations/player-queue';
 
@@ -24,7 +24,8 @@ export class VNAdventureIO {
     // Find all active modules that declared a vn-presets file in their flags
     static scanModules() {
         const found = [];
-        for (const m of game.modules.values()) {
+        const activeModules = [...game.modules.values()].filter(m => m.active);
+        for (const m of activeModules) {
             const pqFlags = m.flags?.['player-queue'];
             if (pqFlags?.vnPresetsFile) {
                 found.push({
@@ -38,7 +39,7 @@ export class VNAdventureIO {
         }
         if (!found.length) {
             // Debug: print first few active modules so GM can verify flag path in browser console
-            const sample = [...game.modules.values()].slice(0, 5)
+            const sample = activeModules.slice(0, 5)
                 .map(m => ({ id: m.id, flags: m.flags }));
             console.log('[player-queue] scanModules: no adventure modules found. ' +
                 'Check that module.json is saved and Foundry server restarted. ' +
@@ -57,7 +58,7 @@ export class VNAdventureIO {
             if (data.presets && typeof data.presets === 'object') return Object.values(data.presets);
             return [];
         } catch (err) {
-            ui.notifications.error(`Ошибка загрузки пресетов из ${moduleId}: ${err.message}`);
+            ui.notifications.error(game.i18n.format('vn.io.loadError', { moduleId, msg: err.message }));
             return [];
         }
     }

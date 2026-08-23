@@ -7,6 +7,9 @@ import { SoundTestApp } from './sound-test.js';
 import { registerSettings, applyNameplateImage } from './settings.js';
 import { VisualNovelScene } from './visual-dialog/visual-novel-scene.js';
 
+const QUEUE_SYNC_DELAY_MS     = 2000;
+const RECONNECT_SYNC_DELAY_MS = 3000;
+
 // ============================================================
 // Scene Control Buttons
 // ============================================================
@@ -38,11 +41,11 @@ function addQueueControl() {
     layers.querySelector('[data-control="queue"]')?.closest('li')?.remove();
     layers.querySelector('[data-control="vn-scene"]')?.closest('li')?.remove();
 
-    _makeControlBtn(layers, 'queue', 'fa-users', 'Очередь игроков',
+    _makeControlBtn(layers, 'queue', 'fa-users', game.i18n.localize('playerQueue.control.queueLabel'),
         () => PlayerQueue.instance?.toggleQueue());
 
     if (game.user?.isGM) {
-        _makeControlBtn(layers, 'vn-scene', 'fa-theater-masks', 'Диалоговая сцена',
+        _makeControlBtn(layers, 'vn-scene', 'fa-theater-masks', game.i18n.localize('playerQueue.control.vnSceneLabel'),
             () => window.visualNovelScene?.openSceneDialog());
     }
 }
@@ -70,6 +73,10 @@ Hooks.once('socketlib.ready', () => {
 
     PlayerQueue.socket = socket;
 
+    socket.register('playerQueue', (data) => {
+        PlayerQueue.instance?.handleSocketEvent(data);
+    });
+
     socket.register('vnScene', (data) => {
         window.visualNovelScene?.handleSocketEvent(data);
     });
@@ -83,17 +90,19 @@ Hooks.once('ready', async () => {
         await PlayerQueue.instance.loadQueue();
     }
 
-    if (game.socket) {
-        game.socket.on(PlayerQueue.SOCKET, (data) => {
-            PlayerQueue.instance?.handleSocketEvent(data);
-        });
-    }
-
     PlayerQueue.instance?.updateTheme(PlayerQueue.setting('darkTheme'));
-    applyNameplateImage(PlayerQueue.setting('nameplateImage'));
+
+    let nameplateValue = PlayerQueue.setting('nameplateImage');
+    if (game.user.isGM && (nameplateValue?.includes('dialog name lables') || nameplateValue?.includes('name_lable_'))) {
+        nameplateValue = nameplateValue
+            .replace('dialog name lables', 'dialog name labels')
+            .replace('name_lable_', 'name_label_');
+        game.settings.set(PlayerQueue.ID, 'nameplateImage', nameplateValue).catch(() => {});
+    }
+    applyNameplateImage(nameplateValue);
 
     if (game.user.isGM && PlayerQueue.instance?.isLoaded) {
-        setTimeout(() => PlayerQueue.instance.requestSync(), 2000);
+        setTimeout(() => PlayerQueue.instance.requestSync(), QUEUE_SYNC_DELAY_MS);
     }
 
     // Visual Novel Scene
@@ -124,13 +133,13 @@ Hooks.on('playerQueueUpdated', () => {
     window.visualNovelScene?.updateQueueDisplay();
 });
 
-Hooks.on('userConnected', async (user, connected) => {
+Hooks.on('userConnected', (user, connected) => {
     if (!PlayerQueue.instance?.isLoaded) return;
 
     if (!connected && PlayerQueue.instance.isInQueue(user.id)) {
-        await PlayerQueue.instance.removeFromQueue(user.id);
+        PlayerQueue.instance.removeFromQueue(user.id);
     } else if (connected && game.user.isGM) {
-        setTimeout(() => PlayerQueue.instance.requestSync(), 3000);
+        setTimeout(() => PlayerQueue.instance.requestSync(), RECONNECT_SYNC_DELAY_MS);
     }
 });
 

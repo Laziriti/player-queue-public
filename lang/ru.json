@@ -1,0 +1,377 @@
+{
+  "playerQueue": {
+    "priority": {
+      "low": "Низкий",
+      "medium": "Средний",
+      "high": "Высокий",
+      "suffix": "приоритет"
+    },
+    "dialog": {
+      "title": "Очередь игроков",
+      "close": "Закрыть",
+      "empty": "Очередь пуста",
+      "clearQueue": "Очистить очередь",
+      "playerCount": "Игроков в очереди: {count}",
+      "gmHint": "ЛКМ - объявить и убрать, ПКМ - просто убрать",
+      "prioritiesLabel": "Приоритеты:",
+      "joinTitleLow": "Встать в очередь с низким приоритетом",
+      "joinTitleMedium": "Встать в очередь со средним приоритетом",
+      "joinTitleHigh": "Встать в очередь с высоким приоритетом",
+      "yourPriority": "Ваш приоритет:",
+      "changeTitleLow": "Изменить на низкий приоритет",
+      "changeTitleMedium": "Изменить на средний приоритет",
+      "changeTitleHigh": "Изменить на высокий приоритет",
+      "leaveQueue": "Покинуть очередь"
+    },
+    "chat": {
+      "systemAlias": "Система",
+      "speakingNow": "сейчас выступает!"
+    },
+    "floatingQueue": {
+      "dragHandle": "Перетащить очередь"
+    },
+    "control": {
+      "queueLabel": "Очередь игроков",
+      "vnSceneLabel": "Диалоговая сцена"
+    }
+  },
+  "settings": {
+    "queuePosition": {
+      "name": "Позиция очереди по умолчанию",
+      "hint": "Начальная позиция плавающего окна очереди (можно перетащить)",
+      "topLeft": "Верх-лево",
+      "topRight": "Верх-право",
+      "bottomLeft": "Низ-лево",
+      "bottomRight": "Низ-право"
+    },
+    "queueOrientation": {
+      "name": "Ориентация очереди",
+      "hint": "Вертикальная или горизонтальная очередь",
+      "vertical": "Вертикальная",
+      "horizontal": "Горизонтальная"
+    },
+    "queueSize": {
+      "name": "Размер портретов",
+      "hint": "Размер портретов в пикселях"
+    },
+    "queueMaxItems": {
+      "name": "Максимум видимых игроков",
+      "hint": "Максимальное количество видимых игроков до появления прокрутки"
+    },
+    "enableSounds": {
+      "name": "🔊 Включить звуки приоритетов",
+      "hint": "Воспроизводить звуки при изменении приоритета в очереди"
+    },
+    "soundVolume": {
+      "name": "🔉 Громкость звуков",
+      "hint": "Громкость звуков приоритетов (0-100%)"
+    },
+    "soundOnlyForSelf": {
+      "name": "🎵 Звуки только для себя",
+      "hint": "Если включено — слышны только ваши звуки"
+    },
+    "enableLowPrioritySound": {
+      "name": "🟢 Звук низкого приоритета (!)",
+      "hint": "Воспроизводить звук для низкого приоритета"
+    },
+    "enableMediumPrioritySound": {
+      "name": "🟡 Звук среднего приоритета (!!)",
+      "hint": "Воспроизводить звук для среднего приоритета"
+    },
+    "enableHighPrioritySound": {
+      "name": "🔴 Звук высокого приоритета (!!!)",
+      "hint": "Воспроизводить звук для высокого приоритета"
+    },
+    "testSounds": {
+      "name": "🎮 Тестировать звуки",
+      "label": "Открыть тест звуков",
+      "hint": "Проверить как звучат разные приоритеты с текущими настройками"
+    },
+    "darkTheme": {
+      "name": "🌙 Тёмная тема",
+      "hint": "Использовать тёмную тему для интерфейса очереди"
+    },
+    "nameplateImage": {
+      "name": "🎭 Плашка имени персонажа",
+      "hint": "Выберите изображение из папки assets/dialog name lables/ или оставьте пустым для стандартного вида.",
+      "defaultView": "— Стандартный вид —",
+      "noPlate": "— Без плашки —"
+    },
+    "parallaxEnabled": {
+      "name": "🎥 Параллакс фона",
+      "hint": "Плавное смещение фона при движении мыши в сцене диалога"
+    },
+    "parallaxDepth": {
+      "name": "🎥 Глубина параллакса",
+      "hint": "Насколько сильно фон смещается при движении мыши (0 — нет смещения, 100 — максимум)"
+    }
+  },
+  "soundTest": {
+    "title": "Тест звуков приоритетов",
+    "currentSettings": "Текущие настройки:",
+    "labelSounds": "Звуки",
+    "labelVolume": "Громкость"
+  },
+  "vn": {
+    "actor": {
+      "unknown": "Неизвестный"
+    },
+    "scene": {
+      "title": "Диалоговая сцена"
+    },
+    "toolbar": {
+      "settings": "Настройки сцены",
+      "minimizeAll": "Свернуть для всех",
+      "minimizeSelf": "Свернуть для себя",
+      "epicRolls": "Epic Rolls",
+      "broadcast": "Показать игрокам",
+      "showChat": "Показать чат",
+      "closeScene": "Закрыть сцену",
+      "closePlayer": "Закрыть",
+      "maximizeAll": "Развернуть для всех",
+      "maximizeSelf": "Развернуть для себя",
+      "sizeDecrease": "Уменьшить",
+      "sizeReset": "Сброс",
+      "sizeIncrease": "Увеличить",
+      "sizeSettings": "Настройка"
+    },
+    "queue": {
+      "title": "Очередь",
+      "itemHint": "ЛКМ: объявить · ПКМ: убрать"
+    },
+    "chat": {
+      "header": "Чат",
+      "error": "Не удалось открыть чат. Проверьте консоль браузера."
+    },
+    "atmosphere": {
+      "header": "Атмосфера",
+      "buttonTitle": "Атмосфера: {effect}",
+      "groups": {
+        "basic": "Базовые",
+        "nature": "Природа",
+        "magic": "Магия",
+        "dark": "Тьма",
+        "chaos": "Хаос",
+        "special": "Особые"
+      },
+      "effects": {
+        "none": "Выкл",
+        "particles": "Частицы",
+        "snow": "Снег",
+        "rain": "Дождь",
+        "embers": "Угли",
+        "fireflies": "Светлячки",
+        "divine": "✨ Божественное",
+        "eldritch": "🐙 Элдритч",
+        "dark_ritual": "🌑 Тёмный ритуал",
+        "warm": "🔥 Тёплая атмосфера",
+        "frozen": "❄️ Мороз",
+        "storm": "⛈️ Гроза",
+        "dream": "💫 Сон",
+        "underwater": "🌊 Под водой",
+        "inferno": "🔥 Инферно",
+        "sacred": "🕊️ Священное",
+        "corruption": "💀 Порча",
+        "moonlit": "🌙 Лунный свет",
+        "sakura": "🌸 Сакура",
+        "ash_wasteland": "💨 Пепелище",
+        "apocalypse": "🌋 Апокалипсис",
+        "ethereal_plane": "🔮 Эфирный план",
+        "blood_moon": "🩸 Кровавая луна",
+        "void_breach": "🕳️ Разрыв Пустоты",
+        "cosmic_horror": "🌌 Космический Ужас",
+        "abyss": "🌊 Бездна",
+        "shadow_intrigue": "🕵️ Тени и интриги",
+        "glass_shatter": "🪟 Разбитое стекло",
+        "sandstorm": "🏜️ Песчаная буря",
+        "carnival": "🎉 Праздник",
+        "ghosts": "👻 Призраки"
+      }
+    },
+    "sounds": {
+      "header": "Звуки",
+      "buttonTitle": "Звуки сцены",
+      "untitled": "Без названия",
+      "empty": "Нет звуков",
+      "trackNotFound": "Трек не найден"
+    },
+    "bg": {
+      "header": "Фон сцены",
+      "overlay": "Затенение",
+      "currentScene": "Текущая сцена",
+      "pathPlaceholder": "Путь к изображению или видео...",
+      "pickFolder": "Выбрать папку",
+      "pickFolderTitle": "Выбрать папку с изображениями",
+      "resetFolderTitle": "Вернуть папку по умолчанию",
+      "back": "Назад",
+      "default": "По умолчанию",
+      "noBackground": "Без фона",
+      "custom": "Пользовательский"
+    },
+    "io": {
+      "loadError": "Ошибка загрузки пресетов из {moduleId}: {msg}"
+    },
+    "dialog": {
+      "editTitle": "✏️ Изменить сцену",
+      "createTitle": "🎭 Создать диалоговую сцену",
+      "btnUpdate": "Обновить",
+      "btnCreate": "Создать",
+      "btnRemoveCharacters": "Убрать персонажей",
+      "btnBackgroundOnly": "Только фон",
+      "btnCancel": "Отмена",
+      "btnDelete": "Удалить",
+      "btnDeleteAll": "Удалить все",
+      "btnDeleteGroup": "Удалить группу",
+      "btnSavePreset": "Сохранить",
+      "btnRegenAll": "Перегенерировать все",
+      "btnApplyForAll": "Для всех",
+      "btnOk": "Понятно",
+      "btnCopySnippet": "Скопировать",
+      "btnCopied": "Скопировано!",
+      "btnLoadModule": "Загрузить",
+      "btnImportSelected": "Импортировать выбранные",
+      "btnImportFreshOnly": "Только новые",
+      "btnImportFreshCount": "Только новые ({count})",
+      "btnOverwriteDupes": "Перезаписать дубли",
+      "btnOverwriteAllCount": "Перезаписать все ({count})",
+      "btnReplaceAll": "Заменить всё",
+      "btnFindAdventureModules": "Найти модули приключений",
+      "btnSelectJsonFile": "Выбрать файл .json",
+      "btnDownloadJson": "Скачать JSON",
+      "btnExportToModule": "В модуль",
+      "hideCharacter": "Скрыть персонажа",
+      "showCharacter": "Показать персонажа",
+      "vis": {
+        "toHidden":     "Скрыть полностью",
+        "toNameHidden": "Скрыть только имя",
+        "toVisible":    "Показать"
+      },
+      "dragActorsFromJournal": "Перетащите актёров из журнала",
+      "dragTracksFromPlaylist": "Перетащите треки из плейлиста",
+      "dragTrackFromPlaylist": "Перетащите трек из плейлиста",
+      "noSavedPresets": "Нет сохранённых пресетов",
+      "noPresetsToExport": "Нет пресетов для экспорта",
+      "noPresetsInModule": "Нет пресетов в этом модуле",
+      "noPresetsInFile": "Файл не содержит пресетов",
+      "noPresetsToDownload": "Нет пресетов для скачивания",
+      "noPresetsForScene": "Нет пресетов для текущей сцены",
+      "noTokensOnScene": "Нет токенов на текущей сцене",
+      "noModulesFound": "Модулей с пресетами не найдено",
+      "noActiveModules": "Нет активных модулей",
+      "noActiveScenePin": "Нет активной сцены",
+      "noActiveSceneForPin": "Нет активной сцены для прикрепления",
+      "noScene": "Без сцены",
+      "nothingFound": "Ничего не найдено",
+      "presetsDescription": "Сохраняйте текущую расстановку персонажей и фон как пресет.",
+      "presetNamePlaceholder": "Название пресета...",
+      "pinToScene": "Прикрепить к «{sceneName}»",
+      "savePinWithoutScene": "Сохранить без сцены",
+      "searchPresetsPlaceholder": "Поиск пресетов...",
+      "viewList": "Список",
+      "viewCards": "Карточки",
+      "viewDetailed": "Подробно",
+      "viewCompact": "Компактно",
+      "checkAll": "Все",
+      "uncheckAll": "Снять",
+      "selectGroup": "Выбрать группу",
+      "selectModule": "— выберите модуль —",
+      "selectNameplate": "— не указывать —",
+      "filterBySceneTitle": "Только пресеты сцены «{sceneName}»",
+      "thisSceneDefault": "текущую сцену",
+      "thisScene": "Эта сцена",
+      "sortingTitle": "Сортировка",
+      "sortNewest": "Новые",
+      "sortOldest": "Старые",
+      "sortAZ": "А→Я",
+      "sortZA": "Я→А",
+      "deleteAllPresetsTitle": "Удалить все пресеты",
+      "deleteAllPresetsConfirm": "Удалить все <strong>{count}</strong> пресетов? Это действие необратимо.",
+      "savedPresetsHeader": "Сохранённые пресеты",
+      "regenAllTitle": "Перегенерировать все пресеты (thumbnail, портреты и т.д.)",
+      "regenGroupTitle": "Перегенерировать группу «{label}»",
+      "deleteGroupTitle": "Удалить группу «{label}»",
+      "deleteGroupDialogTitle": "Удалить группу",
+      "deleteGroupConfirm": "Удалить все <strong>{count}</strong> пресетов группы «<strong>{label}</strong>»? Это действие необратимо.",
+      "presetCreatedUpdated": "Создан: {created} · Обновлён: {updated}",
+      "presetMigrationHint": "Ожидает {count} миграций — нажмите «Перегенерировать»",
+      "presetCreated": "Создан: {date}",
+      "presetRegenerated": "Перегенерировано {count} пресетов",
+      "presetRegeneratedOne": "Пресет перегенерирован",
+      "presetActionLaunch": "Запустить сцену",
+      "presetActionLoad": "Загрузить в диалог",
+      "presetActionUpdate": "Обновить из диалога",
+      "presetActionRegen": "Перегенерировать пресет",
+      "presetActionAssign": "Изменить сцену",
+      "presetActionRename": "Переименовать",
+      "presetActionDelete": "Удалить",
+      "updatePresetTitle": "Обновить пресет",
+      "updatePresetConfirm": "Перезаписать пресет «<strong>{name}</strong>» текущими настройками диалога?",
+      "deletePresetTitle": "Удалить пресет",
+      "deletePresetConfirm": "Удалить пресет «<strong>{name}</strong>»?",
+      "assignToSceneLabel": "К «{sceneName}»",
+      "unlinkFromScene": "Открепить от сцены",
+      "presetSceneLabel": "Сцена пресета: <strong>{sceneName}</strong>",
+      "currentSceneLabel": "Текущая сцена: <strong>{sceneName}</strong>",
+      "changeSceneDialogTitle": "Изменить сцену: «{presetName}»",
+      "soundCuesLabel": "Звуки сцены",
+      "soundCuesHint": "Треки, которые ГМ может запускать прямо со сцены (кнопка в тулбаре).",
+      "cueLabelPlaceholder": "Название...",
+      "musicLabel": "Музыка сцены",
+      "clearMusic": "Убрать музыку",
+      "portraitSizeTitle": "Размер портретов",
+      "scaleLabel": "Масштаб",
+      "tabCharacters": "Персонажи",
+      "tabBackground": "Фон",
+      "tabMusic": "Музыка",
+      "tabPresets": "Пресеты",
+      "tabAdventures": "Приключения",
+      "gmOnlyToggleTitle": "Сцена будет видна только вам. Нажмите «Показать игрокам» на самой сцене, чтобы открыть всем.",
+      "gmOnlyLabel": "Только ГМ",
+      "tokensOnScene": "Доступные на сцене",
+      "positionLeft": "Лево",
+      "positionLeftOrder": "← дальше | ближе →",
+      "positionCenter": "Центр",
+      "positionRight": "Право",
+      "positionRightOrder": "← ближе | дальше →",
+      "favoritesHeader": "Избранное",
+      "favoritesHint": "ПКМ — удалить",
+      "exportPresetsTitle": "Экспорт пресетов",
+      "moduleLabel": "Модуль",
+      "nameplateLabel": "Плашка",
+      "bgFolderLabel": "Папка фонов",
+      "bgFolderPlaceholder": "Папка с изображениями (необязательно)",
+      "pickFolderBtnTitle": "Выбрать папку",
+      "importFromModuleTitle": "Импорт из модуля-приключения",
+      "scanModulesHint": "Ищет активные модули с флагом player-queue",
+      "importFromFileTitle": "Импорт из файла JSON",
+      "loadFromFileHint": "Загрузить ранее сохранённые пресеты из файла",
+      "moduleInactive": "— неактивен",
+      "exportSelectedCount": "Экспортировать выбранные ({count})",
+      "exportSelected": "Экспортировать выбранные",
+      "importSelectedCount": "Импортировать выбранные ({count})",
+      "importSelected": "Импортировать выбранные",
+      "setNameplateTitle": "Установить плашку «{label}»",
+      "setFolderTitle": "Установить папку фонов «{folder}»",
+      "nameplateInstalled": "Плашка установлена",
+      "folderInstalled": "Папка фонов установлена: {folder}",
+      "specifyModuleId": "Укажите ID модуля",
+      "selectAtLeastOnePreset": "Выберите хотя бы один пресет",
+      "exportSuccess": "Экспортировано {count} пресетов в modules/{moduleId}/vn-presets.json",
+      "exportError": "Ошибка экспорта: {msg}",
+      "downloadingPresets": "Скачивание {count} пр.…",
+      "fileImportWithDupes": "В файле {total} пр. ({fresh} новых, {dupes} совп.).",
+      "fileImportNoDupes": "В файле {total} пр. Все новые.",
+      "importedPresets": "Импортировано {count} пресетов",
+      "fileReadError": "Ошибка чтения файла: {msg}",
+      "freshPresetsAdded": "<b>{count}</b> новых пресетов будет добавлено.",
+      "dupesExist": "<b>{count}</b> уже существуют в мире.",
+      "importPresetsDialogTitle": "Импорт пресетов",
+      "exportDoneTitle": "Экспорт завершён",
+      "nameplateNote": "Плашка: <code>{filename}</code>",
+      "bgFolderNote": "Папка фонов: <code>{folder}</code>",
+      "exportFileSaved": "Файл <code>vn-presets.json</code> сохранён в <code>modules/{moduleId}/integrations/player-queue/</code>.",
+      "addToModuleJson": "Добавьте в <code>module.json</code> вашего модуля:",
+      "moduleJsonRestartNote": "После изменения <code>module.json</code> потребуется перезапуск сервера Foundry."
+    }
+  }
+}

@@ -85,7 +85,7 @@ class VNTransitions {
 
         const newBg = document.createElement('div');
         newBg.className = `vn-bg-layer vn-bg-transition-${type}`;
-        newBg.style.backgroundImage = `url("${newImageUrl}")`;
+        newBg.style.backgroundImage = `url("${newImageUrl.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`;
         if (currentTransform) newBg.style.transform = currentTransform;
         newBg.style.animationDuration = `${duration}ms`;
         newBg.style.position = 'absolute';

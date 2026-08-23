@@ -19,7 +19,7 @@ export class VNSocketHandler {
         setExclusiveSpeaker:  { gmOnly: true,  required: ['tokenId'] },
         setBackgroundOverlay: { gmOnly: true,  required: ['enabled'] },
         setAtmosphereEffect:  { gmOnly: true,  required: ['effect'] },
-        setHidden:            { gmOnly: true,  required: ['tokenId', 'hidden'] },
+        setVisibility:        { gmOnly: true,  required: ['tokenId', 'visibility'] },
         updateQueue:          { gmOnly: false },
     };
 
@@ -96,10 +96,14 @@ export class VNSocketHandler {
                     background: p.background,
                     backgroundOverlay: p.backgroundOverlay,
                     atmosphereEffect: p.atmosphereEffect ?? null,
-                    hidden: p.hidden ?? null,
+                    flipped: p.flipped ?? null,
+                    visibility: p.visibility ?? null,
+                    portraitImages: p.portraitImages ?? null,
+                    portraitNames: p.portraitNames ?? null,
                     portraitScales: p.portraitScales ?? null,
                     soundCues: p.soundCues ?? null,
                 }, false);
+                if (p.portraitScale != null) s.setPortraitScale(Number(p.portraitScale), false);
                 break;
             case 'minimize':             s.setMinimized(true, false, true, true); break;
             case 'maximize':             s.setMinimized(false, false, true, true); break;
@@ -109,7 +113,7 @@ export class VNSocketHandler {
             case 'setExclusiveSpeaker':  s.setExclusiveSpeaker(p.tokenId, false); break;
             case 'setBackgroundOverlay': s.setBackgroundOverlay(!!p.enabled, false); break;
             case 'setAtmosphereEffect':  s.setAtmosphereEffect(p.effect, false); break;
-            case 'setHidden':            s.applyHidden(p.tokenId, !!p.hidden, false); break;
+            case 'setVisibility':        s.applyVisibility(p.tokenId, p.visibility, false); break;
             default: console.warn(`[VN] No handler for action: ${action}`);
         }
     }

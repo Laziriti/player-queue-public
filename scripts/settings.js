@@ -10,7 +10,7 @@ import { SoundTestApp } from './sound-test.js';
 // paddingX: horizontal padding to keep text within the frame's "safe zone"
 // minWidth: minimum rendered width of the nameplate element
 const NAMEPLATE_CONFIGS = {
-    'modules/player-queue/assets/dialog name lables/name_lable_drakkenheim.webp': {
+    'modules/player-queue/assets/dialog name labels/name_label_drakkenheim.webp': {
         label: 'Drakkenheim',
         ratio: 4.94,      // width / height of the frame image
         height: '3.2em',  // nameplate height (scales with font); width = height × ratio
@@ -36,12 +36,14 @@ function registerSettings() {
     S('queueData', { scope: 'world', config: false, type: Array, default: [] });
 
     S('queuePosition', {
-        name: 'Позиция очереди по умолчанию',
-        hint: 'Начальная позиция плавающего окна очереди (можно перетащить)',
+        name: 'settings.queuePosition.name',
+        hint: 'settings.queuePosition.hint',
         scope: 'client', config: true, type: String, default: 'bottom-right',
         choices: {
-            'top-left': 'Верх-лево', 'top-right': 'Верх-право',
-            'bottom-left': 'Низ-лево', 'bottom-right': 'Низ-право'
+            'top-left':     game.i18n.localize('settings.queuePosition.topLeft'),
+            'top-right':    game.i18n.localize('settings.queuePosition.topRight'),
+            'bottom-left':  game.i18n.localize('settings.queuePosition.bottomLeft'),
+            'bottom-right': game.i18n.localize('settings.queuePosition.bottomRight')
         },
         onChange: () => {
             localStorage.removeItem(`${PlayerQueue.ID}-position`);
@@ -50,88 +52,91 @@ function registerSettings() {
     });
 
     S('queueOrientation', {
-        name: 'Ориентация очереди',
-        hint: 'Вертикальная или горизонтальная очередь',
+        name: 'settings.queueOrientation.name',
+        hint: 'settings.queueOrientation.hint',
         scope: 'client', config: true, type: String, default: 'vertical',
-        choices: { vertical: 'Вертикальная', horizontal: 'Горизонтальная' },
+        choices: {
+            vertical:   game.i18n.localize('settings.queueOrientation.vertical'),
+            horizontal: game.i18n.localize('settings.queueOrientation.horizontal')
+        },
         onChange: onFloatingChange
     });
 
     S('queueSize', {
-        name: 'Размер портретов',
-        hint: 'Размер портретов в пикселях',
+        name: 'settings.queueSize.name',
+        hint: 'settings.queueSize.hint',
         scope: 'client', config: true, type: Number, default: 50,
         range: { min: 30, max: 100, step: 5 },
         onChange: onFloatingChange
     });
 
     S('queueMaxItems', {
-        name: 'Максимум видимых игроков',
-        hint: 'Максимальное количество видимых игроков до появления прокрутки',
+        name: 'settings.queueMaxItems.name',
+        hint: 'settings.queueMaxItems.hint',
         scope: 'client', config: true, type: Number, default: 8,
         range: { min: 3, max: 15, step: 1 },
         onChange: onFloatingChange
     });
 
     S('enableSounds', {
-        name: '🔊 Включить звуки приоритетов',
-        hint: 'Воспроизводить звуки при изменении приоритета в очереди',
+        name: 'settings.enableSounds.name',
+        hint: 'settings.enableSounds.hint',
         scope: 'client', config: true, type: Boolean, default: true
     });
 
     S('soundVolume', {
-        name: '🔉 Громкость звуков',
-        hint: 'Громкость звуков приоритетов (0-100%)',
+        name: 'settings.soundVolume.name',
+        hint: 'settings.soundVolume.hint',
         scope: 'client', config: true, type: Number, default: 50,
         range: { min: 0, max: 100, step: 5 }
     });
 
     S('soundOnlyForSelf', {
-        name: '🎵 Звуки только для себя',
-        hint: 'Если включено — слышны только ваши звуки',
+        name: 'settings.soundOnlyForSelf.name',
+        hint: 'settings.soundOnlyForSelf.hint',
         scope: 'client', config: true, type: Boolean, default: false
     });
 
     S('enableLowPrioritySound', {
-        name: '🟢 Звук низкого приоритета (!)',
-        hint: 'Воспроизводить звук для низкого приоритета',
+        name: 'settings.enableLowPrioritySound.name',
+        hint: 'settings.enableLowPrioritySound.hint',
         scope: 'client', config: true, type: Boolean, default: true
     });
 
     S('enableMediumPrioritySound', {
-        name: '🟡 Звук среднего приоритета (!!)',
-        hint: 'Воспроизводить звук для среднего приоритета',
+        name: 'settings.enableMediumPrioritySound.name',
+        hint: 'settings.enableMediumPrioritySound.hint',
         scope: 'client', config: true, type: Boolean, default: true
     });
 
     S('enableHighPrioritySound', {
-        name: '🔴 Звук высокого приоритета (!!!)',
-        hint: 'Воспроизводить звук для высокого приоритета',
+        name: 'settings.enableHighPrioritySound.name',
+        hint: 'settings.enableHighPrioritySound.hint',
         scope: 'client', config: true, type: Boolean, default: true
     });
 
     // SoundTestApp вместо SoundTestDialog (FormApplication)
     game.settings.registerMenu(PlayerQueue.ID, 'testSounds', {
-        name: '🎮 Тестировать звуки',
-        label: 'Открыть тест звуков',
-        hint: 'Проверить как звучат разные приоритеты с текущими настройками',
+        name: 'settings.testSounds.name',
+        label: 'settings.testSounds.label',
+        hint: 'settings.testSounds.hint',
         icon: 'fas fa-volume-up',
         type: SoundTestApp,
         restricted: false
     });
 
     S('darkTheme', {
-        name: '🌙 Тёмная тема',
-        hint: 'Использовать тёмную тему для интерфейса очереди',
+        name: 'settings.darkTheme.name',
+        hint: 'settings.darkTheme.hint',
         scope: 'client', config: true, type: Boolean, default: false,
         onChange: (v) => PlayerQueue.instance?.updateTheme(v)
     });
 
     S('nameplateImage', {
-        name: '🎭 Плашка имени персонажа',
-        hint: 'Выберите изображение из папки assets/dialog name lables/ или оставьте пустым для стандартного вида.',
+        name: 'settings.nameplateImage.name',
+        hint: 'settings.nameplateImage.hint',
         scope: 'world', config: true, type: String,
-        default: 'modules/player-queue/assets/dialog name lables/name_lable_drakkenheim.webp',
+        default: 'modules/player-queue/assets/dialog name labels/name_label_drakkenheim.webp',
         onChange: (v) => applyNameplateImage(v)
     });
 
@@ -141,7 +146,7 @@ function registerSettings() {
         const inputEl = html.querySelector('[name="player-queue.nameplateImage"]');
         if (!inputEl) return;
 
-        const FOLDER = 'modules/player-queue/assets/dialog name lables';
+        const FOLDER = 'modules/player-queue/assets/dialog name labels';
         const IMAGE_EXTS = ['webp', 'png', 'jpg', 'jpeg', 'gif'];
 
         if (!_nameplateFilesCache) {
@@ -155,6 +160,7 @@ function registerSettings() {
         const files = _nameplateFilesCache;
 
         const currentValue = game.settings.get(PlayerQueue.ID, 'nameplateImage');
+        const normPath = p => decodeURIComponent(p).replace(/^\//, '');
 
         const select = document.createElement('select');
         select.name = inputEl.name;
@@ -162,18 +168,38 @@ function registerSettings() {
 
         const emptyOpt = document.createElement('option');
         emptyOpt.value = '';
-        emptyOpt.textContent = '— Стандартный вид —';
-        if (!currentValue) emptyOpt.selected = true;
+        emptyOpt.textContent = game.i18n.localize('settings.nameplateImage.defaultView');
         select.appendChild(emptyOpt);
+
+        const hiddenOpt = document.createElement('option');
+        hiddenOpt.value = '__hidden__';
+        hiddenOpt.textContent = game.i18n.localize('settings.nameplateImage.noPlate');
+        select.appendChild(hiddenOpt);
 
         for (const f of files) {
             const opt = document.createElement('option');
             opt.value = f;
             opt.textContent = NAMEPLATE_CONFIGS[f]?.label
                 ?? f.split('/').pop().replace(/\.[^.]+$/, '').replace(/_/g, ' ');
-            if (f === currentValue) opt.selected = true;
             select.appendChild(opt);
         }
+
+        // Set initial selection robustly — after all options are added
+        const matchingOpt = [...select.options].find(o => normPath(o.value) === normPath(currentValue));
+        if (matchingOpt) matchingOpt.selected = true;
+
+        const originalValue = game.settings.get(PlayerQueue.ID, 'nameplateImage');
+        let saved = false;
+
+        select.addEventListener('change', () => {
+            applyNameplateImage(select.value);
+        });
+
+        html.closest('form')?.addEventListener('submit', () => { saved = true; }, { once: true });
+
+        Hooks.once('closeSettingsConfig', () => {
+            if (!saved) applyNameplateImage(originalValue);
+        });
 
         inputEl.replaceWith(select);
     });
@@ -183,27 +209,39 @@ function registerSettings() {
     });
 
     S('parallaxEnabled', {
-        name: '🎥 Параллакс фона',
-        hint: 'Плавное смещение фона при движении мыши в сцене диалога',
+        name: 'settings.parallaxEnabled.name',
+        hint: 'settings.parallaxEnabled.hint',
         scope: 'client', config: true, type: Boolean, default: true,
         onChange: v => window.visualNovelScene?.setParallaxOptions({ enabled: v })
     });
 
     S('parallaxDepth', {
-        name: '🎥 Глубина параллакса',
-        hint: 'Насколько сильно фон смещается при движении мыши (0 — нет смещения, 100 — максимум)',
+        name: 'settings.parallaxDepth.name',
+        hint: 'settings.parallaxDepth.hint',
         scope: 'client', config: true, type: Number, default: 50,
         range: { min: 0, max: 100, step: 10 },
         onChange: v => window.visualNovelScene?.setParallaxOptions({ depth: v })
     });
 }
 
+function escapeCSSUrl(url) {
+    return url.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\n\r]/g, '');
+}
+
 function applyNameplateImage(path) {
-    if (path) {
+    document.body.classList.remove('vn-nameplate-hidden');
+    if (path === '__hidden__') {
+        document.documentElement.style.removeProperty('--vn-nameplate-image');
+        document.documentElement.style.removeProperty('--vn-nameplate-ratio');
+        document.documentElement.style.removeProperty('--vn-nameplate-height');
+        document.documentElement.style.removeProperty('--vn-nameplate-padding-x');
+        document.body.classList.remove('vn-nameplate-has-image');
+        document.body.classList.add('vn-nameplate-hidden');
+    } else if (path) {
         // CSS url() in a stylesheet resolves relative to the .css file — prepend / to make absolute
         const url = /^https?:\/\/|^\//.test(path) ? path : '/' + path;
         const cfg = NAMEPLATE_CONFIGS[path] || {};
-        document.documentElement.style.setProperty('--vn-nameplate-image', `url("${url}")`);
+        document.documentElement.style.setProperty('--vn-nameplate-image', `url("${escapeCSSUrl(url)}")`);
         document.documentElement.style.setProperty('--vn-nameplate-ratio', cfg.ratio ?? 4.94);
         document.documentElement.style.setProperty('--vn-nameplate-height', cfg.height ?? '2.8em');
         document.documentElement.style.setProperty('--vn-nameplate-padding-x', cfg.paddingX ?? '1.8em');

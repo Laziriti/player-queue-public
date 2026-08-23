@@ -3,11 +3,13 @@
 // ============================================================
 
 import { parseActorId } from './vn-id-utils.js';
+import { applyMigrations } from './vn-migrations.js';
 
-const MODULE_ID = 'player-queue';
+export const MODULE_ID = 'player-queue';
 
 class VNSceneState {
     static POSITIONS = ['left', 'center', 'right'];
+    static SCALE_LIMITS = { MIN: 0.5, MAX: 2.0 };
 
     constructor() { this.reset(); }
 
@@ -23,7 +25,7 @@ class VNSceneState {
         this.atmosphereEffect = 'particles';
         this.speakers = Object.fromEntries(VNSceneState.POSITIONS.map(p => [p, null]));
         this.flipped = {};
-        this.hidden = {};
+        this.visibility = {};
         this.musicUuid = null;
         this.soundCues = [];
         this.portraitImages = {};
@@ -43,7 +45,7 @@ class VNSceneState {
             portraitScale: this.portraitScale,
             atmosphereEffect: this.atmosphereEffect,
             flipped: { ...this.flipped },
-            hidden: { ...this.hidden },
+            visibility: { ...this.visibility },
             musicUuid: this.musicUuid,
             soundCues: [...(this.soundCues || [])],
             portraitImages: { ...this.portraitImages },
@@ -58,10 +60,20 @@ class VNSceneState {
         this.rightIds = [...(p.rightIds ?? [])];
         this.background = p.background ?? null;
         this.backgroundOverlay = p.backgroundOverlay ?? true;
-        this.portraitScale = p.portraitScale ?? 1.0;
+        const { MIN, MAX } = VNSceneState.SCALE_LIMITS;
+        this.portraitScale = Math.min(Math.max(p.portraitScale ?? 1.0, MIN), MAX);
         this.atmosphereEffect = p.atmosphereEffect ?? 'particles';
         this.flipped = { ...(p.flipped ?? {}) };
-        this.hidden = { ...(p.hidden ?? {}) };
+        if (p.visibility) {
+            this.visibility = { ...p.visibility };
+        } else if (p.hidden) {
+            this.visibility = {};
+            for (const [id, val] of Object.entries(p.hidden)) {
+                if (val === true) this.visibility[id] = 'hidden';
+            }
+        } else {
+            this.visibility = {};
+        }
         this.musicUuid = p.musicUuid ?? null;
         this.soundCues = [...(p.soundCues ?? [])];
         this.portraitImages = { ...(p.portraitImages ?? {}) };
@@ -108,13 +120,17 @@ class VNPresets {
     }
 
     static _migrated = false;
+    static _cache = null;
+
+    static invalidateCache() { this._cache = null; }
 
     static async getAll() {
+        if (this._cache !== null) return this._cache;
         try {
             const raw = game.settings.get(MODULE_ID, this.SETTING_KEY) || {};
-            if (this._migrated) return raw;
+            if (this._migrated) { this._cache = raw; return raw; }
             const needsMigration = Object.values(raw).some(v => !v.id);
-            if (!needsMigration) { this._migrated = true; return raw; }
+            if (!needsMigration) { this._migrated = true; this._cache = raw; return raw; }
             const migrated = {};
             for (const [key, val] of Object.entries(raw)) {
                 if (val.id) { migrated[val.id] = val; continue; }
@@ -124,6 +140,7 @@ class VNPresets {
             }
             await game.settings.set(MODULE_ID, this.SETTING_KEY, migrated);
             this._migrated = true;
+            this._cache = migrated;
             return migrated;
         } catch { return {}; }
     }
@@ -146,6 +163,7 @@ class VNPresets {
             ...sceneState.toPayload(),
             id,
             name,
+            version: game.modules.get(MODULE_ID)?.version ?? '0.0.0',
             createdAt: now,
             updatedAt: now,
             sceneId: attachScene ? (canvas?.scene?.id ?? null) : null,
@@ -211,7 +229,7 @@ class VNPresets {
         const presets = await this.getAll();
         if (!presets[id]) return null;
         const { id: pid, name, createdAt, sceneId, sceneName } = presets[id];
-        presets[id] = { ...sceneState.toPayload(), id: pid, name, createdAt, updatedAt: Date.now(), sceneId, sceneName };
+        presets[id] = { ...sceneState.toPayload(), id: pid, name, version: game.modules.get(MODULE_ID)?.version ?? '0.0.0', createdAt, updatedAt: Date.now(), sceneId, sceneName };
         await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
         return this._sortedFrom(presets);
     }
@@ -221,9 +239,10 @@ class VNPresets {
     static async regenerate(ids = null) {
         const presets = await this.getAll();
         const keys = ids ? ids.filter(id => presets[id]) : Object.keys(presets);
+        const currentVersion = game.modules.get(MODULE_ID)?.version ?? '0.0.0';
         let count = 0;
         for (const id of keys) {
-            const p = presets[id];
+            const p = applyMigrations(presets[id]);
 
             // Regenerate thumbnail from background
             let thumbnailData = p.thumbnailData ?? null;
@@ -252,7 +271,7 @@ class VNPresets {
                 }
             }
 
-            presets[id] = { ...p, thumbnailData, portraitImages, portraitNames, updatedAt: Date.now() };
+            presets[id] = { ...p, thumbnailData, portraitImages, portraitNames, version: currentVersion, updatedAt: Date.now() };
             count++;
         }
         await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
@@ -266,6 +285,7 @@ class VNPresets {
             store[id] = { ...p, id };
         }
         await game.settings.set(MODULE_ID, this.SETTING_KEY, store);
+        this._cache = null;
     }
 
     static async delete(id) {
@@ -276,4 +296,4 @@ class VNPresets {
     }
 }
 
-export { VNSceneState, VNPresets, MODULE_ID };
+export { VNSceneState, VNPresets };

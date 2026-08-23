@@ -111,7 +111,11 @@ export class VNBackgroundManager {
                     video.play().catch(() => {});
                 }
             } else if (bgLayer) {
-                bgLayer.style.backgroundImage = `url("${background}?t=${Date.now()}")`;
+                const current = bgLayer.style.backgroundImage;
+                const currentBase = current.replace(/\?t=\d+/, '').replace(/url\(["']?|["']?\)/g, '');
+                if (currentBase !== background) {
+                    bgLayer.style.backgroundImage = `url("${background.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`;
+                }
             }
 
             const existing = el.querySelector('.vn-background-overlay');
@@ -141,7 +145,7 @@ export class VNBackgroundManager {
         }
 
         try {
-            await VNTransitions.switchBackground(el, `${newBg}?t=${Date.now()}`, 'dissolve');
+            await VNTransitions.switchBackground(el, newBg, 'dissolve');
             atmosphere?.resetZoom?.();
 
             const existing = el.querySelector('.vn-background-overlay');
@@ -161,8 +165,8 @@ export class VNBackgroundManager {
     generateSelector(currentBg = null, currentOverlay = true, currentEffect = 'particles') {
         const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
         const effectOptions = VNAtmosphere.EFFECT_GROUPS
-            .map(g => `<optgroup label="${g.label}">${
-                g.effects.map(e => `<option value="${e}" ${e === currentEffect ? 'selected' : ''}>${VNAtmosphere.EFFECT_LABELS[e]}</option>`).join('')
+            .map(g => `<optgroup label="${game.i18n.localize(g.label)}">${
+                g.effects.map(e => `<option value="${e}" ${e === currentEffect ? 'selected' : ''}>${game.i18n.localize(VNAtmosphere.EFFECT_LABELS[e])}</option>`).join('')
             }</optgroup>`)
             .join('');
         const customFolder = VNBackgroundManager.getCustomFolder();
@@ -171,19 +175,19 @@ export class VNBackgroundManager {
             : `${this.moduleId}/assets/scenes`;
 
         return `<details class="vn-collapsible vn-bg-section" open>
-            <summary class="vn-collapsible-header"><i class="fas fa-image"></i> Фон сцены <i class="fas fa-chevron-down vn-chevron"></i></summary>
+            <summary class="vn-collapsible-header"><i class="fas fa-image"></i> ${game.i18n.localize('vn.bg.header')} <i class="fas fa-chevron-down vn-chevron"></i></summary>
             <div class="vn-collapsible-body">
                 <div class="vn-bg-toolbar">
                     <label class="vn-overlay-toggle">
-                        <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span>Затенение</span>
+                        <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span>${game.i18n.localize('vn.bg.overlay')}</span>
                     </label>
                     <label class="vn-overlay-toggle">
                         <i class="fas fa-magic"></i>
                         <select id="atmosphere-effect" class="vn-atmosphere-select">${effectOptions}</select>
                     </label>
-                    ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${sceneBg}"><i class="fas fa-map"></i> Текущая сцена</button>` : ''}
+                    ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${sceneBg}"><i class="fas fa-map"></i> ${game.i18n.localize('vn.bg.currentScene')}</button>` : ''}
                     <div class="vn-custom-path">
-                        <input type="text" id="custom-background-path" placeholder="Путь к изображению или видео..."
+                        <input type="text" id="custom-background-path" placeholder="${game.i18n.localize('vn.bg.pathPlaceholder')}"
                                value="${currentBg && !currentBg.startsWith('modules/') ? currentBg : ''}">
                         <button type="button" class="vn-btn vn-btn-sm vn-apply-path-btn"><i class="fas fa-check"></i></button>
                     </div>
@@ -191,8 +195,8 @@ export class VNBackgroundManager {
                 <div class="vn-folder-row">
                     <i class="fas fa-folder-open"></i>
                     <span class="vn-folder-row-label" title="${customFolder || this._defaultPath}">${folderLabel}</span>
-                    <button type="button" class="vn-btn vn-btn-sm vn-pick-folder-btn" title="Выбрать папку с изображениями"><i class="fas fa-search"></i> Выбрать папку</button>
-                    ${customFolder ? `<button type="button" class="vn-btn vn-btn-sm vn-reset-folder-btn" title="Вернуть папку по умолчанию"><i class="fas fa-undo"></i></button>` : ''}
+                    <button type="button" class="vn-btn vn-btn-sm vn-pick-folder-btn" title="${game.i18n.localize('vn.bg.pickFolderTitle')}"><i class="fas fa-search"></i> ${game.i18n.localize('vn.bg.pickFolder')}</button>
+                    ${customFolder ? `<button type="button" class="vn-btn vn-btn-sm vn-reset-folder-btn" title="${game.i18n.localize('vn.bg.resetFolderTitle')}"><i class="fas fa-undo"></i></button>` : ''}
                 </div>
                 <div class="vn-background-gallery">${this.generateGalleryContent(currentBg)}</div>
             </div></details>`;
@@ -201,8 +205,8 @@ export class VNBackgroundManager {
     generateGalleryContent(currentBg = null, folderName = null) {
         let html = '';
         if (folderName) html += `<div class="vn-folder-title"><i class="fas fa-folder-open"></i> ${folderName}</div>`;
-        if (this.navigation.length) html += this._folderNavBtn('back', 'fa-arrow-left', 'Назад');
-        html += this._bgOption('none', 'По умолчанию', 'vn-no-background', currentBg);
+        if (this.navigation.length) html += this._folderNavBtn('back', 'fa-arrow-left', game.i18n.localize('vn.bg.back'));
+        html += this._bgOption('none', game.i18n.localize('vn.bg.default'), 'vn-no-background', currentBg);
 
         for (const item of this.available) {
             html += item.type === 'folder'
@@ -222,7 +226,7 @@ export class VNBackgroundManager {
         const selected = currentBg === value || (!currentBg && value === 'none');
         let previewInner = '', bgStyle = '';
 
-        if (cssClass === 'vn-no-background') previewInner = '<span class="vn-no-bg-text">Без фона</span>';
+        if (cssClass === 'vn-no-background') previewInner = `<span class="vn-no-bg-text">${game.i18n.localize('vn.bg.noBackground')}</span>`;
         else if (VNBackgroundManager.isVideo(value)) previewInner = `<video class="vn-bg-preview-video" src="${value}" muted loop playsinline preload="metadata"></video>`;
         else bgStyle = `style="background-image: url('${value}')"`;
 
@@ -300,7 +304,7 @@ export class VNBackgroundManager {
                 if (sceneBtn) {
                     e.preventDefault();
                     const bg = sceneBtn.dataset.background;
-                    if (bg) this.addDynamicOption(root, bg, 'Текущая сцена');
+                    if (bg) this.addDynamicOption(root, bg, game.i18n.localize('vn.bg.currentScene'));
                     return;
                 }
 
@@ -308,7 +312,7 @@ export class VNBackgroundManager {
                 if (pathBtn) {
                     e.preventDefault();
                     const path = root.querySelector('#custom-background-path')?.value?.trim();
-                    if (path) this.addDynamicOption(root, path, 'Пользовательский');
+                    if (path) this.addDynamicOption(root, path, game.i18n.localize('vn.bg.custom'));
                     return;
                 }
 

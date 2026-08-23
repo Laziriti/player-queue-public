@@ -4,8 +4,13 @@
 
 import { VNSceneState, VNPresets, MODULE_ID } from './vn-state.js';
 import { VNAdventureIO } from './vn-adventure-io.js';
-import { stripDupSuffix, parseActorId, toActorTokenId, parsePlaylistUuid } from './vn-id-utils.js';
+import { stripDupSuffix, parseActorId, toActorTokenId, parsePlaylistUuid, FALLBACK_AVATAR } from './vn-id-utils.js';
 import { NAMEPLATE_CONFIGS, applyNameplateImage } from '../settings.js';
+import { countPendingMigrations } from './vn-migrations.js';
+
+const VIS_CYCLE = ['visible', 'hidden', 'name-hidden'];
+const VIS_ICON  = { visible: 'fa-eye', hidden: 'fa-eye-slash', 'name-hidden': 'fa-user-secret' };
+const VIS_TITLE = { visible: 'vn.dialog.vis.toHidden', hidden: 'vn.dialog.vis.toNameHidden', 'name-hidden': 'vn.dialog.vis.toVisible' };
 
 export class VNDialogBuilder {
     constructor(scene) {
@@ -63,15 +68,15 @@ export class VNDialogBuilder {
             : { width: 1050, height: 840 };
 
         const dialog = new foundry.applications.api.DialogV2({
-            window: { title: isEdit ? '✏️ Изменить сцену' : '🎭 Создать диалоговую сцену', icon: isEdit ? 'fas fa-edit' : 'fas fa-theater-masks', resizable: true },
+            window: { title: isEdit ? game.i18n.localize('vn.dialog.editTitle') : game.i18n.localize('vn.dialog.createTitle'), icon: isEdit ? 'fas fa-edit' : 'fas fa-theater-masks', resizable: true },
             position: dialogPosition,
             content: dialogContent,
             buttons: [
-                { action: 'create', label: isEdit ? 'Обновить' : 'Создать', icon: isEdit ? 'fas fa-sync' : 'fas fa-play', default: true,
+                { action: 'create', label: isEdit ? game.i18n.localize('vn.dialog.btnUpdate') : game.i18n.localize('vn.dialog.btnCreate'), icon: isEdit ? 'fas fa-sync' : 'fas fa-play', default: true,
                     callback: (_, __, dlg) => this._handleSubmit(dlg.element, isEdit, false) },
-                { action: 'background-only', label: isEdit ? 'Убрать персонажей' : 'Только фон', icon: 'fas fa-image',
+                { action: 'background-only', label: isEdit ? game.i18n.localize('vn.dialog.btnRemoveCharacters') : game.i18n.localize('vn.dialog.btnBackgroundOnly'), icon: 'fas fa-image',
                     callback: (_, __, dlg) => this._handleSubmit(dlg.element, isEdit, true) },
-                { action: 'cancel', label: 'Отмена', icon: 'fas fa-times' }
+                { action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel'), icon: 'fas fa-times' }
             ]
         });
 
@@ -126,7 +131,7 @@ export class VNDialogBuilder {
         const musicUuid = root.querySelector('#vn-music-uuid')?.value || null;
         const soundCues = this._gatherSoundCues(root);
 
-        const hiddenIds = this._collectHiddenIds(root, allRaw, allDeduped);
+        const visibilityData = this._collectVisibilityData(root, allRaw, allDeduped);
 
         const { portraitImages, portraitNames } = backgroundOnly
             ? { portraitImages: {}, portraitNames: {} }
@@ -143,14 +148,14 @@ export class VNDialogBuilder {
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
             flipped: pendingFlipped ?? null, atmosphereEffect: effect,
-            hidden: hiddenIds, musicUuid, soundCues, portraitImages, portraitNames,
+            visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales ?? null, gmOnly,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
             flipped: pendingFlipped || {}, atmosphereEffect: effect,
-            hidden: hiddenIds, musicUuid, soundCues, portraitImages, portraitNames,
+            visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales || {}, gmOnly,
         });
     }
@@ -187,10 +192,11 @@ export class VNDialogBuilder {
             e.preventDefault();
             const tokenOpt = btn.closest('.vn-token-option');
             if (!tokenOpt || !tokenOpt.closest('.vn-token-selector')) return;
-            const isHidden = tokenOpt.dataset.hidden === 'true';
-            tokenOpt.dataset.hidden = String(!isHidden);
-            btn.querySelector('i').className = `fas ${!isHidden ? 'fa-eye-slash' : 'fa-eye'}`;
-            btn.title = !isHidden ? 'Показать персонажа' : 'Скрыть персонажа';
+            const vis = tokenOpt.dataset.visibility ?? 'visible';
+            const next = VIS_CYCLE[(VIS_CYCLE.indexOf(vis) + 1) % VIS_CYCLE.length];
+            tokenOpt.dataset.visibility = next;
+            btn.querySelector('i').className = `fas ${VIS_ICON[next]}`;
+            btn.title = game.i18n.localize(VIS_TITLE[next]);
         });
     }
 
@@ -245,7 +251,7 @@ export class VNDialogBuilder {
                     root.querySelectorAll('.vn-token-option').forEach(el => el.classList.remove('selected'));
                     root.querySelectorAll('.vn-token-selector .vn-token-option').forEach(el => el.classList.add('selected'));
                     if (zone.classList.contains('vn-favorites-section') && data.actorId) {
-                        await window.visualNovelScene.addToFavorites(data.actorId);
+                        await this._scene.addToFavorites(data.actorId);
                     }
                 } catch { /* handled elsewhere */ }
             }, { signal });
@@ -326,7 +332,7 @@ export class VNDialogBuilder {
         if (!favSection) return;
         const scene = this._scene;
         favSection.innerHTML = scene.favoriteActors.length === 0
-            ? '<div class="vn-favorites-empty"><i class="fas fa-arrow-down"></i> Перетащите актёров из журнала</div>'
+            ? `<div class="vn-favorites-empty"><i class="fas fa-arrow-down"></i> ${game.i18n.localize('vn.dialog.dragActorsFromJournal')}</div>`
             : scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean).map(a => VNDialogBuilder.generateActorToken(a)).join('');
         this._setupDragAndDrop(root);
     }
@@ -412,16 +418,16 @@ export class VNDialogBuilder {
         if (es) es.value = state.atmosphereEffect || 'particles';
 
         const defaultsUsed = new Set();
-        for (const [tokenId, isHidden] of Object.entries(state.hidden ?? {})) {
-            if (!isHidden) continue;
+        for (const [tokenId, vis] of Object.entries(state.visibility ?? {})) {
+            if (!vis || vis === 'visible') continue;
             const el = this._findTokenElement(root, tokenId, defaultsUsed);
             if (!el) continue;
             defaultsUsed.add(el);
-            el.dataset.hidden = 'true';
+            el.dataset.visibility = vis;
             const i = el.querySelector('.vn-token-hide-btn i');
-            if (i) i.className = 'fas fa-eye-slash';
+            if (i) i.className = `fas ${VIS_ICON[vis]}`;
             const btn = el.querySelector('.vn-token-hide-btn');
-            if (btn) btn.title = 'Показать персонажа';
+            if (btn) btn.title = game.i18n.localize(VIS_TITLE[vis]);
         }
 
         if (state.musicUuid) this._setMusicInDialog(root, state.musicUuid);
@@ -463,23 +469,27 @@ export class VNDialogBuilder {
         if (effectSelect) effectSelect.value = preset.atmosphereEffect || 'particles';
 
         root.querySelectorAll('.vn-token-option').forEach(el => {
-            el.dataset.hidden = 'false';
+            el.dataset.visibility = 'visible';
             const i = el.querySelector('.vn-token-hide-btn i');
-            if (i) i.className = 'fas fa-eye';
+            if (i) i.className = `fas ${VIS_ICON.visible}`;
             const btn = el.querySelector('.vn-token-hide-btn');
-            if (btn) btn.title = 'Скрыть персонажа';
+            if (btn) btn.title = game.i18n.localize(VIS_TITLE.visible);
         });
-        const hiddenUsed = new Set();
-        for (const [tokenId, isHidden] of Object.entries(preset.hidden ?? {})) {
-            if (!isHidden) continue;
-            const el = this._findTokenElement(root, tokenId, hiddenUsed);
+        // Support both new `visibility` and legacy `hidden` preset formats
+        const visMap = preset.visibility ?? (preset.hidden
+            ? Object.fromEntries(Object.entries(preset.hidden).filter(([, v]) => v).map(([id]) => [id, 'hidden']))
+            : {});
+        const visUsed = new Set();
+        for (const [tokenId, vis] of Object.entries(visMap)) {
+            if (!vis || vis === 'visible') continue;
+            const el = this._findTokenElement(root, tokenId, visUsed);
             if (!el) continue;
-            hiddenUsed.add(el);
-            el.dataset.hidden = 'true';
+            visUsed.add(el);
+            el.dataset.visibility = vis;
             const i = el.querySelector('.vn-token-hide-btn i');
-            if (i) i.className = 'fas fa-eye-slash';
+            if (i) i.className = `fas ${VIS_ICON[vis]}`;
             const btn = el.querySelector('.vn-token-hide-btn');
-            if (btn) btn.title = 'Показать персонажа';
+            if (btn) btn.title = game.i18n.localize(VIS_TITLE[vis]);
         }
 
         this._setMusicInDialog(root, preset.musicUuid || null);
@@ -495,41 +505,41 @@ export class VNDialogBuilder {
         const currentSceneId = canvas?.scene?.id ?? null;
         const hasCurrent = !!currentSceneId;
         const itemsHtml = this._buildPresetItemsHtml(sorted)
-            || '<div class="vn-empty-hint">Нет сохранённых пресетов</div>';
+            || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noSavedPresets')}</div>`;
 
         return `<div class="vn-presets-content">
-            <div class="vn-presets-description"><i class="fas fa-info-circle"></i> Сохраняйте текущую расстановку персонажей и фон как пресет.</div>
+            <div class="vn-presets-description"><i class="fas fa-info-circle"></i> ${game.i18n.localize('vn.dialog.presetsDescription')}</div>
             <div class="vn-preset-save-row">
-                <input type="text" id="vn-preset-name" placeholder="Название пресета...">
+                <input type="text" id="vn-preset-name" placeholder="${game.i18n.localize('vn.dialog.presetNamePlaceholder')}">
                 <button type="button" class="vn-btn vn-btn-xs vn-preset-scene-pin${hasCurrent ? ' active' : ''}" id="vn-preset-scene-pin"
-                    title="${hasCurrent ? `Прикрепить к «${currentSceneName}»` : 'Нет активной сцены'}"
+                    title="${hasCurrent ? game.i18n.format('vn.dialog.pinToScene', {sceneName: currentSceneName}) : game.i18n.localize('vn.dialog.noActiveScenePin')}"
                     data-scene-name="${currentSceneName || ''}"${!hasCurrent ? ' disabled' : ''}>
                     <i class="fas fa-map-pin"></i>
                 </button>
-                <button type="button" class="vn-btn vn-btn-sm vn-btn-accent vn-preset-save-btn"><i class="fas fa-save"></i> Сохранить</button>
+                <button type="button" class="vn-btn vn-btn-sm vn-btn-accent vn-preset-save-btn"><i class="fas fa-save"></i> ${game.i18n.localize('vn.dialog.btnSavePreset')}</button>
             </div>
             <div class="vn-preset-controls">
-                <input type="text" class="vn-preset-search" placeholder="Поиск пресетов...">
+                <input type="text" class="vn-preset-search" placeholder="${game.i18n.localize('vn.dialog.searchPresetsPlaceholder')}">
                 <div class="vn-preset-view-toggle">
-                    <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'list' ? 'active' : ''}" data-view="list" title="Список"><i class="fas fa-list"></i></button>
-                    <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'cards' ? 'active' : ''}" data-view="cards" title="Карточки"><i class="fas fa-th-large"></i></button>
+                    <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'list' ? 'active' : ''}" data-view="list" title="${game.i18n.localize('vn.dialog.viewList')}"><i class="fas fa-list"></i></button>
+                    <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'cards' ? 'active' : ''}" data-view="cards" title="${game.i18n.localize('vn.dialog.viewCards')}"><i class="fas fa-th-large"></i></button>
                 </div>
-                <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter${this._presetSceneFilter ? ' active' : ''}" title="Только пресеты сцены «${currentSceneName || 'текущую сцену'}»" data-scene-id="${currentSceneId || ''}">
-                    <i class="fas fa-map"></i> Эта сцена
+                <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter${this._presetSceneFilter ? ' active' : ''}" title="${game.i18n.format('vn.dialog.filterBySceneTitle', {sceneName: currentSceneName || game.i18n.localize('vn.dialog.thisSceneDefault')})}" data-scene-id="${currentSceneId || ''}">
+                    <i class="fas fa-map"></i> ${game.i18n.localize('vn.dialog.thisScene')}
                 </button>
-                <select class="vn-preset-sort" title="Сортировка">
-                    <option value="newest"${this._presetSortMode === 'newest' ? ' selected' : ''}>Новые</option>
-                    <option value="oldest"${this._presetSortMode === 'oldest' ? ' selected' : ''}>Старые</option>
-                    <option value="az"${this._presetSortMode === 'az' ? ' selected' : ''}>А→Я</option>
-                    <option value="za"${this._presetSortMode === 'za' ? ' selected' : ''}>Я→А</option>
+                <select class="vn-preset-sort" title="${game.i18n.localize('vn.dialog.sortingTitle')}">
+                    <option value="newest"${this._presetSortMode === 'newest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortNewest')}</option>
+                    <option value="oldest"${this._presetSortMode === 'oldest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortOldest')}</option>
+                    <option value="az"${this._presetSortMode === 'az' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortAZ')}</option>
+                    <option value="za"${this._presetSortMode === 'za' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortZA')}</option>
                 </select>
-                <button type="button" class="vn-btn vn-btn-sm vn-btn-danger vn-preset-clear-all" title="Удалить все пресеты">
+                <button type="button" class="vn-btn vn-btn-sm vn-btn-danger vn-preset-clear-all" title="${game.i18n.localize('vn.dialog.deleteAllPresetsTitle')}">
                     <i class="fas fa-trash-can"></i>
                 </button>
             </div>
             <div class="vn-preset-list-header">
-                <i class="fas fa-list"></i> Сохранённые пресеты <span class="vn-badge">${sorted.length}</span>
-                <button type="button" class="vn-btn vn-btn-xs vn-preset-regen-all" title="Перегенерировать все пресеты (thumbnail, портреты и т.д.)"><i class="fas fa-rotate"></i> Перегенерировать все</button>
+                <i class="fas fa-list"></i> ${game.i18n.localize('vn.dialog.savedPresetsHeader')} <span class="vn-badge">${sorted.length}</span>
+                <button type="button" class="vn-btn vn-btn-xs vn-preset-regen-all" title="${game.i18n.localize('vn.dialog.regenAllTitle')}"><i class="fas fa-rotate"></i> ${game.i18n.localize('vn.dialog.btnRegenAll')}</button>
             </div>
             <div class="vn-preset-list${this._presetViewMode === 'cards' ? ' vn-preset-list--cards' : ''}">${itemsHtml}</div>
         </div>`;
@@ -568,7 +578,7 @@ export class VNDialogBuilder {
         });
         return sortedKeys.map(key => {
             const group = groups.get(key);
-            const label = key || 'Без сцены';
+            const label = key || game.i18n.localize('vn.dialog.noScene');
             const items = isCards
                 ? `<div class="vn-preset-cards">${group.map(p => this._buildPresetCardHtml(p)).join('')}</div>`
                 : `<div class="vn-preset-group-items">${group.map(p => this._buildPresetListItemHtml(p, true)).join('')}</div>`;
@@ -577,8 +587,8 @@ export class VNDialogBuilder {
                     <i class="fas fa-map-pin"></i> ${label}
                     <span class="vn-badge">${group.length}</span>
                     <div class="vn-preset-group-actions">
-                        <button type="button" class="vn-btn vn-btn-xs vn-preset-group-regen" data-group-key="${key}" title="Перегенерировать группу «${label}»"><i class="fas fa-rotate"></i></button>
-                        <button type="button" class="vn-btn vn-btn-xs vn-btn-danger vn-preset-group-delete" data-group-key="${key}" title="Удалить группу «${label}»"><i class="fas fa-trash-can"></i></button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-preset-group-regen" data-group-key="${key}" title="${game.i18n.format('vn.dialog.regenGroupTitle', {label})}"><i class="fas fa-rotate"></i></button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-btn-danger vn-preset-group-delete" data-group-key="${key}" title="${game.i18n.format('vn.dialog.deleteGroupTitle', {label})}"><i class="fas fa-trash-can"></i></button>
                     </div>
                 </div>
                 ${items}
@@ -593,10 +603,15 @@ export class VNDialogBuilder {
         const createdStr = this._formatDate(p.createdAt || p.savedAt);
         const updatedStr = (p.updatedAt && p.updatedAt !== p.createdAt) ? this._formatDate(p.updatedAt) : null;
         const dateText = updatedStr
-            ? `Создан: ${createdStr} · Обновлён: ${updatedStr}`
-            : createdStr ? `Создан: ${createdStr}` : '';
-        const metaHtml = (sceneTag || dateText)
-            ? `<div class="vn-preset-meta">${sceneTag}<span class="vn-preset-dates">${dateText}</span></div>`
+            ? game.i18n.format('vn.dialog.presetCreatedUpdated', {created: createdStr, updated: updatedStr})
+            : createdStr ? game.i18n.format('vn.dialog.presetCreated', {date: createdStr}) : '';
+        const versionHtml = p.version ? `<span class="vn-preset-version">v${p.version}</span>` : '';
+        const pendingMigrations = countPendingMigrations(p);
+        const migrationHtml = pendingMigrations
+            ? `<span class="vn-preset-migration-badge" title="${game.i18n.format('vn.dialog.presetMigrationHint', { count: pendingMigrations })}"><i class="fas fa-wrench"></i> ${pendingMigrations}</span>`
+            : '';
+        const metaHtml = (sceneTag || dateText || versionHtml || migrationHtml)
+            ? `<div class="vn-preset-meta">${sceneTag}<span class="vn-preset-dates">${dateText}</span>${versionHtml}${migrationHtml}</div>`
             : '';
         return `<div class="vn-preset-item" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}">
             <div class="vn-preset-info">
@@ -614,10 +629,18 @@ export class VNDialogBuilder {
             : `<div class="vn-preset-card-placeholder"><i class="fas fa-image"></i></div>`;
         const allIds = [...(p.leftIds || []), ...(p.centerIds || []), ...(p.rightIds || [])];
         const actorsHtml = this._buildActorPips(allIds, 5, p.portraitImages || {});
+        const pendingMigrations = countPendingMigrations(p);
+        const migrationBadge = pendingMigrations
+            ? `<span class="vn-preset-migration-badge" title="${game.i18n.format('vn.dialog.presetMigrationHint', { count: pendingMigrations })}"><i class="fas fa-wrench"></i> ${pendingMigrations}</span>`
+            : '';
+        const versionHtml = (p.version || pendingMigrations)
+            ? `<div class="vn-preset-card-version">${p.version ? `v${p.version}` : ''}${migrationBadge}</div>`
+            : '';
         return `<div class="vn-preset-card" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}">
             <div class="vn-preset-card-thumb">${thumbHtml}</div>
             <div class="vn-preset-card-body">
                 <div class="vn-preset-card-name" title="${p.name}">${p.name}</div>
+                ${versionHtml}
                 ${actorsHtml ? `<div class="vn-preset-card-actors">${actorsHtml}</div>` : ''}
                 <div class="vn-preset-card-actions">${this._presetActionButtons(p.id)}</div>
             </div>
@@ -650,16 +673,17 @@ export class VNDialogBuilder {
         return { portraitImages, portraitNames };
     }
 
-    _collectHiddenIds(root, allRaw = null, allDeduped = null) {
-        const hiddenIds = {};
+    _collectVisibilityData(root, allRaw = null, allDeduped = null) {
+        const visibilityData = {};
         const elements = Array.from(root.querySelectorAll('#left-tokens .vn-token-option, #center-tokens .vn-token-option, #right-tokens .vn-token-option'));
         elements.forEach((el, i) => {
-            if (el.dataset.hidden !== 'true') return;
+            const vis = el.dataset.visibility ?? 'visible';
+            if (vis === 'visible') return;
             const id = (allDeduped && allRaw) ? allDeduped[i]
                 : (el.dataset.tokenId || (el.dataset.actorId ? `actor-${el.dataset.actorId}` : null));
-            if (id) hiddenIds[id] = true;
+            if (id) visibilityData[id] = vis;
         });
-        return hiddenIds;
+        return visibilityData;
     }
 
     _gatherDialogState(root) {
@@ -671,7 +695,7 @@ export class VNDialogBuilder {
         const leftCount = root.querySelectorAll('#left-tokens .vn-token-option').length;
         const centerCount = root.querySelectorAll('#center-tokens .vn-token-option').length;
 
-        const hiddenIds = this._collectHiddenIds(root, allRaw, allDeduped);
+        const visibilityData = this._collectVisibilityData(root, allRaw, allDeduped);
         const { portraitImages, portraitNames } = this._gatherPortraitData(root, allRaw, allDeduped);
         const state = new VNSceneState();
         state.fromPayload({
@@ -683,7 +707,7 @@ export class VNDialogBuilder {
             atmosphereEffect: root.querySelector('#atmosphere-effect')?.value || 'particles',
             portraitScale: scene.state.portraitScale,
             portraitScales: scene.state.isActive ? { ...scene.state.portraitScales } : { ...(root._vnPendingScales ?? {}) },
-            hidden: hiddenIds,
+            visibility: visibilityData,
             musicUuid: root.querySelector('#vn-music-uuid')?.value || null,
             soundCues: this._gatherSoundCues(root),
             flipped: Object.fromEntries(
@@ -730,20 +754,20 @@ export class VNDialogBuilder {
                 hint.className = 'vn-empty-hint vn-filter-empty-hint';
                 list.appendChild(hint);
             }
-            hint.textContent = filterScene ? 'Нет пресетов для текущей сцены' : 'Ничего не найдено';
+            hint.textContent = filterScene ? game.i18n.localize('vn.dialog.noPresetsForScene') : game.i18n.localize('vn.dialog.nothingFound');
         } else {
             hint?.remove();
         }
     }
 
     static PRESET_ACTIONS = [
-        { action: 'launch', icon: 'fa-play',           extra: 'vn-btn-accent', title: 'Запустить сцену' },
-        { action: 'load',   icon: 'fa-upload',         extra: '',              title: 'Загрузить в диалог' },
-        { action: 'update', icon: 'fa-arrows-rotate',  extra: '',              title: 'Обновить из диалога' },
-        { action: 'regen',  icon: 'fa-rotate',         extra: '',              title: 'Перегенерировать пресет' },
-        { action: 'assign', icon: 'fa-map-pin',        extra: '',              title: 'Изменить сцену' },
-        { action: 'rename', icon: 'fa-pen',            extra: '',              title: 'Переименовать' },
-        { action: 'delete', icon: 'fa-trash',          extra: 'vn-btn-danger', title: 'Удалить' },
+        { action: 'launch', icon: 'fa-play',           extra: 'vn-btn-accent', title: 'vn.dialog.presetActionLaunch' },
+        { action: 'load',   icon: 'fa-upload',         extra: '',              title: 'vn.dialog.presetActionLoad' },
+        { action: 'update', icon: 'fa-arrows-rotate',  extra: '',              title: 'vn.dialog.presetActionUpdate' },
+        { action: 'regen',  icon: 'fa-rotate',         extra: '',              title: 'vn.dialog.presetActionRegen' },
+        { action: 'assign', icon: 'fa-map-pin',        extra: '',              title: 'vn.dialog.presetActionAssign' },
+        { action: 'rename', icon: 'fa-pen',            extra: '',              title: 'vn.dialog.presetActionRename' },
+        { action: 'delete', icon: 'fa-trash',          extra: 'vn-btn-danger', title: 'vn.dialog.presetActionDelete' },
     ];
 
     _presetBtn(action, presetId, icon, extraClass = '', title = '') {
@@ -751,7 +775,7 @@ export class VNDialogBuilder {
     }
 
     _presetActionButtons(presetId) {
-        return VNDialogBuilder.PRESET_ACTIONS.map(a => this._presetBtn(a.action, presetId, a.icon, a.extra, a.title)).join('');
+        return VNDialogBuilder.PRESET_ACTIONS.map(a => this._presetBtn(a.action, presetId, a.icon, a.extra, game.i18n.localize(a.title))).join('');
     }
 
     _attachPresetListeners(root) {
@@ -795,11 +819,11 @@ export class VNDialogBuilder {
             const count = root.querySelectorAll('.vn-preset-item, .vn-preset-card').length;
             if (!count) return;
             const confirmed = await foundry.applications.api.DialogV2.confirm({
-                window: { title: 'Удалить все пресеты' },
+                window: { title: game.i18n.localize('vn.dialog.deleteAllPresetsTitle') },
                 classes: ['vn-confirm-dialog'],
-                content: `<p>Удалить все <strong>${count}</strong> пресетов? Это действие необратимо.</p>`,
-                yes: { label: 'Удалить все', icon: 'fas fa-trash-can' },
-                no: { label: 'Отмена' },
+                content: `<p>${game.i18n.format('vn.dialog.deleteAllPresetsConfirm', {count})}</p>`,
+                yes: { label: game.i18n.localize('vn.dialog.btnDeleteAll'), icon: 'fas fa-trash-can' },
+                no: { label: game.i18n.localize('vn.dialog.btnCancel') },
             });
             if (!confirmed) return;
             await game.settings.set(MODULE_ID, VNPresets.SETTING_KEY, {});
@@ -813,7 +837,7 @@ export class VNDialogBuilder {
             pinBtn.classList.toggle('active');
             const isActive = pinBtn.classList.contains('active');
             const sceneName = pinBtn.dataset.sceneName;
-            pinBtn.title = isActive ? `Прикрепить к «${sceneName}»` : 'Сохранить без сцены';
+            pinBtn.title = isActive ? game.i18n.format('vn.dialog.pinToScene', {sceneName}) : game.i18n.localize('vn.dialog.savePinWithoutScene');
         }, { signal });
 
         root.querySelector('.vn-preset-save-btn')?.addEventListener('click', async (e) => {
@@ -832,7 +856,7 @@ export class VNDialogBuilder {
             e.preventDefault();
             regenAllBtn.disabled = true;
             const count = await VNPresets.regenerate();
-            ui.notifications.info(`Перегенерировано ${count} пресетов`);
+            ui.notifications.info(game.i18n.format('vn.dialog.presetRegenerated', {count}));
             this._refreshPresetList(root);
             this._rebuildExportList(root);
             regenAllBtn.disabled = false;
@@ -876,11 +900,11 @@ export class VNDialogBuilder {
             case 'update': {
                 const presetName = btn.closest('.vn-preset-item, .vn-preset-card')?.dataset.presetName || '';
                 const confirmed = await foundry.applications.api.DialogV2.confirm({
-                    window: { title: 'Обновить пресет' },
+                    window: { title: game.i18n.localize('vn.dialog.updatePresetTitle') },
                     classes: ['vn-confirm-dialog'],
-                    content: `<p>Перезаписать пресет «<strong>${presetName}</strong>» текущими настройками диалога?</p>`,
-                    yes: { label: 'Обновить', icon: 'fas fa-arrows-rotate' },
-                    no: { label: 'Отмена' },
+                    content: `<p>${game.i18n.format('vn.dialog.updatePresetConfirm', {name: presetName})}</p>`,
+                    yes: { label: game.i18n.localize('vn.dialog.btnUpdate'), icon: 'fas fa-arrows-rotate' },
+                    no: { label: game.i18n.localize('vn.dialog.btnCancel') },
                 });
                 if (!confirmed) return;
                 const sorted = await VNPresets.update(presetId, this._gatherDialogState(root));
@@ -893,11 +917,11 @@ export class VNDialogBuilder {
             case 'delete': {
                 const presetName = btn.closest('.vn-preset-item, .vn-preset-card')?.dataset.presetName || '';
                 const confirmed = await foundry.applications.api.DialogV2.confirm({
-                    window: { title: 'Удалить пресет' },
+                    window: { title: game.i18n.localize('vn.dialog.deletePresetTitle') },
                     classes: ['vn-confirm-dialog'],
-                    content: `<p>Удалить пресет «<strong>${presetName}</strong>»?</p>`,
-                    yes: { label: 'Удалить', icon: 'fas fa-trash' },
-                    no: { label: 'Отмена' },
+                    content: `<p>${game.i18n.format('vn.dialog.deletePresetConfirm', {name: presetName})}</p>`,
+                    yes: { label: game.i18n.localize('vn.dialog.btnDelete'), icon: 'fas fa-trash' },
+                    no: { label: game.i18n.localize('vn.dialog.btnCancel') },
                 });
                 if (!confirmed) return;
                 await VNPresets.delete(presetId);
@@ -913,19 +937,19 @@ export class VNDialogBuilder {
 
                 const buttons = [];
                 if (curId && !alreadyOnCurrent)
-                    buttons.push({ action: 'assign', label: `К «${curName}»`, icon: 'fas fa-map-pin', default: true });
+                    buttons.push({ action: 'assign', label: game.i18n.format('vn.dialog.assignToSceneLabel', {sceneName: curName}), icon: 'fas fa-map-pin', default: true });
                 if (preset.sceneId)
-                    buttons.push({ action: 'unlink', label: 'Открепить от сцены', icon: 'fas fa-link-slash', default: !curId || !!alreadyOnCurrent });
-                buttons.push({ action: 'cancel', label: 'Отмена', icon: 'fas fa-times' });
+                    buttons.push({ action: 'unlink', label: game.i18n.localize('vn.dialog.unlinkFromScene'), icon: 'fas fa-link-slash', default: !curId || !!alreadyOnCurrent });
+                buttons.push({ action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel'), icon: 'fas fa-times' });
 
-                if (!curId && !preset.sceneId) { ui.notifications.warn('Нет активной сцены для прикрепления'); return; }
+                if (!curId && !preset.sceneId) { ui.notifications.warn(game.i18n.localize('vn.dialog.noActiveSceneForPin')); return; }
 
-                const presetSceneHtml = preset.sceneName ? `<p style="margin:4px 0">Сцена пресета: <strong>${preset.sceneName}</strong></p>` : '';
-                const curSceneHtml = curName ? `<p style="margin:4px 0">Текущая сцена: <strong>${curName}</strong></p>` : '';
+                const presetSceneHtml = preset.sceneName ? `<p style="margin:4px 0">${game.i18n.format('vn.dialog.presetSceneLabel', {sceneName: preset.sceneName})}</p>` : '';
+                const curSceneHtml = curName ? `<p style="margin:4px 0">${game.i18n.format('vn.dialog.currentSceneLabel', {sceneName: curName})}</p>` : '';
 
                 const choice = await new Promise(resolve => {
                     const dlg = new foundry.applications.api.DialogV2({
-                        window: { title: `Изменить сцену: «${preset.name}»` },
+                        window: { title: game.i18n.format('vn.dialog.changeSceneDialogTitle', {presetName: preset.name}) },
                         classes: ['vn-confirm-dialog'],
                         content: `<div style="padding:6px 0">${presetSceneHtml}${curSceneHtml}</div>`,
                         buttons,
@@ -947,7 +971,7 @@ export class VNDialogBuilder {
             case 'regen': {
                 btn.disabled = true;
                 await VNPresets.regenerate([presetId]);
-                ui.notifications.info('Пресет перегенерирован');
+                ui.notifications.info(game.i18n.localize('vn.dialog.presetRegeneratedOne'));
                 this._refreshPresetList(root);
                 this._rebuildExportList(root);
                 break;
@@ -993,14 +1017,14 @@ export class VNDialogBuilder {
 
     async _handleGroupDelete(btn, root) {
         const groupKey = btn.dataset.groupKey;
-        const label = groupKey || 'Без сцены';
+        const label = groupKey || game.i18n.localize('vn.dialog.noScene');
         const count = btn.closest('.vn-preset-scene-group')?.querySelectorAll('.vn-preset-item, .vn-preset-card').length || 0;
         const confirmed = await foundry.applications.api.DialogV2.confirm({
-            window: { title: 'Удалить группу' },
+            window: { title: game.i18n.localize('vn.dialog.deleteGroupDialogTitle') },
             classes: ['vn-confirm-dialog'],
-            content: `<p>Удалить все <strong>${count}</strong> пресетов группы «<strong>${label}</strong>»? Это действие необратимо.</p>`,
-            yes: { label: 'Удалить группу', icon: 'fas fa-trash-can' },
-            no: { label: 'Отмена' },
+            content: `<p>${game.i18n.format('vn.dialog.deleteGroupConfirm', {count, label})}</p>`,
+            yes: { label: game.i18n.localize('vn.dialog.btnDeleteGroup'), icon: 'fas fa-trash-can' },
+            no: { label: game.i18n.localize('vn.dialog.btnCancel') },
         });
         if (!confirmed) return;
         await VNPresets.deleteGroup(groupKey);
@@ -1013,7 +1037,7 @@ export class VNDialogBuilder {
         const ids = [...(btn.closest('.vn-preset-scene-group')?.querySelectorAll('.vn-preset-item, .vn-preset-card') || [])]
             .map(el => el.dataset.preset).filter(Boolean);
         const count = await VNPresets.regenerate(ids);
-        ui.notifications.info(`Перегенерировано ${count} пресетов`);
+        ui.notifications.info(game.i18n.format('vn.dialog.presetRegenerated', {count}));
         this._refreshPresetList(root);
         this._rebuildExportList(root);
     }
@@ -1028,7 +1052,7 @@ export class VNDialogBuilder {
 
         listEl.classList.toggle('vn-preset-list--cards', this._presetViewMode === 'cards');
         listEl.innerHTML = sorted.length === 0
-            ? '<div class="vn-empty-hint">Нет сохранённых пресетов</div>'
+            ? `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noSavedPresets')}</div>`
             : this._buildPresetItemsHtml(sorted);
 
         this._attachPresetListeners(root);
@@ -1048,11 +1072,11 @@ export class VNDialogBuilder {
         return `<div class="vn-music-tab">
             ${this._generateMusicSection(musicUuid)}
             <div class="vn-cues-section">
-                <div class="vn-music-label"><i class="fas fa-play-circle"></i> Звуки сцены</div>
-                <p class="vn-cues-hint">Треки, которые ГМ может запускать прямо со сцены (кнопка в тулбаре).</p>
+                <div class="vn-music-label"><i class="fas fa-play-circle"></i> ${game.i18n.localize('vn.dialog.soundCuesLabel')}</div>
+                <p class="vn-cues-hint">${game.i18n.localize('vn.dialog.soundCuesHint')}</p>
                 <div class="vn-cue-drop-zone" id="vn-cue-drop">
                     <i class="fas fa-plus-circle"></i>
-                    <span>Перетащите треки из плейлиста</span>
+                    <span>${game.i18n.localize('vn.dialog.dragTracksFromPlaylist')}</span>
                 </div>
                 <div class="vn-cue-list" id="vn-cue-list">${cuesHtml}</div>
             </div>
@@ -1062,8 +1086,8 @@ export class VNDialogBuilder {
     _buildCueItemHtml(cue) {
         return `<div class="vn-cue-item" data-cue-id="${cue.id}" data-cue-uuid="${cue.uuid}">
             <i class="fas fa-music vn-cue-icon"></i>
-            <input type="text" class="vn-cue-label-input" value="${cue.label || ''}" placeholder="Название...">
-            <button type="button" class="vn-btn vn-btn-xs vn-cue-delete" title="Удалить"><i class="fas fa-times"></i></button>
+            <input type="text" class="vn-cue-label-input" value="${cue.label || ''}" placeholder="${game.i18n.localize('vn.dialog.cueLabelPlaceholder')}">
+            <button type="button" class="vn-btn vn-btn-xs vn-cue-delete" title="${game.i18n.localize('vn.dialog.btnDelete')}"><i class="fas fa-times"></i></button>
         </div>`;
     }
 
@@ -1126,15 +1150,15 @@ export class VNDialogBuilder {
             if (sound) { nameText = `${sound.parent.name} — ${sound.name}`; hasMusic = true; }
         }
         return `<div class="vn-music-section">
-            <div class="vn-music-label"><i class="fas fa-music"></i> Музыка сцены</div>
+            <div class="vn-music-label"><i class="fas fa-music"></i> ${game.i18n.localize('vn.dialog.musicLabel')}</div>
             <div class="vn-music-drop-zone" id="vn-music-drop"${hasMusic ? ' hidden' : ''}>
                 <i class="fas fa-music"></i>
-                <span>Перетащите трек из плейлиста</span>
+                <span>${game.i18n.localize('vn.dialog.dragTrackFromPlaylist')}</span>
             </div>
             <div class="vn-music-selected" id="vn-music-selected"${!hasMusic ? ' hidden' : ''}>
                 <i class="fas fa-music"></i>
                 <span class="vn-music-name" id="vn-music-name">${nameText}</span>
-                <button type="button" class="vn-music-clear" id="vn-music-clear" title="Убрать музыку"><i class="fas fa-times"></i></button>
+                <button type="button" class="vn-music-clear" id="vn-music-clear" title="${game.i18n.localize('vn.dialog.clearMusic')}"><i class="fas fa-times"></i></button>
             </div>
             <input type="hidden" id="vn-music-uuid" value="${musicUuid || ''}">
         </div>`;
@@ -1215,17 +1239,17 @@ export class VNDialogBuilder {
         const debouncedScale = debounce(val => scene.setPortraitScale(val / 100, false), 30);
 
         const dialog = new foundry.applications.api.DialogV2({
-            window: { title: 'Размер портретов', icon: 'fas fa-expand-arrows-alt' },
+            window: { title: game.i18n.localize('vn.dialog.portraitSizeTitle'), icon: 'fas fa-expand-arrows-alt' },
             position: { width: 380, height: 'auto' },
             content: `<div class="vn-scale-dialog">
-                <div class="vn-scale-header"><label>Масштаб</label><span class="vn-scale-value" id="scale-value">${currentPercent}%</span></div>
+                <div class="vn-scale-header"><label>${game.i18n.localize('vn.dialog.scaleLabel')}</label><span class="vn-scale-value" id="scale-value">${currentPercent}%</span></div>
                 <input type="range" id="portrait-scale-slider" name="scaleSlider" min="50" max="200" step="5" value="${currentPercent}">
                 <div class="vn-scale-presets">${presets.map(v => `<button type="button" class="vn-btn vn-scale-preset ${v === currentPercent ? 'active' : ''}" data-scale="${v}">${v}%</button>`).join('')}</div>
             </div>`,
             buttons: [
-                { action: 'apply', label: 'Для всех', icon: 'fas fa-check', default: true,
+                { action: 'apply', label: game.i18n.localize('vn.dialog.btnApplyForAll'), icon: 'fas fa-check', default: true,
                     callback: (_, button) => scene.setPortraitScale(parseInt(button.form.elements.scaleSlider.value) / 100, true) },
-                { action: 'cancel', label: 'Отмена', icon: 'fas fa-times' }
+                { action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel'), icon: 'fas fa-times' }
             ]
         });
 
@@ -1272,40 +1296,40 @@ export class VNDialogBuilder {
         const currentSoundCues = sceneState?.soundCues || [];
 
         const favHTML = scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean).map(a => VNDialogBuilder.generateActorToken(a)).join('');
-        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${t.id}" data-actor-id="${t.actor.id}" data-type="token" data-hidden="false">
-            <button type="button" class="vn-token-hide-btn" title="Скрыть персонажа" draggable="false"><i class="fas fa-eye"></i></button>
+        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${t.id}" data-actor-id="${t.actor.id}" data-type="token" data-visibility="visible">
+            <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
             <div class="vn-token-preview"><img src="${t.actor.img || t.document.texture.src}" alt="${t.name}" loading="lazy"><div class="vn-token-name">${t.name}</div></div></div>`).join('');
 
         return `<div class="vn-scene-dialog">
             <div class="vn-tabs">
-                <button type="button" class="vn-tab-btn active" data-tab="characters"><i class="fas fa-users"></i> Персонажи</button>
-                <button type="button" class="vn-tab-btn" data-tab="background"><i class="fas fa-image"></i> Фон</button>
-                <button type="button" class="vn-tab-btn" data-tab="music"><i class="fas fa-music"></i> Музыка</button>
-                <button type="button" class="vn-tab-btn" data-tab="presets"><i class="fas fa-bookmark"></i> Пресеты</button>
-                <button type="button" class="vn-tab-btn" data-tab="adventure-io"><i class="fas fa-boxes-stacked"></i> Приключения</button>
-                <label class="vn-gm-only-toggle" title="Сцена будет видна только вам. Нажмите «Показать игрокам» на самой сцене, чтобы открыть всем.">
+                <button type="button" class="vn-tab-btn active" data-tab="characters"><i class="fas fa-users"></i> ${game.i18n.localize('vn.dialog.tabCharacters')}</button>
+                <button type="button" class="vn-tab-btn" data-tab="background"><i class="fas fa-image"></i> ${game.i18n.localize('vn.dialog.tabBackground')}</button>
+                <button type="button" class="vn-tab-btn" data-tab="music"><i class="fas fa-music"></i> ${game.i18n.localize('vn.dialog.tabMusic')}</button>
+                <button type="button" class="vn-tab-btn" data-tab="presets"><i class="fas fa-bookmark"></i> ${game.i18n.localize('vn.dialog.tabPresets')}</button>
+                <button type="button" class="vn-tab-btn" data-tab="adventure-io"><i class="fas fa-boxes-stacked"></i> ${game.i18n.localize('vn.dialog.tabAdventures')}</button>
+                <label class="vn-gm-only-toggle" title="${game.i18n.localize('vn.dialog.gmOnlyToggleTitle')}">
                     <input type="checkbox" id="vn-gm-only-toggle">
-                    <i class="fas fa-eye-slash"></i> Только ГМ
+                    <i class="fas fa-eye-slash"></i> ${game.i18n.localize('vn.dialog.gmOnlyLabel')}
                 </label>
             </div>
             <div class="vn-tab-panel active" data-tab="characters">
                 <div class="vn-dialog-layout">
                     <div class="vn-dialog-main">
                         <details class="vn-collapsible" open>
-                            <summary class="vn-collapsible-header"><i class="fas fa-map-marker-alt"></i> Доступные на сцене <span class="vn-badge">${tokens.length}</span><i class="fas fa-chevron-down vn-chevron"></i></summary>
-                            <div class="vn-collapsible-body"><div class="vn-available-tokens" id="available-tokens">${tokensHTML || '<div class="vn-empty-hint">Нет токенов на текущей сцене</div>'}</div></div>
+                            <summary class="vn-collapsible-header"><i class="fas fa-map-marker-alt"></i> ${game.i18n.localize('vn.dialog.tokensOnScene')} <span class="vn-badge">${tokens.length}</span><i class="fas fa-chevron-down vn-chevron"></i></summary>
+                            <div class="vn-collapsible-body"><div class="vn-available-tokens" id="available-tokens">${tokensHTML || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noTokensOnScene')}</div>`}</div></div>
                         </details>
                         <div class="vn-positions-grid">
-                            ${this._positionSection('left', 'Лево', 'fa-arrow-left', '← дальше | ближе →')}
-                            ${this._positionSection('center', 'Центр', 'fa-bullseye')}
-                            ${this._positionSection('right', 'Право', 'fa-arrow-right', '← ближе | дальше →')}
+                            ${this._positionSection('left', game.i18n.localize('vn.dialog.positionLeft'), 'fa-arrow-left', game.i18n.localize('vn.dialog.positionLeftOrder'))}
+                            ${this._positionSection('center', game.i18n.localize('vn.dialog.positionCenter'), 'fa-bullseye')}
+                            ${this._positionSection('right', game.i18n.localize('vn.dialog.positionRight'), 'fa-arrow-right', game.i18n.localize('vn.dialog.positionRightOrder'))}
                         </div>
                     </div>
                     <div class="vn-dialog-sidebar">
                         <div class="vn-favorites-panel">
-                            <div class="vn-panel-header"><i class="fas fa-star"></i> Избранное</div>
-                            <div class="vn-favorites-section">${favHTML || '<div class="vn-favorites-empty"><i class="fas fa-arrow-down"></i> Перетащите актёров из журнала</div>'}</div>
-                            <div class="vn-favorites-hint"><i class="fas fa-mouse-pointer"></i> ПКМ — удалить</div>
+                            <div class="vn-panel-header"><i class="fas fa-star"></i> ${game.i18n.localize('vn.dialog.favoritesHeader')}</div>
+                            <div class="vn-favorites-section">${favHTML || `<div class="vn-favorites-empty"><i class="fas fa-arrow-down"></i> ${game.i18n.localize('vn.dialog.dragActorsFromJournal')}</div>`}</div>
+                            <div class="vn-favorites-hint"><i class="fas fa-mouse-pointer"></i> ${game.i18n.localize('vn.dialog.favoritesHint')}</div>
                         </div>
                     </div>
                 </div>
@@ -1335,46 +1359,46 @@ export class VNDialogBuilder {
     _generateIOSection(sorted) {
         const exportList = this._buildIOPresetGroups(sorted, 'exp', true);
         const exportEmpty = sorted.length === 0
-            ? '<div class="vn-empty-hint">Нет пресетов для экспорта</div>'
+            ? `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noPresetsToExport')}</div>`
             : '';
 
         return `<div class="vn-io-tab">
             <div class="vn-io-section">
-                <div class="vn-io-section-title"><i class="fas fa-file-export"></i> Экспорт пресетов</div>
+                <div class="vn-io-section-title"><i class="fas fa-file-export"></i> ${game.i18n.localize('vn.dialog.exportPresetsTitle')}</div>
                 <div class="vn-io-controls">
                     <div class="vn-io-view-toggle">
-                        <button type="button" class="vn-btn vn-btn-xs vn-io-view-btn ${this._ioViewMode === 'detailed' ? 'active' : ''}" data-view="detailed">Подробно</button>
-                        <button type="button" class="vn-btn vn-btn-xs vn-io-view-btn ${this._ioViewMode === 'compact' ? 'active' : ''}" data-view="compact">Компактно</button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-view-btn ${this._ioViewMode === 'detailed' ? 'active' : ''}" data-view="detailed">${game.i18n.localize('vn.dialog.viewDetailed')}</button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-view-btn ${this._ioViewMode === 'compact' ? 'active' : ''}" data-view="compact">${game.i18n.localize('vn.dialog.viewCompact')}</button>
                     </div>
                     <div class="vn-io-bulk-btns">
-                        <button type="button" class="vn-btn vn-btn-xs vn-io-check-all" data-section="export">Все</button>
-                        <button type="button" class="vn-btn vn-btn-xs vn-io-uncheck-all" data-section="export">Снять</button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-check-all" data-section="export">${game.i18n.localize('vn.dialog.checkAll')}</button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-uncheck-all" data-section="export">${game.i18n.localize('vn.dialog.uncheckAll')}</button>
                     </div>
                 </div>
                 <div class="vn-io-preset-list" id="vn-io-export-list">${exportEmpty || exportList}</div>
                 <div class="vn-io-export-footer">
                     <div class="vn-io-module-input-row">
-                        <label class="vn-io-label"><i class="fas fa-cube"></i> Модуль</label>
+                        <label class="vn-io-label"><i class="fas fa-cube"></i> ${game.i18n.localize('vn.dialog.moduleLabel')}</label>
                         ${this._buildModuleSelect()}
                     </div>
                     <div class="vn-io-module-input-row">
-                        <label class="vn-io-label"><i class="fas fa-id-badge"></i> Плашка</label>
+                        <label class="vn-io-label"><i class="fas fa-id-badge"></i> ${game.i18n.localize('vn.dialog.nameplateLabel')}</label>
                         ${this._buildNameplateSelect()}
                     </div>
                     <div class="vn-io-module-input-row">
-                        <label class="vn-io-label"><i class="fas fa-folder-open"></i> Папка фонов</label>
+                        <label class="vn-io-label"><i class="fas fa-folder-open"></i> ${game.i18n.localize('vn.dialog.bgFolderLabel')}</label>
                         <div class="vn-io-folder-row">
-                            <input type="text" id="vn-io-export-folder" class="vn-io-select" placeholder="Папка с изображениями (необязательно)"
+                            <input type="text" id="vn-io-export-folder" class="vn-io-select" placeholder="${game.i18n.localize('vn.dialog.bgFolderPlaceholder')}"
                                    value="${this._scene?._bgManager?.constructor?.getCustomFolder?.() || ''}">
-                            <button type="button" class="vn-btn vn-btn-xs" id="vn-io-pick-folder-btn" title="Выбрать папку"><i class="fas fa-search"></i></button>
+                            <button type="button" class="vn-btn vn-btn-xs" id="vn-io-pick-folder-btn" title="${game.i18n.localize('vn.dialog.pickFolderBtnTitle')}"><i class="fas fa-search"></i></button>
                         </div>
                     </div>
                     <div class="vn-io-export-btns">
                         <button type="button" class="vn-btn vn-btn-sm vn-btn-accent" id="vn-io-export-btn">
-                            <i class="fas fa-file-export"></i> <span id="vn-io-export-label">В модуль</span>
+                            <i class="fas fa-file-export"></i> <span id="vn-io-export-label">${game.i18n.localize('vn.dialog.btnExportToModule')}</span>
                         </button>
                         <button type="button" class="vn-btn vn-btn-sm" id="vn-io-export-file-btn">
-                            <i class="fas fa-download"></i> Скачать JSON
+                            <i class="fas fa-download"></i> ${game.i18n.localize('vn.dialog.btnDownloadJson')}
                         </button>
                     </div>
                 </div>
@@ -1383,22 +1407,22 @@ export class VNDialogBuilder {
             <div class="vn-io-divider"></div>
 
             <div class="vn-io-section">
-                <div class="vn-io-section-title"><i class="fas fa-file-import"></i> Импорт из модуля-приключения</div>
+                <div class="vn-io-section-title"><i class="fas fa-file-import"></i> ${game.i18n.localize('vn.dialog.importFromModuleTitle')}</div>
                 <div class="vn-io-scan-row">
                     <button type="button" class="vn-btn vn-btn-sm" id="vn-io-scan-btn">
-                        <i class="fas fa-magnifying-glass"></i> Найти модули приключений
+                        <i class="fas fa-magnifying-glass"></i> ${game.i18n.localize('vn.dialog.btnFindAdventureModules')}
                     </button>
-                    <span class="vn-io-scan-hint">Ищет активные модули с флагом player-queue</span>
+                    <span class="vn-io-scan-hint">${game.i18n.localize('vn.dialog.scanModulesHint')}</span>
                 </div>
                 <div id="vn-io-modules-list" class="vn-io-modules-list"></div>
                 <div id="vn-io-import-presets" class="vn-io-preset-list"></div>
                 <div class="vn-io-import-footer" id="vn-io-import-footer" hidden>
                     <div class="vn-io-bulk-btns">
-                        <button type="button" class="vn-btn vn-btn-xs vn-io-check-all" data-section="import">Все</button>
-                        <button type="button" class="vn-btn vn-btn-xs vn-io-uncheck-all" data-section="import">Снять</button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-check-all" data-section="import">${game.i18n.localize('vn.dialog.checkAll')}</button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-uncheck-all" data-section="import">${game.i18n.localize('vn.dialog.uncheckAll')}</button>
                     </div>
                     <button type="button" class="vn-btn vn-btn-sm vn-btn-accent" id="vn-io-import-btn">
-                        <i class="fas fa-file-import"></i> <span id="vn-io-import-label">Импортировать выбранные</span>
+                        <i class="fas fa-file-import"></i> <span id="vn-io-import-label">${game.i18n.localize('vn.dialog.btnImportSelected')}</span>
                     </button>
                 </div>
             </div>
@@ -1406,13 +1430,13 @@ export class VNDialogBuilder {
             <div class="vn-io-divider"></div>
 
             <div class="vn-io-section">
-                <div class="vn-io-section-title"><i class="fas fa-upload"></i> Импорт из файла JSON</div>
+                <div class="vn-io-section-title"><i class="fas fa-upload"></i> ${game.i18n.localize('vn.dialog.importFromFileTitle')}</div>
                 <div class="vn-io-scan-row">
                     <button type="button" class="vn-btn vn-btn-sm" id="vn-io-import-file-btn">
-                        <i class="fas fa-folder-open"></i> Выбрать файл .json
+                        <i class="fas fa-folder-open"></i> ${game.i18n.localize('vn.dialog.btnSelectJsonFile')}
                     </button>
                     <input type="file" id="vn-io-file-input" accept=".json" style="display:none">
-                    <span class="vn-io-scan-hint">Загрузить ранее сохранённые пресеты из файла</span>
+                    <span class="vn-io-scan-hint">${game.i18n.localize('vn.dialog.loadFromFileHint')}</span>
                 </div>
             </div>
         </div>`;
@@ -1425,13 +1449,13 @@ export class VNDialogBuilder {
             .map(m => {
                 const label = m.active
                     ? `${m.title || m.id} (${m.id})`
-                    : `${m.title || m.id} (${m.id}) — неактивен`;
+                    : `${m.title || m.id} (${m.id}) ${game.i18n.localize('vn.dialog.moduleInactive')}`;
                 return `<option value="${m.id}">${label}</option>`;
             })
             .join('');
         return `<select id="vn-io-module-id" class="vn-io-select">
-            <option value="">— выберите модуль —</option>
-            ${options || '<option disabled>Нет активных модулей</option>'}
+            <option value="">${game.i18n.localize('vn.dialog.selectModule')}</option>
+            ${options || `<option disabled>${game.i18n.localize('vn.dialog.noActiveModules')}</option>`}
         </select>`;
     }
 
@@ -1441,7 +1465,7 @@ export class VNDialogBuilder {
             `<option value="${path}" ${path === current ? 'selected' : ''}>${cfg.label || path.split('/').pop().replace(/\.[^.]+$/, '')}</option>`
         ).join('');
         return `<select id="vn-io-nameplate" class="vn-io-select">
-            <option value="" ${!current ? 'selected' : ''}>— не указывать —</option>
+            <option value="" ${!current ? 'selected' : ''}>${game.i18n.localize('vn.dialog.selectNameplate')}</option>
             ${opts}
         </select>`;
     }
@@ -1462,13 +1486,13 @@ export class VNDialogBuilder {
 
         return sortedKeys.map(key => {
             const group = groups.get(key);
-            const label = key || 'Без сцены';
+            const label = key || game.i18n.localize('vn.dialog.noScene');
             const items = this._ioViewMode === 'compact'
                 ? group.map(p => this._buildIORowCompact(p, idPrefix, allChecked)).join('')
                 : group.map(p => this._buildIOCardDetailed(p, idPrefix, allChecked)).join('');
             return `<div class="vn-io-scene-group">
                 <div class="vn-io-scene-header">
-                    <label class="vn-io-group-check-label" title="Выбрать группу">
+                    <label class="vn-io-group-check-label" title="${game.i18n.localize('vn.dialog.selectGroup')}">
                         <input type="checkbox" class="vn-io-group-cb"${allChecked ? ' checked' : ''}>
                     </label>
                     <i class="fas fa-map-pin"></i> ${label}
@@ -1524,31 +1548,31 @@ export class VNDialogBuilder {
             const aid = parseActorId(id);
             if (aid) {
                 const a = game.actors.get(aid);
-                if (a) return a.img || a.prototypeToken?.texture?.src || 'icons/svg/mystery-man.svg';
-                return portraitImages[id] || 'icons/svg/mystery-man.svg';
+                if (a) return a.img || a.prototypeToken?.texture?.src || FALLBACK_AVATAR;
+                return portraitImages[id] || FALLBACK_AVATAR;
             }
             const t = canvas.tokens?.get(id);
-            return t?.actor?.img || portraitImages[id] || 'icons/svg/mystery-man.svg';
-        } catch { return portraitImages[id] || 'icons/svg/mystery-man.svg'; }
+            return t?.actor?.img || portraitImages[id] || FALLBACK_AVATAR;
+        } catch { return portraitImages[id] || FALLBACK_AVATAR; }
     }
 
     _updateIOExportCounter(root) {
         const checked = root.querySelectorAll('#vn-io-export-list .vn-io-preset-cb:checked').length;
         const label = root.querySelector('#vn-io-export-label');
-        if (label) label.textContent = checked > 0 ? `Экспортировать выбранные (${checked})` : 'Экспортировать выбранные';
+        if (label) label.textContent = checked > 0 ? game.i18n.format('vn.dialog.exportSelectedCount', {count: checked}) : game.i18n.localize('vn.dialog.exportSelected');
     }
 
     _updateIOImportCounter(root) {
         const checked = root.querySelectorAll('#vn-io-import-presets .vn-io-preset-cb:checked').length;
         const label = root.querySelector('#vn-io-import-label');
-        if (label) label.textContent = checked > 0 ? `Импортировать выбранные (${checked})` : 'Импортировать выбранные';
+        if (label) label.textContent = checked > 0 ? game.i18n.format('vn.dialog.importSelectedCount', {count: checked}) : game.i18n.localize('vn.dialog.importSelected');
     }
 
     _renderModulesList(root) {
         const listEl = root.querySelector('#vn-io-modules-list');
         if (!listEl) return;
         if (!this._ioFoundModules.length) {
-            listEl.innerHTML = '<div class="vn-empty-hint">Модулей с пресетами не найдено</div>';
+            listEl.innerHTML = `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noModulesFound')}</div>`;
             return;
         }
         listEl.innerHTML = this._ioFoundModules.map(m => {
@@ -1559,8 +1583,8 @@ export class VNDialogBuilder {
                 ? (m.backgroundFolder.split('/').pop() || m.backgroundFolder)
                 : null;
             const applyBtns = [
-                nameplateLabel ? `<button type="button" class="vn-btn vn-btn-xs vn-io-apply-nameplate" data-module-id="${m.id}" title="Установить плашку «${nameplateLabel}»"><i class="fas fa-id-badge"></i> ${nameplateLabel}</button>` : '',
-                folderLabel ? `<button type="button" class="vn-btn vn-btn-xs vn-io-apply-folder" data-module-id="${m.id}" title="Установить папку фонов «${m.backgroundFolder}»"><i class="fas fa-folder-open"></i> ${folderLabel}</button>` : '',
+                nameplateLabel ? `<button type="button" class="vn-btn vn-btn-xs vn-io-apply-nameplate" data-module-id="${m.id}" title="${game.i18n.format('vn.dialog.setNameplateTitle', {label: nameplateLabel})}"><i class="fas fa-id-badge"></i> ${nameplateLabel}</button>` : '',
+                folderLabel ? `<button type="button" class="vn-btn vn-btn-xs vn-io-apply-folder" data-module-id="${m.id}" title="${game.i18n.format('vn.dialog.setFolderTitle', {folder: m.backgroundFolder})}"><i class="fas fa-folder-open"></i> ${folderLabel}</button>` : '',
             ].filter(Boolean).join('');
             return `<div class="vn-io-module-item ${this._ioSelectedModuleId === m.id ? 'active' : ''}" data-module-id="${m.id}">
                 <div class="vn-io-module-info">
@@ -1569,7 +1593,7 @@ export class VNDialogBuilder {
                     ${applyBtns ? `<div class="vn-io-module-apply-row">${applyBtns}</div>` : ''}
                 </div>
                 <button type="button" class="vn-btn vn-btn-xs vn-io-load-module" data-module-id="${m.id}">
-                    <i class="fas fa-download"></i> Загрузить
+                    <i class="fas fa-download"></i> ${game.i18n.localize('vn.dialog.btnLoadModule')}
                 </button>
             </div>`;
         }).join('');
@@ -1581,7 +1605,7 @@ export class VNDialogBuilder {
         const footer = root.querySelector('#vn-io-import-footer');
         if (!listEl) return;
         if (!this._ioModulePresets.length) {
-            listEl.innerHTML = '<div class="vn-empty-hint">Нет пресетов в этом модуле</div>';
+            listEl.innerHTML = `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noPresetsInModule')}</div>`;
             if (footer) footer.hidden = true;
             return;
         }
@@ -1614,7 +1638,7 @@ export class VNDialogBuilder {
                 if (!mod?.nameplate) return;
                 await game.settings.set(MODULE_ID, 'nameplateImage', mod.nameplate);
                 applyNameplateImage(mod.nameplate);
-                ui.notifications.info('Плашка установлена');
+                ui.notifications.info(game.i18n.localize('vn.dialog.nameplateInstalled'));
             });
         });
 
@@ -1625,7 +1649,7 @@ export class VNDialogBuilder {
                 const mod = this._ioFoundModules.find(m => m.id === moduleId);
                 if (!mod?.backgroundFolder) return;
                 await game.settings.set(MODULE_ID, 'backgroundFolder', mod.backgroundFolder);
-                ui.notifications.info(`Папка фонов установлена: ${mod.backgroundFolder}`);
+                ui.notifications.info(game.i18n.format('vn.dialog.folderInstalled', {folder: mod.backgroundFolder}));
             });
         });
     }
@@ -1651,7 +1675,7 @@ export class VNDialogBuilder {
             if (!listEl.isConnected) return;
             listEl.innerHTML = sorted.length
                 ? this._buildIOPresetGroups(sorted, 'exp', true)
-                : '<div class="vn-empty-hint">Нет пресетов для экспорта</div>';
+                : `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noPresetsToExport')}</div>`;
             this._updateIOExportCounter(root);
         });
     }
@@ -1744,19 +1768,19 @@ export class VNDialogBuilder {
         root.querySelector('#vn-io-export-btn')?.addEventListener('click', async (e) => {
             e.preventDefault();
             const moduleId = root.querySelector('#vn-io-module-id')?.value?.trim();
-            if (!moduleId) { ui.notifications.warn('Укажите ID модуля'); return; }
+            if (!moduleId) { ui.notifications.warn(game.i18n.localize('vn.dialog.specifyModuleId')); return; }
             const ids = [...root.querySelectorAll('#vn-io-export-list .vn-io-preset-cb:checked')].map(cb => cb.value);
-            if (!ids.length) { ui.notifications.warn('Выберите хотя бы один пресет'); return; }
+            if (!ids.length) { ui.notifications.warn(game.i18n.localize('vn.dialog.selectAtLeastOnePreset')); return; }
             const all = await VNPresets.getAll();
             const toExport = ids.map(id => all[id]).filter(Boolean);
             const nameplate = root.querySelector('#vn-io-nameplate')?.value || '';
             const backgroundFolder = root.querySelector('#vn-io-export-folder')?.value?.trim() || '';
             try {
                 await VNAdventureIO.exportToModule(toExport, moduleId);
-                ui.notifications.info(`Экспортировано ${toExport.length} пресетов в modules/${moduleId}/vn-presets.json`);
+                ui.notifications.info(game.i18n.format('vn.dialog.exportSuccess', {count: toExport.length, moduleId}));
                 this._showExportInstructions(moduleId, { nameplate, backgroundFolder });
             } catch (err) {
-                ui.notifications.error(`Ошибка экспорта: ${err.message}`);
+                ui.notifications.error(game.i18n.format('vn.dialog.exportError', {msg: err.message}));
             }
         });
 
@@ -1780,9 +1804,9 @@ export class VNDialogBuilder {
             const all = await VNPresets.getAll();
             const sorted = await VNPresets.getSorted();
             const toExport = ids.length > 0 ? ids.map(id => all[id]).filter(Boolean) : sorted;
-            if (!toExport.length) { ui.notifications.warn('Нет пресетов для скачивания'); return; }
+            if (!toExport.length) { ui.notifications.warn(game.i18n.localize('vn.dialog.noPresetsToDownload')); return; }
             VNAdventureIO.exportToFile(toExport);
-            ui.notifications.info(`Скачивание ${toExport.length} пр.…`);
+            ui.notifications.info(game.i18n.format('vn.dialog.downloadingPresets', {count: toExport.length}));
         });
 
         // Import from JSON file
@@ -1802,22 +1826,22 @@ export class VNDialogBuilder {
                 if (Array.isArray(data.presets)) presets = data.presets;
                 else if (data.presets && typeof data.presets === 'object') presets = Object.values(data.presets);
                 else if (Array.isArray(data)) presets = data;
-                if (!presets.length) { ui.notifications.warn('Файл не содержит пресетов'); return; }
+                if (!presets.length) { ui.notifications.warn(game.i18n.localize('vn.dialog.noPresetsInFile')); return; }
 
                 const { fresh, dupes } = await VNAdventureIO.classifyImport(presets);
                 const hasDupes = dupes.length > 0;
                 const msg = hasDupes
-                    ? `В файле ${presets.length} пр. (${fresh.length} новых, ${dupes.length} совп.).`
-                    : `В файле ${presets.length} пр. Все новые.`;
+                    ? game.i18n.format('vn.dialog.fileImportWithDupes', {total: presets.length, fresh: fresh.length, dupes: dupes.length})
+                    : game.i18n.format('vn.dialog.fileImportNoDupes', {total: presets.length});
 
                 const choice = await new Promise(resolve => {
                     const buttons = [
-                        { action: 'fresh', label: 'Только новые', icon: 'fas fa-plus', default: true },
-                        ...(hasDupes ? [{ action: 'overwrite', label: 'Перезаписать дубли', icon: 'fas fa-sync' }] : []),
-                        { action: 'replace', label: 'Заменить всё', icon: 'fas fa-trash' },
+                        { action: 'fresh', label: game.i18n.localize('vn.dialog.btnImportFreshOnly'), icon: 'fas fa-plus', default: true },
+                        ...(hasDupes ? [{ action: 'overwrite', label: game.i18n.localize('vn.dialog.btnOverwriteDupes'), icon: 'fas fa-sync' }] : []),
+                        { action: 'replace', label: game.i18n.localize('vn.dialog.btnReplaceAll'), icon: 'fas fa-trash' },
                     ];
                     const dlg = new foundry.applications.api.DialogV2({
-                        window: { title: 'Импорт из файла JSON' },
+                        window: { title: game.i18n.localize('vn.dialog.importFromFileTitle') },
                         classes: ['vn-confirm-dialog'],
                         content: `<div style="padding:6px 0"><p style="margin:0 0 8px">${msg}</p></div>`,
                         buttons,
@@ -1841,11 +1865,11 @@ export class VNDialogBuilder {
                 } else {
                     added = await VNAdventureIO.mergeImport(fresh);
                 }
-                ui.notifications.info(`Импортировано ${added} пресетов`);
+                ui.notifications.info(game.i18n.format('vn.dialog.importedPresets', {count: added}));
                 this._refreshPresetList(root);
                 this._rebuildExportList(root);
             } catch (err) {
-                ui.notifications.error(`Ошибка чтения файла: ${err.message}`);
+                ui.notifications.error(game.i18n.format('vn.dialog.fileReadError', {msg: err.message}));
             }
         });
 
@@ -1853,32 +1877,32 @@ export class VNDialogBuilder {
         root.querySelector('#vn-io-import-btn')?.addEventListener('click', async (e) => {
             e.preventDefault();
             const ids = [...root.querySelectorAll('#vn-io-import-presets .vn-io-preset-cb:checked')].map(cb => cb.value);
-            if (!ids.length) { ui.notifications.warn('Выберите хотя бы один пресет'); return; }
+            if (!ids.length) { ui.notifications.warn(game.i18n.localize('vn.dialog.selectAtLeastOnePreset')); return; }
             const toImport = this._ioModulePresets.filter(p => ids.includes(p.id));
 
             const { fresh, dupes } = await VNAdventureIO.classifyImport(toImport);
 
             if (!dupes.length) {
                 const added = await VNAdventureIO.mergeImport(fresh);
-                ui.notifications.info(`Импортировано ${added} пресетов`);
+                ui.notifications.info(game.i18n.format('vn.dialog.importedPresets', {count: added}));
                 this._refreshPresetList(root);
                 return;
             }
 
             const bodyLines = [
-                fresh.length ? `<b>${fresh.length}</b> новых пресетов будет добавлено.` : null,
-                `<b>${dupes.length}</b> уже существуют в мире.`,
+                fresh.length ? game.i18n.format('vn.dialog.freshPresetsAdded', {count: fresh.length}) : null,
+                game.i18n.format('vn.dialog.dupesExist', {count: dupes.length}),
             ].filter(Boolean).map(l => `<p style="margin:4px 0">${l}</p>`).join('');
 
             const buttons = [
-                ...(fresh.length ? [{ action: 'new-only', label: `Только новые (${fresh.length})`, icon: 'fas fa-plus', default: true }] : []),
-                { action: 'overwrite', label: `Перезаписать все (${toImport.length})`, icon: 'fas fa-sync', default: !fresh.length },
-                { action: 'cancel', label: 'Отмена', icon: 'fas fa-times' },
+                ...(fresh.length ? [{ action: 'new-only', label: game.i18n.format('vn.dialog.btnImportFreshCount', {count: fresh.length}), icon: 'fas fa-plus', default: true }] : []),
+                { action: 'overwrite', label: game.i18n.format('vn.dialog.btnOverwriteAllCount', {count: toImport.length}), icon: 'fas fa-sync', default: !fresh.length },
+                { action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel'), icon: 'fas fa-times' },
             ];
 
             const choice = await new Promise(resolve => {
                 const dlg = new foundry.applications.api.DialogV2({
-                    window: { title: 'Импорт пресетов' },
+                    window: { title: game.i18n.localize('vn.dialog.importPresetsDialogTitle') },
                     classes: ['vn-confirm-dialog'],
                     content: `<div style="padding:6px 0">${bodyLines}</div>`,
                     buttons,
@@ -1893,7 +1917,7 @@ export class VNDialogBuilder {
 
             const presetsToImport = choice === 'new-only' ? fresh : toImport;
             const added = await VNAdventureIO.mergeImport(presetsToImport, choice === 'overwrite');
-            ui.notifications.info(`Импортировано ${added} пресетов`);
+            ui.notifications.info(game.i18n.format('vn.dialog.importedPresets', {count: added}));
             this._refreshPresetList(root);
         });
     }
@@ -1901,30 +1925,29 @@ export class VNDialogBuilder {
     _showExportInstructions(moduleId, opts = {}) {
         const snippet = VNAdventureIO.moduleJsonSnippet(opts);
         const notesHtml = [
-            opts.nameplate ? `<li>Плашка: <code>${opts.nameplate.split('/').pop()}</code></li>` : '',
-            opts.backgroundFolder ? `<li>Папка фонов: <code>${opts.backgroundFolder}</code></li>` : '',
+            opts.nameplate ? `<li>${game.i18n.format('vn.dialog.nameplateNote', {filename: opts.nameplate.split('/').pop()})}</li>` : '',
+            opts.backgroundFolder ? `<li>${game.i18n.format('vn.dialog.bgFolderNote', {folder: opts.backgroundFolder})}</li>` : '',
         ].filter(Boolean).join('');
 
         const dialog = new foundry.applications.api.DialogV2({
-            window: { title: 'Экспорт завершён', icon: 'fas fa-check-circle' },
+            window: { title: game.i18n.localize('vn.dialog.exportDoneTitle'), icon: 'fas fa-check-circle' },
             classes: ['vn-instructions-dialog'],
             position: { width: 520 },
             content: `<div class="vn-io-instructions">
                 <p><i class="fas fa-check-circle" style="color:var(--vn-success)"></i>
-                Файл <code>vn-presets.json</code> сохранён в
-                <code>modules/${moduleId}/integrations/player-queue/</code>.</p>
+                ${game.i18n.format('vn.dialog.exportFileSaved', {moduleId})}</p>
                 ${notesHtml ? `<ul style="margin:4px 0 8px;padding-left:1.4em;font-size:0.85em">${notesHtml}</ul>` : ''}
-                <p>Добавьте в <code>module.json</code> вашего модуля:</p>
+                <p>${game.i18n.localize('vn.dialog.addToModuleJson')}</p>
                 <div class="vn-io-snippet-wrapper">
                     <pre class="vn-io-snippet" id="vn-io-snippet-text">${snippet}</pre>
                     <button type="button" class="vn-btn vn-btn-xs vn-io-copy-btn" id="vn-io-copy-snippet">
-                        <i class="fas fa-copy"></i> Скопировать
+                        <i class="fas fa-copy"></i> ${game.i18n.localize('vn.dialog.btnCopySnippet')}
                     </button>
                 </div>
                 <p class="vn-io-hint"><i class="fas fa-triangle-exclamation"></i>
-                После изменения <code>module.json</code> потребуется перезапуск сервера Foundry.</p>
+                ${game.i18n.localize('vn.dialog.moduleJsonRestartNote')}</p>
             </div>`,
-            buttons: [{ action: 'ok', label: 'Понятно', icon: 'fas fa-check', default: true }],
+            buttons: [{ action: 'ok', label: game.i18n.localize('vn.dialog.btnOk'), icon: 'fas fa-check', default: true }],
         });
         dialog.addEventListener('render', () => {
             dialog.element.querySelector('#vn-io-copy-snippet')?.addEventListener('click', async (e) => {
@@ -1932,8 +1955,8 @@ export class VNDialogBuilder {
                 await navigator.clipboard.writeText(snippet);
                 const btn = dialog.element.querySelector('#vn-io-copy-snippet');
                 if (!btn) return;
-                btn.innerHTML = '<i class="fas fa-check"></i> Скопировано!';
-                setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i> Скопировать'; }, 2000);
+                btn.innerHTML = `<i class="fas fa-check"></i> ${game.i18n.localize('vn.dialog.btnCopied')}`;
+                setTimeout(() => { btn.innerHTML = `<i class="fas fa-copy"></i> ${game.i18n.localize('vn.dialog.btnCopySnippet')}`; }, 2000);
             });
         });
         dialog.render({ force: true });
@@ -1945,9 +1968,9 @@ export class VNDialogBuilder {
 
     static generateActorToken(actor) {
         const id = actor.id || actor._id;
-        const img = actor.img || actor.prototypeToken?.texture?.src || 'icons/svg/mystery-man.svg';
-        return `<div class="vn-token-option" draggable="true" data-actor-id="${id}" data-token-id="" data-type="actor" data-hidden="false">
-            <button type="button" class="vn-token-hide-btn" title="Скрыть персонажа" draggable="false"><i class="fas fa-eye"></i></button>
+        const img = actor.img || actor.prototypeToken?.texture?.src || FALLBACK_AVATAR;
+        return `<div class="vn-token-option" draggable="true" data-actor-id="${id}" data-token-id="" data-type="actor" data-visibility="visible">
+            <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
             <div class="vn-token-preview"><img src="${img}" alt="${actor.name}" loading="lazy"><div class="vn-token-name">${actor.name}</div></div></div>`;
     }
 }

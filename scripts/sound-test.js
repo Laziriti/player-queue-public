@@ -8,7 +8,7 @@ class SoundTestApp extends foundry.applications.api.ApplicationV2 {
     static DEFAULT_OPTIONS = {
         id: 'player-queue-sound-test',
         window: {
-            title: 'Тест звуков приоритетов',
+            title: 'soundTest.title',
             icon: 'fas fa-volume-up',
             resizable: false
         },
@@ -34,19 +34,19 @@ class SoundTestApp extends foundry.applications.api.ApplicationV2 {
                     <button type="button" class="priority-test-btn ${key.toLowerCase()}"
                             data-priority="${p.value}">
                         <span class="priority-icon">${p.label}</span>
-                        <span class="priority-name">${p.name}</span>
+                        <span class="priority-name">${game.i18n.localize(p.name)}</span>
                         <span class="sound-file">${p.sound}</span>
                     </button>
                 `).join('')}
             </div>
             <div class="current-settings">
-                <h4>Текущие настройки:</h4>
+                <h4>${game.i18n.localize('soundTest.currentSettings')}</h4>
                 <ul>
-                    <li>Звуки: ${settings.enableSounds ? '✅' : '❌'}</li>
-                    <li>Громкость: ${settings.soundVolume}%</li>
-                    <li>Низкий: ${settings.enableLow ? '✅' : '❌'}</li>
-                    <li>Средний: ${settings.enableMedium ? '✅' : '❌'}</li>
-                    <li>Высокий: ${settings.enableHigh ? '✅' : '❌'}</li>
+                    <li>${game.i18n.localize('soundTest.labelSounds')}: ${settings.enableSounds ? '✅' : '❌'}</li>
+                    <li>${game.i18n.localize('soundTest.labelVolume')}: ${settings.soundVolume}%</li>
+                    <li>${game.i18n.localize('playerQueue.priority.low')}: ${settings.enableLow ? '✅' : '❌'}</li>
+                    <li>${game.i18n.localize('playerQueue.priority.medium')}: ${settings.enableMedium ? '✅' : '❌'}</li>
+                    <li>${game.i18n.localize('playerQueue.priority.high')}: ${settings.enableHigh ? '✅' : '❌'}</li>
                 </ul>
             </div>`;
 

@@ -2,6 +2,8 @@
 // vn-id-utils.js — shared ID parsing for actor-/# conventions
 // ============================================================
 
+export const FALLBACK_AVATAR = 'icons/svg/mystery-man.svg';
+
 export function stripDupSuffix(id) {
     const h = id.indexOf('#');
     return h === -1 ? id : id.slice(0, h);

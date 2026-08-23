@@ -2,15 +2,17 @@
 // vn-queue-bridge.js — QueueBridge class
 // ============================================================
 
+import { PlayerQueue } from '../queue/player-queue.js';
+
 class QueueBridge {
     static get instance() {
-        return window.playerQueueInstance ?? window.PlayerQueue?.instance ?? null;
+        return PlayerQueue.instance;
     }
 
-    static get available() { return !!this.instance; }
+    static get available() { return !!PlayerQueue.instance; }
 
     static getQueue() {
-        return this.instance?.queue ?? this._getFromSettings();
+        return PlayerQueue.instance?.queue ?? this._getFromSettings();
     }
 
     static _getFromSettings() {
@@ -18,17 +20,8 @@ class QueueBridge {
         catch { return []; }
     }
 
-    static PRIORITY_FALLBACK = {
-        0: { value: 0, label: '!',   name: 'Низкий',  color: '#28a745' },
-        1: { value: 1, label: '!!',  name: 'Средний', color: '#ffc107' },
-        2: { value: 2, label: '!!!', name: 'Высокий', color: '#dc3545' },
-    };
-
     static getPriorityData(priority) {
-        if (typeof window.PlayerQueue?.getPriorityData === 'function') {
-            return window.PlayerQueue.getPriorityData(priority);
-        }
-        return this.PRIORITY_FALLBACK[priority] ?? this.PRIORITY_FALLBACK[0];
+        return PlayerQueue.getPriorityData(priority);
     }
 
     static buildActorIndex(queueData) {

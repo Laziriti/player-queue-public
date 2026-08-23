@@ -367,3 +367,9 @@
     opacity: 0 !important;
     animation: none !important;
 }
+
+/* Name obscured: portrait visible, identity unknown */
+#vn-scene-overlay .vn-character.vn-character-name-hidden .vn-character-nameplate {
+    opacity: 0.7;
+    font-style: italic;
+}

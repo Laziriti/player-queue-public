@@ -175,16 +175,39 @@
 }
 
 /* Диалог очереди — хром окна */
-.dialog:has(.queue-dialog) .dialog-content {
-    padding: 15px;
-    background: var(--pq-bg-primary);
-    color: var(--pq-text-primary);
+.pq-queue-window,
+.pq-queue-window .window-content,
+.pq-queue-window .dialog-form,
+.pq-queue-window .dialog-content,
+.pq-queue-window .standard-form {
+    background: var(--pq-bg-primary) !important;
+    color: var(--pq-text-primary) !important;
 }
 
-.dialog:has(.queue-dialog) .window-header {
-    background: var(--pq-bg-secondary);
-    color: var(--pq-text-primary);
-    border-bottom: 1px solid var(--pq-border-light);
+.pq-queue-window .window-header {
+    background: var(--pq-bg-secondary) !important;
+    color: var(--pq-text-primary) !important;
+    border-bottom: 1px solid var(--pq-border-light) !important;
+}
+
+.pq-queue-window .window-title,
+.pq-queue-window .window-header i {
+    color: var(--pq-text-primary) !important;
+}
+
+.pq-queue-window .form-footer {
+    background: var(--pq-bg-secondary) !important;
+    border-top: 1px solid var(--pq-border-light) !important;
+}
+
+.pq-queue-window .form-footer button {
+    background: var(--pq-button-bg) !important;
+    color: var(--pq-text-primary) !important;
+    border-color: var(--pq-button-border) !important;
+}
+
+.pq-queue-window .dialog-content {
+    padding: 15px !important;
 }
 
 .queue-dialog .queue-container {
@@ -612,31 +635,6 @@
     }
 }
 
-/* Стили для тёмной темы в диалогах FoundryVTT */
-.player-queue-dark-theme .dialog:has(.queue-dialog) {
-    background: var(--pq-bg-primary);
-}
-
-.player-queue-dark-theme .dialog:has(.queue-dialog) .window-header {
-    background: var(--pq-bg-secondary);
-    border-bottom-color: var(--pq-border-light);
-}
-
-.player-queue-dark-theme .dialog:has(.queue-dialog) .window-title {
-    color: var(--pq-text-primary);
-}
-
-body.player-queue-dark-theme .dialog:has(.queue-dialog) .window-content,
-body.player-queue-dark-theme .dialog:has(.queue-dialog) .dialog-form,
-body.player-queue-dark-theme .dialog:has(.queue-dialog) .dialog-content {
-    background: var(--pq-bg-primary) !important;
-    color: var(--pq-text-primary) !important;
-}
-
-body.player-queue-dark-theme .dialog:has(.queue-dialog) .form-footer {
-    background: var(--pq-bg-secondary) !important;
-    border-top: 1px solid var(--pq-border-light);
-}
 
 
 /* Темная тема для визуальной новеллы */

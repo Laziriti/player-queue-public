@@ -11,19 +11,29 @@ function log(...args) {
 
 class PlayerQueue {
     static ID = 'player-queue';
-    static SOCKET = 'module.player-queue';
+    static socket = null;
 
     static PRIORITIES = {
-        LOW:    { value: 0, label: '!',   name: 'Низкий',  color: '#28a745', sound: 'request0.wav' },
-        MEDIUM: { value: 1, label: '!!',  name: 'Средний', color: '#ffc107', sound: 'request1.wav' },
-        HIGH:   { value: 2, label: '!!!', name: 'Высокий', color: '#dc3545', sound: 'request2.wav' }
+        LOW:    { value: 0, label: '!',   name: 'playerQueue.priority.low',    color: '#28a745', sound: 'request0.wav' },
+        MEDIUM: { value: 1, label: '!!',  name: 'playerQueue.priority.medium', color: '#ffc107', sound: 'request1.wav' },
+        HIGH:   { value: 2, label: '!!!', name: 'playerQueue.priority.high',   color: '#dc3545', sound: 'request2.wav' }
     };
 
     static VALID_PRIORITIES = new Set([0, 1, 2]);
 
+    static FALLBACK_AVATAR = PlayerQueue.FALLBACK_AVATAR;
+
     static _PRIORITY_MAP = new Map(
         Object.values(PlayerQueue.PRIORITIES).map(p => [p.value, p])
     );
+
+    static _escHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
 
     static PRIORITY_SOUND_SETTINGS = {
         0: 'enableLowPrioritySound',
@@ -75,7 +85,7 @@ class PlayerQueue {
         return {
             id: String(data.id),
             name: user.name,
-            avatar: user.avatar || 'icons/svg/mystery-man.svg',
+            avatar: user.avatar || PlayerQueue.FALLBACK_AVATAR,
             priority,
             timestamp: Number(data.timestamp) || Date.now()
         };
@@ -149,7 +159,7 @@ class PlayerQueue {
                             ...p,
                             priority: p.priority ?? 0,
                             name: user?.name ?? p.name,
-                            avatar: user?.avatar || 'icons/svg/mystery-man.svg'
+                            avatar: user?.avatar || PlayerQueue.FALLBACK_AVATAR
                         };
                     });
 
@@ -228,9 +238,10 @@ class PlayerQueue {
 
         const dialog = new foundry.applications.api.DialogV2({
             window: {
-                title: "Очередь игроков",
+                title: game.i18n.localize('playerQueue.dialog.title'),
                 icon: "fas fa-users",
-                resizable: true
+                resizable: true,
+                classes: ['pq-queue-window']
             },
             position: { width: 450, height: 520 },
             content: this._generateDialogContent(),
@@ -261,16 +272,17 @@ class PlayerQueue {
         const queueItems = this.queue.length > 0
             ? this.queue.map(player => {
                 const pd = PlayerQueue.getPriorityData(player.priority);
+                const esc = PlayerQueue._escHtml;
                 return `
                     <div class="queue-player ${isGM ? 'gm-clickable' : ''}"
-                         title="${player.name} - ${pd.name} приоритет"
+                         title="${esc(player.name)} - ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')}"
                          data-user-id="${player.id}"
                          style="border-color: ${pd.color}; border-width: 3px;">
-                        <img src="${player.avatar}" alt="${player.name}"
-                             onerror="this.src='icons/svg/mystery-man.svg'">
+                        <img src="${esc(player.avatar)}" alt="${esc(player.name)}"
+                             onerror="this.src=PlayerQueue.FALLBACK_AVATAR">
                     </div>`;
             }).join('')
-            : '<div class="queue-empty">Очередь пуста</div>';
+            : `<div class="queue-empty">${game.i18n.localize('playerQueue.dialog.empty')}</div>`;
 
         const controls = currentPlayer
             ? this._generateInQueueControls(currentPlayer)
@@ -283,16 +295,16 @@ class PlayerQueue {
                 <div class="queue-container">${queueItems}</div>
                 <div class="queue-controls">
                     ${controls}
-                    ${isGM ? '<button type="button" class="clear-btn" data-action="clear-queue">Очистить очередь</button>' : ''}
+                    ${isGM ? `<button type="button" class="clear-btn" data-action="clear-queue">${game.i18n.localize('playerQueue.dialog.clearQueue')}</button>` : ''}
                 </div>
                 <div class="queue-info">
-                    <small>Игроков в очереди: ${this.queue.length}</small>
-                    ${isGM ? '<br><small>ЛКМ - объявить и убрать, ПКМ - просто убрать</small>' : ''}
+                    <small>${game.i18n.format('playerQueue.dialog.playerCount', { count: this.queue.length })}</small>
+                    ${isGM ? `<br><small>${game.i18n.localize('playerQueue.dialog.gmHint')}</small>` : ''}
                     <div class="priority-legend">
-                        <small>Приоритеты:
-                            <span style="color:${HIGH.color};font-weight:bold;">${HIGH.label} Высокий</span> •
-                            <span style="color:${MEDIUM.color};font-weight:bold;">${MEDIUM.label} Средний</span> •
-                            <span style="color:${LOW.color};font-weight:bold;">${LOW.label} Низкий</span>
+                        <small>${game.i18n.localize('playerQueue.dialog.prioritiesLabel')}
+                            <span style="color:${HIGH.color};font-weight:bold;">${HIGH.label} ${game.i18n.localize(HIGH.name)}</span> •
+                            <span style="color:${MEDIUM.color};font-weight:bold;">${MEDIUM.label} ${game.i18n.localize(MEDIUM.name)}</span> •
+                            <span style="color:${LOW.color};font-weight:bold;">${LOW.label} ${game.i18n.localize(LOW.name)}</span>
                         </small>
                     </div>
                 </div>
@@ -303,21 +315,29 @@ class PlayerQueue {
         // DialogV2 требует хотя бы одну кнопку, делаем «Закрыть»
         return [{
             action: 'close',
-            label: 'Закрыть',
+            label: game.i18n.localize('playerQueue.dialog.close'),
             icon: 'fas fa-times'
         }];
     }
 
     _generateJoinControls() {
+        const JOIN_TITLES = {
+            low:    'playerQueue.dialog.joinTitleLow',
+            medium: 'playerQueue.dialog.joinTitleMedium',
+            high:   'playerQueue.dialog.joinTitleHigh'
+        };
         return `
             <div class="priority-buttons">
-                ${[['low', 0, '!', 'Низкий'], ['medium', 1, '!!', 'Средний'], ['high', 2, '!!!', 'Высокий']]
-                .map(([cls, val, icon, text]) => `
+                ${[
+                    { cls: 'low',    p: PlayerQueue.PRIORITIES.LOW },
+                    { cls: 'medium', p: PlayerQueue.PRIORITIES.MEDIUM },
+                    { cls: 'high',   p: PlayerQueue.PRIORITIES.HIGH }
+                ].map(({ cls, p }) => `
                     <button type="button" class="priority-join-btn ${cls}"
-                            data-priority="${val}"
-                            title="Встать в очередь с ${text.toLowerCase()} приоритетом">
-                        <span class="priority-icon">${icon}</span>
-                        <span class="priority-text">${text}</span>
+                            data-priority="${p.value}"
+                            title="${game.i18n.localize(JOIN_TITLES[cls])}">
+                        <span class="priority-icon">${p.label}</span>
+                        <span class="priority-text">${game.i18n.localize(p.name)}</span>
                     </button>`).join('')}
             </div>`;
     }
@@ -327,20 +347,24 @@ class PlayerQueue {
         return `
             <div class="current-player-controls">
                 <div class="current-priority-info">
-                    <span class="current-priority-label">Ваш приоритет:</span>
+                    <span class="current-priority-label">${game.i18n.localize('playerQueue.dialog.yourPriority')}</span>
                     <span class="current-priority-value" style="color: ${pd.color};">
-                        ${pd.label} ${pd.name}
+                        ${pd.label} ${game.i18n.localize(pd.name)}
                     </span>
                 </div>
                 <div class="priority-change-buttons">
-                    ${[['low', 0, '!'], ['medium', 1, '!!'], ['high', 2, '!!!']].map(([cls, val, icon]) => `
+                    ${[
+                        { cls: 'low',    val: 0, icon: '!',   titleKey: 'playerQueue.dialog.changeTitleLow' },
+                        { cls: 'medium', val: 1, icon: '!!',  titleKey: 'playerQueue.dialog.changeTitleMedium' },
+                        { cls: 'high',   val: 2, icon: '!!!', titleKey: 'playerQueue.dialog.changeTitleHigh' }
+                    ].map(({ cls, val, icon, titleKey }) => `
                         <button type="button"
                                 class="priority-change-btn ${cls} ${player.priority === val ? 'active' : ''}"
                                 data-priority="${val}"
-                                title="Изменить на ${cls} приоритет">${icon}</button>`).join('')}
+                                title="${game.i18n.localize(titleKey)}">${icon}</button>`).join('')}
                 </div>
                 <button type="button" class="leave-btn" data-action="leave-queue">
-                    Покинуть очередь
+                    ${game.i18n.localize('playerQueue.dialog.leaveQueue')}
                 </button>
             </div>`;
     }
@@ -417,7 +441,7 @@ class PlayerQueue {
         const playerData = {
             id: game.user.id,
             name: game.user.name,
-            avatar: game.user.avatar || 'icons/svg/mystery-man.svg',
+            avatar: game.user.avatar || PlayerQueue.FALLBACK_AVATAR,
             priority,
             timestamp: Date.now()
         };
@@ -469,8 +493,8 @@ class PlayerQueue {
         const pd = PlayerQueue.getPriorityData(player.priority);
         await ChatMessage.create({
             user: game.user.id,
-            speaker: { alias: "Система" },
-            content: `🎭 <strong>${player.name}</strong> сейчас выступает! <span style="color: ${pd.color}; font-weight: bold;">(${pd.label} ${pd.name} приоритет)</span>`,
+            speaker: { alias: game.i18n.localize('playerQueue.chat.systemAlias') },
+            content: `🎭 <strong>${PlayerQueue._escHtml(player.name)}</strong> ${game.i18n.localize('playerQueue.chat.speakingNow')} <span style="color: ${pd.color}; font-weight: bold;">(${pd.label} ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')})</span>`,
         });
 
         this.removePlayerFromQueue(userId);
@@ -521,11 +545,11 @@ class PlayerQueue {
 
     emitSocketEvent(action, data) {
         log('emit:', action, data);
-        if (!game.socket) {
-            console.error('Socket not available');
+        if (!PlayerQueue.socket) {
+            console.error('[PlayerQueue] Socket not available');
             return;
         }
-        game.socket.emit(PlayerQueue.SOCKET, {
+        PlayerQueue.socket.executeForEveryone('playerQueue', {
             action, data, sender: game.user.id
         });
     }
@@ -652,8 +676,8 @@ class PlayerQueue {
         const savedPos = this.loadQueuePosition();
         if (savedPos) {
             el.style.position = 'fixed';
-            el.style.left = savedPos.x + 'px';
-            el.style.top = savedPos.y + 'px';
+            el.style.left = Math.min(Math.max(0, savedPos.x), window.innerWidth  - 60) + 'px';
+            el.style.top  = Math.min(Math.max(0, savedPos.y), window.innerHeight - 60) + 'px';
         } else {
             this._applyQueuePosition(el, PlayerQueue.setting('queuePosition'));
         }
@@ -686,7 +710,7 @@ class PlayerQueue {
         const handle = document.createElement('div');
         handle.className = 'drag-handle';
         handle.innerHTML = '⋮⋮';
-        handle.title = 'Перетащить очередь';
+        handle.title = game.i18n.localize('playerQueue.floatingQueue.dragHandle');
         element.appendChild(handle);
 
         handle.addEventListener('mousedown', (e) => {
@@ -705,8 +729,9 @@ class PlayerQueue {
             });
 
             const onMove = (ev) => {
-                element.style.left = (startLeft + ev.clientX - startX) + 'px';
-                element.style.top  = (startTop  + ev.clientY - startY) + 'px';
+                const w = element.offsetWidth, h = element.offsetHeight;
+                element.style.left = Math.min(Math.max(0, startLeft + ev.clientX - startX), window.innerWidth  - w) + 'px';
+                element.style.top  = Math.min(Math.max(0, startTop  + ev.clientY - startY), window.innerHeight - h) + 'px';
             };
 
             const onUp = () => {
@@ -767,7 +792,7 @@ class PlayerQueue {
             if (el) {
                 // Обновляем существующий
                 el.style.border = `3px solid ${pd.color}`;
-                el.title = `${player.name} (${index + 1}) - ${pd.name} приоритет`;
+                el.title = `${player.name} (${index + 1}) - ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')}`;
                 const img = el.querySelector('img');
                 if (img) {
                     const expectedSrc = player.avatar;
@@ -795,14 +820,14 @@ class PlayerQueue {
     _createFloatingPlayerElement(player, index, pd, isGM) {
         const el = document.createElement('div');
         el.className = `queue-player ${isGM ? 'gm-clickable' : ''}`;
-        el.title = `${player.name} (${index + 1}) - ${pd.name} приоритет`;
+        el.title = `${player.name} (${index + 1}) - ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')}`;
         el.dataset.userId = player.id;
         el.style.border = `3px solid ${pd.color}`;
 
         const img = document.createElement('img');
         img.src = player.avatar;
         img.alt = player.name;
-        img.onerror = () => { img.src = 'icons/svg/mystery-man.svg'; };
+        img.onerror = () => { img.src = PlayerQueue.FALLBACK_AVATAR; };
         el.appendChild(img);
 
         if (isGM) {

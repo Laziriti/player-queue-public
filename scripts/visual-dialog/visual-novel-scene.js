@@ -10,11 +10,13 @@ import { VNBackgroundManager } from './vn-background-manager.js';
 import { VNDialogBuilder } from './vn-dialog-builder.js';
 import { VNSocketHandler } from './vn-socket-handler.js';
 import { stripDupSuffix, parseActorId, parsePlaylistUuid } from './vn-id-utils.js';
+import { VNChatPanel } from './vn-chat-panel.js';
+import { VNSceneHTML } from './vn-scene-html.js';
 
 const VN_DEBUG = false;
 const vnLog = VN_DEBUG ? (...args) => console.log('[VN]', ...args) : () => {};
 
-const UNKNOWN_NAME = 'Неизвестный';
+const UNKNOWN_NAME = 'vn.actor.unknown';
 
 class VisualNovelScene {
     static ID = 'player-queue';
@@ -25,6 +27,8 @@ class VisualNovelScene {
         center: { enabled: true, maxPerRow: 3, maxRows: 3 },
         right:  { enabled: true, maxPerRow: 3, maxRows: 3 }
     };
+
+    static VISIBILITY_CYCLE = ['visible', 'hidden', 'name-hidden'];
 
     static DEFAULTS = {
         PORTRAIT_SCALE: 1.0,
@@ -50,16 +54,10 @@ class VisualNovelScene {
         this._sceneMusicUuid = null;
         this._pausedSounds = null; // null = scene music never started; array = it has
         this._gmOnly = false;      // true = scene hidden from players until "broadcast"
+        this._closing = false;
 
-        this._chatVisible = false;
-        this._chatBusy = false;
-        this._chatOpenToken = 0;
-
-        this._movedChat = null;
-        this._chatPlaceholder = null;
-        this._chatOriginalParent = null;
-        this._chatOriginalNextSibling = null;
-        this._chatRestoreState = null;
+        this._chatPanel = new VNChatPanel(() => this.$overlay);
+        this._html = new VNSceneHTML(this, VisualNovelScene.ROW_CONFIG);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -165,7 +163,7 @@ class VisualNovelScene {
                 if (!actor) {
                     const img = portraitImages[id] || portraitImages[baseId];
                     if (!img) return null;
-                    const name = portraitNames[id] || portraitNames[baseId] || UNKNOWN_NAME;
+                    const name = portraitNames[id] || portraitNames[baseId] || game.i18n.localize(UNKNOWN_NAME);
                     return { id, actor: { img, id: actorId, name }, name, document: { texture: { src: img } } };
                 }
                 return { id, actor, name: actor.name, document: { texture: { src: actor.prototypeToken?.texture?.src || actor.img } } };
@@ -182,54 +180,11 @@ class VisualNovelScene {
             }
             const img = portraitImages[id] || portraitImages[baseId];
             if (img) {
-                const name = portraitNames[id] || portraitNames[baseId] || UNKNOWN_NAME;
+                const name = portraitNames[id] || portraitNames[baseId] || game.i18n.localize(UNKNOWN_NAME);
                 return { id, actor: { img, id: baseId, name }, name, document: { texture: { src: img } } };
             }
             return null;
         }).filter(Boolean);
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // Multi-Row Layout
-    // ══════════════════════════════════════════════════════════
-
-    _computeRowLayout(count, position) {
-        const cfg = VisualNovelScene.ROW_CONFIG[position];
-        if (!cfg?.enabled || count <= cfg.maxPerRow || cfg.maxRows <= 1) {
-            return { rows: [count], useMultiRow: false };
-        }
-
-        const numRows = Math.min(cfg.maxRows, Math.ceil(count / cfg.maxPerRow));
-        const rows = new Array(numRows).fill(0);
-        let remaining = count;
-
-        for (let r = numRows - 1; r >= 0; r--) {
-            if (r === 0) { rows[r] = remaining; }
-            else { const perRow = Math.ceil(remaining / (r + 1)); rows[r] = perRow; remaining -= perRow; }
-        }
-        return { rows, useMultiRow: rows.length > 1 };
-    }
-
-    _generateSideCharacters(tokens, position, queueData, layout) {
-        const { rows, useMultiRow } = layout || this._computeRowLayout(tokens.length, position);
-        if (!useMultiRow || tokens.length <= 1) {
-            return tokens.map(t => this._generateCharacterHTML(t, queueData)).join('');
-        }
-
-        let html = '', idx = 0;
-        const totalRows = rows.length;
-        for (let r = 0; r < totalRows; r++) {
-            const rowTokens = tokens.slice(idx, idx + rows[r]);
-            idx += rows[r];
-            const isFront = r === totalRows - 1;
-            let rowClass = 'vn-row';
-            if (isFront) rowClass += ' vn-front-row';
-            else if (totalRows === 2) rowClass += ' vn-back-row';
-            else rowClass += ` vn-back-row vn-row-depth-${totalRows - 1 - r}`;
-            const rowType = isFront ? 'front' : 'back';
-            html += `<div class="${rowClass}" data-depth="${r}">${rowTokens.map(t => this._generateCharacterHTML(t, queueData, rowType)).join('')}</div>`;
-        }
-        return html;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -324,24 +279,26 @@ class VisualNovelScene {
         this._applyAllPortraitTransforms();
     }
 
-    static _applyHiddenToElement(charEl, hidden) {
-        charEl.classList.toggle('vn-character-hidden', hidden);
+    static _applyVisibilityToElement(charEl, visibility) {
+        const v = visibility ?? 'visible';
+        charEl.classList.toggle('vn-character-hidden',      v === 'hidden');
+        charEl.classList.toggle('vn-character-name-hidden', v === 'name-hidden');
         const nm = charEl.querySelector('.vn-nameplate-text');
-        if (nm) nm.textContent = hidden ? '???' : (charEl.dataset.name || '');
+        if (nm) nm.textContent = (v !== 'visible') ? '???' : (charEl.dataset.name || '');
     }
 
-    applyHidden(tokenId, hidden, emit = true) {
+    applyVisibility(tokenId, visibility, emit = true) {
         if (emit && !game.user.isGM) return;
-        if (hidden) this.state.hidden[tokenId] = true;
-        else delete this.state.hidden[tokenId];
+        if (visibility && visibility !== 'visible') this.state.visibility[tokenId] = visibility;
+        else delete this.state.visibility[tokenId];
         const charEl = document.querySelector(`.vn-character[data-token-id="${tokenId}"]`);
-        if (charEl) VisualNovelScene._applyHiddenToElement(charEl, !!hidden);
-        if (emit) { this.emitSocketEvent('setHidden', { tokenId, hidden: !!hidden }); this._persistState(); }
+        if (charEl) VisualNovelScene._applyVisibilityToElement(charEl, visibility ?? 'visible');
+        if (emit) { this.emitSocketEvent('setVisibility', { tokenId, visibility: visibility ?? 'visible' }); this._persistState(); }
     }
 
-    _applyAllHiddenStates() {
+    _applyAllVisibilityStates() {
         document.querySelectorAll('.vn-character').forEach(charEl =>
-            VisualNovelScene._applyHiddenToElement(charEl, !!this.state.hidden[charEl.dataset.tokenId]));
+            VisualNovelScene._applyVisibilityToElement(charEl, this.state.visibility[charEl.dataset.tokenId] ?? 'visible'));
     }
 
     // ══════════════════════════════════════════════════════════
@@ -434,7 +391,7 @@ class VisualNovelScene {
         const btn = overlay.querySelector('.vn-atmosphere-cycle-btn');
         if (btn) {
             btn.querySelector('i').className = `fas ${VNAtmosphere.EFFECT_ICONS[effect]}`;
-            btn.title = `Атмосфера: ${VNAtmosphere.EFFECT_LABELS[effect]}`;
+            btn.title = game.i18n.format('vn.atmosphere.buttonTitle', { effect: game.i18n.localize(VNAtmosphere.EFFECT_LABELS[effect]) });
         }
         overlay.querySelectorAll('.vn-atmo-item').forEach(item =>
             item.classList.toggle('active', item.dataset.effect === effect));
@@ -449,7 +406,7 @@ class VisualNovelScene {
         const icon = playing ? 'fa-stop-circle' : 'fa-play-circle';
         const cls = playing ? ' playing' : '';
         return `<button type="button" class="vn-sound-item${cls}" data-uuid="${cue.uuid}" title="${cue.label || ''}">`
-            + `<i class="fas ${icon}"></i><span>${cue.label || 'Без названия'}</span></button>`;
+            + `<i class="fas ${icon}"></i><span>${cue.label || game.i18n.localize('vn.sounds.untitled')}</span></button>`;
     }
 
     _generateSoundsWrapHTML() {
@@ -457,11 +414,11 @@ class VisualNovelScene {
         const btn = (cls, icon, title) => `<button type="button" class="vn-toolbar-btn ${cls}" title="${title}"><i class="fas ${icon}"></i></button>`;
         const items = cues.length
             ? cues.map(c => this._buildSoundItemHtml(c)).join('')
-            : '<div class="vn-sounds-empty">Нет звуков</div>';
+            : `<div class="vn-sounds-empty">${game.i18n.localize('vn.sounds.empty')}</div>`;
         return `<div class="vn-sounds-wrap"${!cues.length ? ' hidden' : ''}>
-            ${btn('vn-sounds-btn', 'fa-volume-up', 'Звуки сцены')}
+            ${btn('vn-sounds-btn', 'fa-volume-up', game.i18n.localize('vn.sounds.buttonTitle'))}
             <div class="vn-sounds-picker" hidden>
-                <div class="vn-sounds-picker-header"><i class="fas fa-music"></i> Звуки</div>
+                <div class="vn-sounds-picker-header"><i class="fas fa-music"></i> ${game.i18n.localize('vn.sounds.header')}</div>
                 <div class="vn-sounds-list">${items}</div>
             </div>
         </div>`;
@@ -499,7 +456,7 @@ class VisualNovelScene {
         if (!game.user.isGM) return;
         const parsed = parsePlaylistUuid(uuid);
         const sound = parsed?.sound;
-        if (!sound) { ui.notifications.warn('Трек не найден'); return; }
+        if (!sound) { ui.notifications.warn(game.i18n.localize('vn.sounds.trackNotFound')); return; }
         const playlist = sound.parent;
         if (sound.playing) {
             await playlist.stopSound(sound);
@@ -561,6 +518,7 @@ class VisualNovelScene {
     createScene(payload, emit = true) {
         if (this._creating) return;
         this._creating = true;
+        this._closing = false;
         try { this._doCreateScene(payload, emit); }
         finally { this._creating = false; }
     }
@@ -578,7 +536,8 @@ class VisualNovelScene {
             portraitScale: payload.portraitScale ?? VisualNovelScene.DEFAULTS.PORTRAIT_SCALE,
             atmosphereEffect: payload.atmosphereEffect ?? 'particles',
             flipped: payload.flipped || {},
-            hidden: payload.hidden || {},
+            visibility: payload.visibility || null,
+            hidden: payload.hidden || null,
             musicUuid: payload.musicUuid ?? null,
             soundCues: payload.soundCues || [],
             portraitImages: payload.portraitImages || {},
@@ -609,7 +568,7 @@ class VisualNovelScene {
                 this.state[`${pos}Ids`], this.state.portraitImages, this.state.portraitNames)])
         );
 
-        $('body').append(this._generateSceneHTML(tokens));
+        $('body').append(this._html.scene(tokens));
         this._invalidateOverlayCache();
 
         document.querySelectorAll('#vn-scene-overlay .vn-character .vn-character-img').forEach(img => img.style.opacity = '0');
@@ -639,7 +598,7 @@ class VisualNovelScene {
         if (payload.background != null) this.state.background = payload.background;
         if (payload.backgroundOverlay != null) this.state.backgroundOverlay = payload.backgroundOverlay;
         if (payload.flipped !== undefined && payload.flipped !== null) this.state.flipped = { ...payload.flipped };
-        if (payload.hidden !== undefined && payload.hidden !== null) this.state.hidden = { ...payload.hidden };
+        if (payload.visibility !== undefined && payload.visibility !== null) this.state.visibility = { ...payload.visibility };
         if (payload.portraitImages !== undefined && payload.portraitImages !== null) this.state.portraitImages = { ...payload.portraitImages };
         if (payload.portraitNames !== undefined && payload.portraitNames !== null) this.state.portraitNames = { ...payload.portraitNames };
         if (payload.portraitScales !== undefined && payload.portraitScales !== null) this.state.portraitScales = { ...payload.portraitScales };
@@ -672,7 +631,7 @@ class VisualNovelScene {
                 this._updateSide(this.state[`${side}Ids`], `.vn-${side}-side`, side, queueData)));
 
             this._applyAllPortraitTransforms();
-            this._applyAllHiddenStates();
+            this._applyAllVisibilityStates();
             this._restoreSpeakers(prevSpeakers);
         });
 
@@ -684,7 +643,7 @@ class VisualNovelScene {
         const container = document.querySelector(`.vn-side${sideSelector}`);
         if (!container) return;
 
-        const { useMultiRow } = this._computeRowLayout(ids.length, position);
+        const { useMultiRow } = this._html.computeRowLayout(ids.length, position);
         container.classList.toggle('vn-multi-row', useMultiRow);
 
         const oldChars = container.querySelectorAll('.vn-character');
@@ -701,7 +660,7 @@ class VisualNovelScene {
         if (removingEls.length) await Promise.all(removingEls.map(el => VNTransitions.exitCharacter(el)));
 
         if (tokens.length) {
-            container.innerHTML = this._generateSideCharacters(tokens, position, queueData);
+            container.innerHTML = this._html.sideCharacters(tokens, position, queueData);
             container.classList.remove('empty');
 
             const activeSpeaker = this.state.speakers[position];
@@ -740,6 +699,9 @@ class VisualNovelScene {
 
     closeScene(emit = true) {
         if (emit && !game.user.isGM) return;
+        if (this._closing) return;
+        this._closing = true;
+
         if (emit) this.stopSceneMusic(true);
         this._closeChatPanel();
         this._cleanupListeners();
@@ -749,7 +711,12 @@ class VisualNovelScene {
             const characters = $ov[0].querySelectorAll('.vn-character');
             characters.forEach((charEl, i) => setTimeout(() => VNTransitions.exitCharacter(charEl), i * 50));
             const exitDelay = Math.min(characters.length * 50 + 600, 900);
-            setTimeout(() => { $ov.addClass('vn-closing'); setTimeout(() => $ov.remove(), 600); }, exitDelay);
+            setTimeout(() => {
+                $ov.addClass('vn-closing');
+                setTimeout(() => { $ov.remove(); this._closing = false; }, 600);
+            }, exitDelay);
+        } else {
+            this._closing = false;
         }
 
         this._invalidateOverlayCache();
@@ -809,7 +776,7 @@ class VisualNovelScene {
     updateQueueDisplay() {
         if (!this.state.isActive || !game.user.isGM) return;
         const queueData = QueueBridge.getQueue();
-        $('.vn-queue-display').html(this._generateQueueDisplay(queueData));
+        $('.vn-queue-display').html(this._html.queueDisplay(queueData));
         this._updateCharacterBorders();
         this.emitSocketEvent('updateQueue', {});
     }
@@ -840,115 +807,6 @@ class VisualNovelScene {
             if (img) img.style.opacity = '0';
             setTimeout(() => VNTransitions.enterCharacter(charEl, 'auto'), index * staggerMs);
         });
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // HTML Generation
-    // ══════════════════════════════════════════════════════════
-
-    _generateCharacterHTML(token, queueData, row = null) {
-        const tokenId = token.id || `actor-${token.actor.id}`;
-        const imgSrc = token.actor.img || token.document?.texture?.src || 'icons/svg/mystery-man.svg';
-        const pd = QueueBridge.resolveActorPriority(token.actor, queueData);
-        const priorityClass = pd ? `queue-priority-${pd.priority}` : '';
-        const rowClass = row ? `vn-row-${row}` : '';
-        const isHidden = !!this.state.hidden[tokenId];
-        const hiddenClass = isHidden ? 'vn-character-hidden' : '';
-        const displayName = isHidden ? '???' : token.name;
-
-        // Inline transform vars so element starts at correct values — prevents transition flash on insertion
-        const charScale = this.state.portraitScales[tokenId];
-        const charStyle = (pd ? `--queue-color: ${pd.color};` : '')
-            + (charScale !== undefined ? `--char-scale: ${charScale};` : '');
-        const flipX = this.state.flipped[tokenId] ? '-1' : '1';
-
-        return `<div class="vn-character ${priorityClass} ${rowClass} ${hiddenClass}" data-token-id="${tokenId}" data-name="${token.name}" style="${charStyle}">
-            <div class="vn-speaking-indicator"><span></span><span></span><span></span></div>
-            <img class="vn-character-img" src="${imgSrc}" alt="${token.name}" loading="lazy" style="--flip-x: ${flipX}">
-            <div class="vn-character-nameplate"><span class="vn-nameplate-text">${displayName}</span></div>
-            <div class="vn-character-glow"></div></div>`;
-    }
-
-    _generateQueueDisplay(queueData) {
-        if (!game.user.isGM || !queueData?.length) return '';
-        return `<div class="vn-queue-container">
-            <div class="vn-queue-title"><i class="fas fa-users"></i> Очередь</div>
-            <div class="vn-queue-items">${queueData.map((player, i) => {
-            const pd = QueueBridge.getPriorityData(player.priority);
-            return `<div class="vn-queue-item gm-clickable" title="${player.name} — ${pd.name}&#10;ЛКМ: объявить · ПКМ: убрать" data-user-id="${player.id}" style="border-color: ${pd.color};">
-                    <img src="${player.avatar}" alt="${player.name}" onerror="this.src='icons/svg/mystery-man.svg'" loading="lazy">
-                    <span class="vn-queue-number">${i + 1}</span></div>`;
-        }).join('')}</div></div>`;
-    }
-
-    _generateSceneHTML(tokens) {
-        const qd = QueueBridge.getQueue();
-        const isGM = game.user.isGM;
-
-        const sides = VNSceneState.POSITIONS.map(side => {
-            const t = tokens[side] || [];
-            const layout = this._computeRowLayout(t.length, side);
-            return `<div class="vn-side vn-${side}-side ${t.length ? '' : 'empty'} ${layout.useMultiRow ? 'vn-multi-row' : ''}">${this._generateSideCharacters(t, side, qd, layout)}</div>`;
-        }).join('');
-
-        const controls = isGM ? `<div class="vn-size-controls">
-            <button type="button" class="vn-size-button" id="decrease-size" title="Уменьшить"><i class="fas fa-minus"></i></button>
-            <button type="button" class="vn-size-button vn-size-reset" id="reset-size" title="Сброс">${Math.round(this.state.portraitScale * 100)}%</button>
-            <button type="button" class="vn-size-button" id="increase-size" title="Увеличить"><i class="fas fa-plus"></i></button>
-            <button type="button" class="vn-size-button" id="size-dialog" title="Настройка"><i class="fas fa-sliders-h"></i></button>
-        </div>` : '';
-
-        const atmoEffect = this.state.atmosphereEffect || 'particles';
-
-        const pickerItems = VNAtmosphere.EFFECT_GROUPS.map(group =>
-            `<div class="vn-atmo-group-header">${group.label}</div>`
-            + group.effects.map(e =>
-                `<button type="button" class="vn-atmo-item${e === atmoEffect ? ' active' : ''}" data-effect="${e}" title="${VNAtmosphere.EFFECT_LABELS[e]}"><i class="fas ${VNAtmosphere.EFFECT_ICONS[e]}"></i><span>${VNAtmosphere.EFFECT_LABELS[e]}</span></button>`
-            ).join('')
-        ).join('');
-
-        const btn = (cls, icon, title) => `<button type="button" class="vn-toolbar-btn ${cls}" title="${title}"><i class="fas ${icon}"></i></button>`;
-
-        const toolbar = isGM
-            ? `<div class="vn-toolbar">
-                ${btn('vn-settings-button', 'fa-cog', 'Настройки сцены')}
-                <div class="vn-atmo-wrap">
-                    ${btn('vn-atmosphere-cycle-btn', VNAtmosphere.EFFECT_ICONS[atmoEffect], `Атмосфера: ${VNAtmosphere.EFFECT_LABELS[atmoEffect]}`)}
-                    <div class="vn-atmosphere-picker" hidden>
-                        <div class="vn-atmosphere-picker-header"><i class="fas fa-wand-sparkles"></i> Атмосфера</div>
-                        <div class="vn-atmosphere-picker-grid">${pickerItems}</div>
-                    </div>
-                </div>
-                ${this._generateSoundsWrapHTML()}
-                ${btn('vn-minimize-all-button', 'fa-window-minimize', 'Свернуть для всех')}
-                ${btn('vn-minimize-self-button', 'fa-eye-slash', 'Свернуть для себя')}
-                ${btn('vn-epicrolls-button', 'fa-dice-d20', 'Epic Rolls')}
-                <button type="button" class="vn-toolbar-btn vn-broadcast-button" title="Показать игрокам" style="display:none"><i class="fas fa-broadcast-tower"></i></button>
-                ${btn('vn-chat-button', 'fa-comments', 'Показать чат')}
-                ${btn('vn-close-button', 'fa-times', 'Закрыть сцену')}
-            </div>`
-            : `<div class="vn-toolbar">
-                ${btn('vn-chat-button', 'fa-comments', 'Показать чат')}
-                ${btn('vn-close-button', 'fa-times', 'Закрыть')}
-            </div>`;
-
-        const maxBar = isGM ? `<div class="vn-maximized-actions">
-            <button type="button" class="vn-toolbar-btn vn-maximize-all-button" title="Развернуть для всех"><i class="fas fa-window-maximize"></i></button>
-            <button type="button" class="vn-toolbar-btn vn-maximize-self-button" title="Развернуть для себя"><i class="fas fa-eye"></i></button>
-        </div>` : '';
-
-        return `<div id="vn-scene-overlay">
-            <div class="vn-bg-layer"></div><div class="vn-background-overlay"></div>
-            <div class="vn-fx-tint"></div><div class="vn-fx-rays"></div><div class="vn-fx-edges"></div><div class="vn-fx-scan"></div><div class="vn-fx-flash"></div>
-            <div class="vn-vignette"></div><div class="vn-ambient-light"></div><div class="vn-particles"></div><div class="vn-ground-fog"></div>
-            ${controls}
-            <div class="vn-queue-display">${this._generateQueueDisplay(qd)}</div>
-            ${sides}${toolbar}
-            <div class="vn-maximized-bar"><span class="vn-scene-title"><i class="fas fa-theater-masks"></i> Диалоговая сцена</span>${maxBar}</div>
-            <div class="vn-chat-panel" hidden>
-                <div class="vn-chat-panel-header"><i class="fas fa-comments"></i> Чат</div>
-            </div>
-        </div>`;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1051,514 +909,12 @@ class VisualNovelScene {
         });
     }
 
-    _getChatElement() {
-        const byId = document.getElementById('chat');
-        if (byId) return byId;
-
-        const element = ui.chat?.element;
-        if (element instanceof HTMLElement) return element;
-        if (element?.[0] instanceof HTMLElement) return element[0];
-
-        return null;
-    }
-
-    _chatHasComposer(chat) {
-        if (!chat) return false;
-
-        return !!chat.querySelector([
-            '#chat-form',
-            '.chat-form',
-            '#chat-message',
-            'textarea[name="message"]',
-            'form'
-        ].join(','));
-    }
-
-    _getActiveSidebarTab() {
-        return ui.sidebar?.tabGroups?.primary
-            ?? ui.sidebar?.activeTab
-            ?? document.querySelector(
-                '#sidebar-content > .tab.active, #sidebar-content [data-tab].active'
-            )?.dataset?.tab
-            ?? null;
-    }
-
-    _captureSidebarState() {
-        const sidebar = ui.sidebar;
-        const sidebarEl = document.getElementById('sidebar');
-        const sidebarContent = document.getElementById('sidebar-content');
-
-        let expanded;
-
-        if (typeof sidebar?._collapsed === 'boolean') {
-            expanded = !sidebar._collapsed;
-        } else if (typeof sidebar?.collapsed === 'boolean') {
-            expanded = !sidebar.collapsed;
-        } else if (sidebarContent) {
-            expanded = sidebarContent.classList.contains('expanded');
-        } else {
-            expanded = !sidebarEl?.classList.contains('collapsed');
-        }
-
-        return {
-            activeTab: this._getActiveSidebarTab(),
-            expanded
-        };
-    }
-
-    async _setSidebarExpanded(expanded) {
-        const sidebar = ui.sidebar;
-        const method = expanded ? sidebar?.expand : sidebar?.collapse;
-
-        if (typeof method === 'function') {
-            try {
-                await Promise.resolve(method.call(sidebar));
-                return;
-            } catch (error) {
-                console.warn('[VN] Sidebar expand/collapse failed:', error);
-            }
-        }
-
-        // Fallback для версий/сборок, где публичного метода нет.
-        const sidebarContent = document.getElementById('sidebar-content');
-        if (sidebarContent) {
-            sidebarContent.classList.toggle('expanded', expanded);
-        }
-
-        const sidebarEl = document.getElementById('sidebar');
-        if (sidebarEl) {
-            sidebarEl.classList.toggle('collapsed', !expanded);
-        }
-    }
-
-    async _activateSidebarTab(tabName) {
-        if (!tabName) return;
-
-        const sidebar = ui.sidebar;
-
-        try {
-            // ApplicationV2 / Foundry v14.
-            if (typeof sidebar?.changeTab === 'function') {
-                await Promise.resolve(
-                    sidebar.changeTab(tabName, 'primary')
-                );
-            }
-            // Совместимость со старым API.
-            else if (typeof sidebar?.activateTab === 'function') {
-                await Promise.resolve(
-                    sidebar.activateTab(tabName)
-                );
-            }
-            // Последний fallback — нажатие на кнопку вкладки.
-            else {
-                const buttons = document.querySelectorAll(
-                    '#sidebar-tabs [data-tab], [data-group="primary"][data-tab]'
-                );
-
-                const button = Array.from(buttons).find(
-                    el => el.dataset.tab === tabName
-                );
-
-                button?.click();
-            }
-        } catch (error) {
-            console.warn(`[VN] Failed to activate sidebar tab "${tabName}":`, error);
-        }
-
-        // Даём Foundry завершить смену вкладки.
-        await new Promise(resolve => requestAnimationFrame(resolve));
-    }
-
-    _waitForChatReady(timeout = 2500) {
-        const getReadyChat = () => {
-            const chat = this._getChatElement();
-            return this._chatHasComposer(chat) ? chat : null;
-        };
-
-        const ready = getReadyChat();
-        if (ready) return Promise.resolve(ready);
-
-        return new Promise(resolve => {
-            let observer = null;
-            let timer = null;
-            let finished = false;
-
-            const finish = chat => {
-                if (finished) return;
-                finished = true;
-
-                observer?.disconnect();
-                clearTimeout(timer);
-
-                resolve(chat);
-            };
-
-            observer = new MutationObserver(() => {
-                const chat = getReadyChat();
-                if (chat) finish(chat);
-            });
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-
-            timer = setTimeout(() => {
-                finish(getReadyChat());
-            }, timeout);
-        });
-    }
-
-    async _forceRenderChat() {
-        if (typeof ui.chat?.render !== 'function') return;
-
-        try {
-            /*
-             * В ApplicationV2 это render({ force: true }).
-             * В старом Application объект также является truthy-значением
-             * параметра force, поэтому остаётся совместимость.
-             */
-            await Promise.resolve(
-                ui.chat.render({ force: true })
-            );
-        } catch (error) {
-            console.warn('[VN] Forced chat render failed:', error);
-        }
-
-        // Позволяет renderChatLog и Dice Tray закончить вставку элементов.
-        await new Promise(resolve => setTimeout(resolve, 0));
-        await new Promise(resolve => requestAnimationFrame(resolve));
-    }
-
-    async _restoreSidebarAfterChatInit(state) {
-        if (!state) return;
-
-        // Возвращаем вкладку, которая была открыта до временной
-        // инициализации чата.
-        if (state.activeTab && state.activeTab !== 'chat') {
-            await this._activateSidebarTab(state.activeTab);
-        }
-
-        // Если sidebar был свёрнут, снова сворачиваем его.
-        if (!state.expanded) {
-            await this._setSidebarExpanded(false);
-        }
-    }
-
-    async _toggleChat() {
-        if (this._chatBusy) return;
-
-        const panel = this.$overlay?.[0]?.querySelector('.vn-chat-panel');
-        if (!panel) return;
-
-        if (this._chatVisible || this._movedChat) {
-            this._closeChatPanel();
-            return;
-        }
-
-        this._chatBusy = true;
-        const token = ++this._chatOpenToken;
-
-        panel.hidden = false;
-        panel.style.visibility = 'hidden';
-
-        try {
-            const opened = await this._openChatPanel(panel, token);
-
-            if (!opened || token !== this._chatOpenToken) {
-                panel.hidden = true;
-                panel.style.visibility = '';
-                return;
-            }
-
-            this._chatVisible = true;
-            panel.style.visibility = '';
-
-            this.$overlay
-                .find('.vn-chat-button')
-                .addClass('active');
-        } catch (error) {
-            console.error('[VN] Failed to open chat panel:', error);
-
-            panel.hidden = true;
-            panel.style.visibility = '';
-
-            ui.notifications?.warn(
-                'Не удалось открыть чат. Проверьте консоль браузера.'
-            );
-        } finally {
-            this._chatBusy = false;
-        }
-    }
-
-    async _openChatPanel(panelEl, token) {
-        const sidebarState = this._captureSidebarState();
-        const initialChat = this._getChatElement();
-
-        /*
-         * Состояние вкладки сохраняем до временной активации чата.
-         * Нельзя сохранять className после activateTab("chat"),
-         * иначе при возврате в sidebar чат останется active.
-         */
-        const restoreState = {
-            wasActive: initialChat?.classList.contains('active')
-                ?? sidebarState.activeTab === 'chat',
-
-            hadHidden: initialChat?.hasAttribute('hidden') ?? false,
-            ariaHidden: initialChat?.getAttribute('aria-hidden') ?? null
-        };
-
-        let chat = initialChat;
-        let sidebarWasTemporarilyChanged = false;
-
-        try {
-            /*
-             * Если формы сообщения нет, чат ещё не был полноценно
-             * отрендерен. Временно раскрываем sidebar и активируем чат.
-             */
-            if (!this._chatHasComposer(chat)) {
-                sidebarWasTemporarilyChanged = true;
-
-                if (!sidebarState.expanded) {
-                    await this._setSidebarExpanded(true);
-                }
-
-                if (token !== this._chatOpenToken) return false;
-
-                await this._activateSidebarTab('chat');
-
-                if (token !== this._chatOpenToken) return false;
-
-                // После активации обязательно заново получаем #chat:
-                // Foundry мог заменить старый DOM-элемент новым.
-                chat = await this._waitForChatReady(1200);
-
-                /*
-                 * activateTab обычно достаточно. Принудительный render
-                 * используется только как fallback, чтобы не вызывать
-                 * повторные renderChatLog и дубли Dice Tray.
-                 */
-                if (!this._chatHasComposer(chat)) {
-                    await this._forceRenderChat();
-                    chat = await this._waitForChatReady(2500);
-                }
-            }
-
-            if (token !== this._chatOpenToken) return false;
-
-            // Ещё раз берём актуальный элемент после всех рендеров.
-            chat = this._getChatElement();
-
-            if (!chat || !this._chatHasComposer(chat)) {
-                throw new Error(
-                    'Foundry rendered the chat without its message form'
-                );
-            }
-
-            /*
-             * Даём сторонним модулям обработать renderChatLog.
-             * В частности, Dice Tray успевает вставить свой нижний блок
-             * до перемещения чата.
-             */
-            await new Promise(resolve => setTimeout(resolve, 0));
-            await new Promise(resolve => requestAnimationFrame(resolve));
-
-            if (token !== this._chatOpenToken) return false;
-
-            // Комментарий надёжнее nextElementSibling: сохраняет точное место.
-            const placeholder = document.createComment(
-                'VN chat original position'
-            );
-
-            const originalParent = chat.parentNode;
-            if (!originalParent) {
-                throw new Error('Chat has no parent element');
-            }
-
-            originalParent.insertBefore(placeholder, chat);
-
-            this._chatPlaceholder = placeholder;
-            this._chatOriginalParent = originalParent;
-            this._chatOriginalNextSibling = chat.nextSibling;
-            this._chatRestoreState = restoreState;
-            this._movedChat = chat;
-
-            panelEl.appendChild(chat);
-
-            // Вне sidebar класс вкладки всё равно должен быть активным.
-            chat.classList.add('active');
-            chat.removeAttribute('hidden');
-            chat.setAttribute('aria-hidden', 'false');
-        } finally {
-            /*
-             * Возвращаем пользователю исходную вкладку и состояние sidebar
-             * только после того, как чат уже перенесён.
-             */
-            if (sidebarWasTemporarilyChanged) {
-                await this._restoreSidebarAfterChatInit(sidebarState);
-            }
-        }
-
-        if (token !== this._chatOpenToken || this._movedChat !== chat) {
-            return false;
-        }
-
-        // Смена вкладки могла попытаться снять active.
-        chat.classList.add('active');
-        chat.removeAttribute('hidden');
-        chat.setAttribute('aria-hidden', 'false');
-
-        panelEl.style.visibility = '';
-
-        await new Promise(resolve => requestAnimationFrame(() => {
-            requestAnimationFrame(resolve);
-        }));
-
-        this._scrollChatToBottom(chat);
-
-        return true;
-    }
-
-    _scrollChatToBottom(chat) {
-        if (!chat) return;
-
-        const scroll = () => {
-            // Не прокручиваем sidebar, если чат уже был возвращён обратно.
-            if (this._movedChat !== chat) return;
-
-            try {
-                const result = ui.chat?.scrollBottom?.({
-                    waitImages: true
-                });
-
-                Promise.resolve(result).catch(() => {});
-            } catch {
-                // В некоторых версиях сигнатура scrollBottom отличается.
-            }
-
-            const selectors = [
-                '#chat-log',
-                '.chat-log',
-                '.chat-scroll',
-                '.chat-messages',
-                '[data-application-part="log"]'
-            ];
-
-            const scrollElements = new Set();
-
-            for (const selector of selectors) {
-                chat.querySelectorAll(selector).forEach(el => {
-                    scrollElements.add(el);
-                });
-            }
-
-            for (const element of scrollElements) {
-                element.scrollTop = element.scrollHeight;
-
-                if (typeof element.scrollTo === 'function') {
-                    element.scrollTo({
-                        top: element.scrollHeight,
-                        behavior: 'instant'
-                    });
-                }
-            }
-        };
-
-        // Первый вызов — после расчёта размеров панели.
-        requestAnimationFrame(() => {
-            requestAnimationFrame(scroll);
-        });
-
-        // Повторные вызовы нужны для Dice Tray, шрифтов и изображений.
-        setTimeout(scroll, 80);
-        setTimeout(scroll, 250);
-
-        chat.querySelectorAll('img').forEach(image => {
-            if (image.complete) return;
-
-            image.addEventListener('load', scroll, {
-                once: true
-            });
-        });
-    }
-
-    _closeChatPanel() {
-        // Отменяет ещё не завершившийся _openChatPanel.
-        ++this._chatOpenToken;
-
-        const chat = this._movedChat;
-        const placeholder = this._chatPlaceholder;
-        const restoreState = this._chatRestoreState;
-
-        if (chat) {
-            if (placeholder?.parentNode) {
-                placeholder.parentNode.replaceChild(chat, placeholder);
-            } else if (
-                this._chatOriginalParent
-                && document.contains(this._chatOriginalParent)
-            ) {
-                if (
-                    this._chatOriginalNextSibling
-                    && this._chatOriginalNextSibling.parentNode
-                    === this._chatOriginalParent
-                ) {
-                    this._chatOriginalParent.insertBefore(
-                        chat,
-                        this._chatOriginalNextSibling
-                    );
-                } else {
-                    this._chatOriginalParent.appendChild(chat);
-                }
-            } else {
-                // Редкий fallback, если Foundry полностью перерисовал sidebar.
-                document.getElementById('sidebar-content')?.appendChild(chat);
-            }
-
-            if (restoreState) {
-                chat.classList.toggle(
-                    'active',
-                    !!restoreState.wasActive
-                );
-
-                if (restoreState.hadHidden) {
-                    chat.setAttribute('hidden', '');
-                } else {
-                    chat.removeAttribute('hidden');
-                }
-
-                if (restoreState.ariaHidden == null) {
-                    chat.removeAttribute('aria-hidden');
-                } else {
-                    chat.setAttribute(
-                        'aria-hidden',
-                        restoreState.ariaHidden
-                    );
-                }
-            }
-        } else {
-            placeholder?.remove();
-        }
-
-        this._movedChat = null;
-        this._chatPlaceholder = null;
-        this._chatOriginalParent = null;
-        this._chatOriginalNextSibling = null;
-        this._chatRestoreState = null;
-        this._chatVisible = false;
-
-        const panel = document.querySelector(
-            '#vn-scene-overlay .vn-chat-panel'
-        );
-
-        if (panel) {
-            panel.hidden = true;
-            panel.style.visibility = '';
-        }
-
-        document.querySelectorAll(
-            '#vn-scene-overlay .vn-chat-button'
-        ).forEach(button => button.classList.remove('active'));
-    }
+    // ══════════════════════════════════════════════════════════
+    // Chat Panel (delegated to VNChatPanel)
+    // ══════════════════════════════════════════════════════════
+
+    _toggleChat() { this._chatPanel.toggle(); }
+    _closeChatPanel() { this._chatPanel.close(); }
 
     _setupCharacterListeners() {
         const ns = VisualNovelScene.NS;
@@ -1582,7 +938,10 @@ class VisualNovelScene {
             if (!game.user.isGM) return;
             e.preventDefault(); e.stopImmediatePropagation();
             const tokenId = $(e.currentTarget).data('token-id');
-            this.applyHidden(tokenId, !this.state.hidden[tokenId], true);
+            const current = this.state.visibility[tokenId] ?? 'visible';
+            const cycle = VisualNovelScene.VISIBILITY_CYCLE;
+            const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+            this.applyVisibility(tokenId, next, true);
         });
         $(document).on(`wheel${ns}`, sel, (e) => {
             if (!game.user.isGM || !e.altKey) return;
