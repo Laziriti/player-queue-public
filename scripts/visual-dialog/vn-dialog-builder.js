@@ -10,7 +10,7 @@ import { countPendingMigrations } from './vn-migrations.js';
 
 const VIS_CYCLE = ['visible', 'hidden', 'name-hidden'];
 const VIS_ICON  = { visible: 'fa-eye', hidden: 'fa-eye-slash', 'name-hidden': 'fa-user-secret' };
-const VIS_TITLE = { visible: 'vn.dialog.vis.toHidden', hidden: 'vn.dialog.vis.toNameHidden', 'name-hidden': 'vn.dialog.vis.toVisible' };
+const VIS_TITLE = { visible: 'vn.dialog.vis.visible', hidden: 'vn.dialog.vis.hidden', 'name-hidden': 'vn.dialog.vis.nameHidden' };
 
 export class VNDialogBuilder {
     constructor(scene) {
@@ -115,7 +115,7 @@ export class VNDialogBuilder {
 
     _handleSubmit(root, isEdit, backgroundOnly = false) {
         const getRawIds = (sel) => Array.from(root.querySelectorAll(`${sel} .vn-token-option`))
-            .map(el => el.dataset.actorId ? `actor-${el.dataset.actorId}` : (el.dataset.tokenId || null)).filter(Boolean);
+            .map(el => el.dataset.type === 'token' ? (el.dataset.tokenId || null) : (el.dataset.actorId ? `actor-${el.dataset.actorId}` : null)).filter(Boolean);
 
         const allRaw = backgroundOnly ? [] : [...getRawIds('#left-tokens'), ...getRawIds('#center-tokens'), ...getRawIds('#right-tokens')];
         const allDeduped = VNDialogBuilder._deduplicateIds(allRaw);
@@ -341,21 +341,19 @@ export class VNDialogBuilder {
     // Token Helpers
     // ══════════════════════════════════════════════════════════
 
-    _findTokenElement(root, tokenId, exclude = null) {
+    _findTokenElement(root, tokenId, exclude = null, preferSelected = false) {
+        const pick = (candidates) => {
+            const arr = Array.from(candidates).filter(c => !exclude?.has(c));
+            return (preferSelected ? arr.find(c => c.classList.contains('selected')) : null) ?? arr[0] ?? null;
+        };
         const baseId = stripDupSuffix(tokenId);
         let el = root.querySelector(`.vn-token-option[data-token-id="${baseId}"]`);
         if (el && exclude?.has(el)) el = null;
         const aid = parseActorId(baseId);
-        if (!el && aid) {
-            const candidates = root.querySelectorAll(`.vn-token-option[data-actor-id="${aid}"]`);
-            el = Array.from(candidates).find(c => !exclude?.has(c)) || null;
-        }
+        if (!el && aid) el = pick(root.querySelectorAll(`.vn-token-option[data-actor-id="${aid}"]`));
         if (!el) {
             const t = canvas?.tokens?.get(baseId);
-            if (t?.actor) {
-                const candidates = root.querySelectorAll(`.vn-token-option[data-actor-id="${t.actor.id}"]`);
-                el = Array.from(candidates).find(c => !exclude?.has(c)) || null;
-            }
+            if (t?.actor) el = pick(root.querySelectorAll(`.vn-token-option[data-actor-id="${t.actor.id}"]`));
         }
         return el;
     }
@@ -420,7 +418,7 @@ export class VNDialogBuilder {
         const defaultsUsed = new Set();
         for (const [tokenId, vis] of Object.entries(state.visibility ?? {})) {
             if (!vis || vis === 'visible') continue;
-            const el = this._findTokenElement(root, tokenId, defaultsUsed);
+            const el = this._findTokenElement(root, tokenId, defaultsUsed, true);
             if (!el) continue;
             defaultsUsed.add(el);
             el.dataset.visibility = vis;
@@ -482,7 +480,7 @@ export class VNDialogBuilder {
         const visUsed = new Set();
         for (const [tokenId, vis] of Object.entries(visMap)) {
             if (!vis || vis === 'visible') continue;
-            const el = this._findTokenElement(root, tokenId, visUsed);
+            const el = this._findTokenElement(root, tokenId, visUsed, true);
             if (!el) continue;
             visUsed.add(el);
             el.dataset.visibility = vis;

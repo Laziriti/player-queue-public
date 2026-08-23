@@ -1799,16 +1799,18 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     display: flex;
 }
 
-.vn-token-option[data-hidden="true"] .vn-token-hide-btn {
+.vn-token-option[data-visibility="hidden"] .vn-token-hide-btn,
+.vn-token-option[data-visibility="name-hidden"] .vn-token-hide-btn {
     background: rgba(191, 97, 106, 0.7);
     color: #fff;
 }
 
-.vn-token-option[data-hidden="true"] .vn-token-preview img {
+.vn-token-option[data-visibility="hidden"] .vn-token-preview img {
     filter: brightness(0.2);
 }
 
-.vn-token-option[data-hidden="true"] .vn-token-name {
+.vn-token-option[data-visibility="hidden"] .vn-token-name,
+.vn-token-option[data-visibility="name-hidden"] .vn-token-name {
     color: var(--vn-danger);
 }
 

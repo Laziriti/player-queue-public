@@ -242,9 +242,9 @@
       "hideCharacter": "Скрыть персонажа",
       "showCharacter": "Показать персонажа",
       "vis": {
-        "toHidden":     "Скрыть полностью",
-        "toNameHidden": "Скрыть только имя",
-        "toVisible":    "Показать"
+        "visible":     "Видимый",
+        "hidden":      "Скрыт полностью",
+        "nameHidden":  "Имя скрыто"
       },
       "dragActorsFromJournal": "Перетащите актёров из журнала",
       "dragTracksFromPlaylist": "Перетащите треки из плейлиста",

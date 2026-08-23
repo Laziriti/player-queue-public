@@ -111,6 +111,10 @@ class VisualNovelScene {
 
     _cleanupListeners() {
         $(document).off(VisualNovelScene.NS);
+        if (this._wheelListener) {
+            document.removeEventListener('wheel', this._wheelListener);
+            this._wheelListener = null;
+        }
         this._removeAtmoOutsideListener();
         this._removeSoundsOutsideListener();
         if (this._soundHookId != null) {
@@ -943,14 +947,17 @@ class VisualNovelScene {
             const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
             this.applyVisibility(tokenId, next, true);
         });
-        $(document).on(`wheel${ns}`, sel, (e) => {
+        this._wheelListener = (e) => {
             if (!game.user.isGM || !e.altKey) return;
+            const charEl = e.target.closest(sel);
+            if (!charEl) return;
             e.preventDefault(); e.stopImmediatePropagation();
-            const tokenId = $(e.currentTarget).data('token-id');
+            const tokenId = charEl.dataset.tokenId;
             const current = this.state.portraitScales[tokenId] ?? 1;
-            const delta = e.originalEvent.deltaY > 0 ? -0.05 : 0.05;
+            const delta = e.deltaY > 0 ? -0.05 : 0.05;
             this.setCharacterScale(tokenId, current + delta);
-        });
+        };
+        document.addEventListener('wheel', this._wheelListener, { passive: false });
     }
 }
 
