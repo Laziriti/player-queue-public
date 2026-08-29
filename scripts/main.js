@@ -6,6 +6,7 @@ import { PlayerQueue } from './queue/player-queue.js';
 import { SoundTestApp } from './sound-test.js';
 import { registerSettings, applyNameplateImage } from './settings.js';
 import { VisualNovelScene } from './visual-dialog/visual-novel-scene.js';
+import { VNPresets } from './visual-dialog/vn-state.js';
 
 const QUEUE_SYNC_DELAY_MS     = 2000;
 const RECONNECT_SYNC_DELAY_MS = 3000;
@@ -176,3 +177,11 @@ window.debugQueue = () => {
 };
 
 window.openVisualNovelScene = () => window.visualNovelScene?.openSceneDialog();
+
+window.launchVNPreset = async (presetId) => {
+    const scene = window.visualNovelScene;
+    if (!scene) { ui.notifications.warn('Visual Novel Scene is not initialized'); return; }
+    const preset = await VNPresets.load(presetId);
+    if (!preset) { ui.notifications.error(`VN Preset "${presetId}" not found`); return; }
+    scene.createScene(preset);
+};

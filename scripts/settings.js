@@ -222,6 +222,33 @@ function registerSettings() {
         range: { min: 0, max: 100, step: 10 },
         onChange: v => window.visualNovelScene?.setParallaxOptions({ depth: v })
     });
+
+    S('cameraEnabled', {
+        name: 'settings.cameraEnabled.name',
+        hint: 'settings.cameraEnabled.hint',
+        scope: 'client', config: true, type: Boolean, default: true,
+        onChange: v => window.visualNovelScene?.setCameraEnabled(v)
+    });
+
+    S('cameraDoF', {
+        name: 'settings.cameraDoF.name',
+        hint: 'settings.cameraDoF.hint',
+        scope: 'client', config: true, type: Boolean, default: true,
+        onChange: () => window.visualNovelScene?._reapplyCameraDof()
+    });
+
+    S('kenBurnsDirection', {
+        name: 'settings.kenBurnsDirection.name',
+        hint: 'settings.kenBurnsDirection.hint',
+        scope: 'client', config: true, type: String, default: 'none',
+        choices: {
+            none: 'settings.kenBurnsDirection.none',
+            random: 'settings.kenBurnsDirection.random',
+            left: 'settings.kenBurnsDirection.left',
+            right: 'settings.kenBurnsDirection.right',
+        },
+        onChange: v => window.visualNovelScene?.setParallaxOptions({ kenBurns: { enabled: v !== 'none', direction: v } })
+    });
 }
 
 function escapeCSSUrl(url) {

@@ -43,7 +43,8 @@ export class VNBackgroundManager {
     async load(path = null) {
         try {
             const targetPath = path || this.currentPath;
-            const response = await FilePicker.browse('data', targetPath);
+            const FPImpl = foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+            const response = await FPImpl.browse('data', targetPath);
 
             const folders = (response.dirs || []).map(dir => {
                 const name = decodeURIComponent(dir.split('/').pop()).replace(/[-_]/g, ' ');
@@ -162,7 +163,7 @@ export class VNBackgroundManager {
     // HTML Generation
     // ══════════════════════════════════════════════════════════
 
-    generateSelector(currentBg = null, currentOverlay = true, currentEffect = 'particles') {
+    generateSelector(currentBg = null, currentOverlay = true, currentEffect = 'particles', currentParticlesFg = false) {
         const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
         const effectOptions = VNAtmosphere.EFFECT_GROUPS
             .map(g => `<optgroup label="${game.i18n.localize(g.label)}">${
@@ -184,6 +185,9 @@ export class VNBackgroundManager {
                     <label class="vn-overlay-toggle">
                         <i class="fas fa-magic"></i>
                         <select id="atmosphere-effect" class="vn-atmosphere-select">${effectOptions}</select>
+                    </label>
+                    <label class="vn-overlay-toggle">
+                        <input type="checkbox" id="particles-foreground" ${currentParticlesFg ? 'checked' : ''}><span>${game.i18n.localize('vn.bg.particlesForeground')}</span>
                     </label>
                     ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${sceneBg}"><i class="fas fa-map"></i> ${game.i18n.localize('vn.bg.currentScene')}</button>` : ''}
                     <div class="vn-custom-path">
@@ -349,7 +353,8 @@ export class VNBackgroundManager {
 
     _openFolderPicker(root) {
         const startPath = VNBackgroundManager.getCustomFolder() || this._defaultPath;
-        const fp = new FilePicker({
+        const FPImpl = foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+        const fp = new FPImpl({
             type: 'folder',
             current: startPath,
             callback: async (folderPath) => {
@@ -368,7 +373,8 @@ export class VNBackgroundManager {
         const currentBg = root.querySelector('input[name="background"]:checked')?.value ?? null;
         const currentOverlay = root.querySelector('#background-overlay')?.checked ?? true;
         const currentEffect = root.querySelector('#atmosphere-effect')?.value ?? 'particles';
-        const newHtml = this.generateSelector(currentBg, currentOverlay, currentEffect);
+        const currentParticlesFg = root.querySelector('#particles-foreground')?.checked ?? false;
+        const newHtml = this.generateSelector(currentBg, currentOverlay, currentEffect, currentParticlesFg);
         section.outerHTML = newHtml;
         this.attachListeners(root, (name) => this.refreshGallery(root, name));
     }

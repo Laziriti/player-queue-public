@@ -6,6 +6,7 @@ import { EFFECTS, EFFECT_LABELS, EFFECT_ICONS, PRESETS, EFFECT_GROUPS } from './
 import { ParticleSystem } from './systems/particle-system.js';
 import { VisualFXSystem } from './systems/visual-fx.js';
 import { ParallaxSystem } from './systems/parallax.js';
+import { VNCameraSystem } from './systems/camera.js';
 
 class VNAtmosphere {
     // ─── Статические данные для внешнего доступа ─────────────
@@ -24,6 +25,9 @@ class VNAtmosphere {
         this._particles = new ParticleSystem();
         this._visualFX = new VisualFXSystem();
         this._parallax = new ParallaxSystem();
+        this._camera = new VNCameraSystem();
+
+        this._parallax.setCameraSystem(this._camera);
     }
 
     /**
@@ -50,7 +54,15 @@ class VNAtmosphere {
 
         const parallaxEnabled = game.settings.get('player-queue', 'parallaxEnabled');
         const parallaxDepth = game.settings.get('player-queue', 'parallaxDepth');
-        this._parallax.start(overlayEl, { enabled: parallaxEnabled, depth: parallaxDepth });
+        const cameraEnabled = game.settings.get('player-queue', 'cameraEnabled');
+        const kenBurnsDir = game.settings.get('player-queue', 'kenBurnsDirection');
+
+        this._camera.setEnabled(cameraEnabled);
+        this._parallax.start(overlayEl, {
+            enabled: parallaxEnabled,
+            depth: parallaxDepth,
+            kenBurns: { enabled: kenBurnsDir !== 'none', direction: kenBurnsDir }
+        });
     }
 
     /**
@@ -62,8 +74,17 @@ class VNAtmosphere {
         this._particles.clear();
         this._visualFX.destroy();
         this._parallax.stop();
+        this._camera.reset();
 
         this._overlayEl = null;
+    }
+
+    /**
+     * Уведомить камеру о смене спикера
+     * @param {HTMLElement|null} charEl
+     */
+    onSpeakerChange(charEl) {
+        this._camera.onSpeakerChange(charEl);
     }
 
     /**

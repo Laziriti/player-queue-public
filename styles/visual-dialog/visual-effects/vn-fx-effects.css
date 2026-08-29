@@ -153,10 +153,10 @@
 }
 
 @keyframes vnEldritchDistort {
-    0%, 100% { filter: saturate(0.5) hue-rotate(0deg); }
-    25%      { filter: saturate(0.6) hue-rotate(5deg); }
-    50%      { filter: saturate(0.4) hue-rotate(-3deg) brightness(0.95); }
-    75%      { filter: saturate(0.55) hue-rotate(8deg); }
+    0%, 100% { filter: saturate(0.5) hue-rotate(0deg)                     url(#vn-distort-eldritch); }
+    25%      { filter: saturate(0.6) hue-rotate(5deg)                     url(#vn-distort-eldritch); }
+    50%      { filter: saturate(0.4) hue-rotate(-3deg) brightness(0.95)   url(#vn-distort-eldritch); }
+    75%      { filter: saturate(0.55) hue-rotate(8deg)                    url(#vn-distort-eldritch); }
 }
 
 .vn-vfx-eldritch .vn-vignette {
@@ -502,7 +502,7 @@
 }
 
 .vn-vfx-dream .vn-bg-layer {
-    filter: saturate(0.8) brightness(0.95) contrast(0.9) blur(0.5px);
+    filter: saturate(0.8) brightness(0.95) contrast(0.9) blur(0.5px) url(#vn-distort-dream);
 }
 
 .vn-vfx-dream .vn-fx-edges {
@@ -555,7 +555,7 @@
 }
 
 .vn-vfx-underwater .vn-bg-layer {
-    filter: saturate(0.7) brightness(0.85) hue-rotate(10deg) contrast(1.05);
+    filter: saturate(0.7) brightness(0.85) hue-rotate(10deg) contrast(1.05) url(#vn-distort-wave);
     animation: vnUnderwaterWave 8s ease-in-out infinite !important;
 }
 
@@ -2587,3 +2587,109 @@
     0%   { opacity: 0.50; }
     100% { opacity: 0.85; }
 }
+
+
+/* ══════════════════════════════════════════════════════════
+   BLOOM — .vn-fx-bloom
+   Мягкое объёмное свечение для световых эффектов.
+   ══════════════════════════════════════════════════════════ */
+
+/* Divine: золотое свечение сверху-центр */
+.vn-vfx-divine .vn-fx-bloom {
+    opacity: 0.50;
+    background:
+        radial-gradient(ellipse at 50% 0%,   rgba(255, 230, 100, 0.75) 0%, transparent 50%),
+        radial-gradient(ellipse at 28% 20%,  rgba(255, 200,  60, 0.35) 0%, transparent 42%),
+        radial-gradient(ellipse at 72% 20%,  rgba(255, 210,  80, 0.30) 0%, transparent 40%);
+    filter: blur(34px);
+    animation: vnDivineBloom 5s ease-in-out infinite alternate;
+}
+
+@keyframes vnDivineBloom {
+    0%   { opacity: 0.40; filter: blur(30px); }
+    100% { opacity: 0.60; filter: blur(38px); }
+}
+
+/* Sacred: белое-золотое свечение, мягче чем divine */
+.vn-vfx-sacred .vn-fx-bloom {
+    opacity: 0.40;
+    background:
+        radial-gradient(ellipse at 50% 0%,   rgba(255, 255, 240, 0.70) 0%, transparent 48%),
+        radial-gradient(ellipse at 32% 25%,  rgba(255, 250, 200, 0.28) 0%, transparent 40%),
+        radial-gradient(ellipse at 68% 25%,  rgba(255, 245, 180, 0.24) 0%, transparent 38%);
+    filter: blur(30px);
+    animation: vnSacredBloom 7s ease-in-out infinite alternate;
+}
+
+@keyframes vnSacredBloom {
+    0%   { opacity: 0.32; filter: blur(26px); }
+    100% { opacity: 0.50; filter: blur(34px); }
+}
+
+/* Fire: оранжевое свечение снизу, имитация отсвета огня */
+.vn-vfx-fire .vn-fx-bloom {
+    opacity: 0.45;
+    background:
+        radial-gradient(ellipse at 50% 100%, rgba(255, 110,  10, 0.80) 0%, transparent 45%),
+        radial-gradient(ellipse at 25%  85%, rgba(255,  70,   0, 0.40) 0%, transparent 38%),
+        radial-gradient(ellipse at 75%  85%, rgba(255,  90,   5, 0.35) 0%, transparent 36%);
+    filter: blur(36px);
+    animation: vnFireBloom 3.5s ease-in-out infinite;
+}
+
+@keyframes vnFireBloom {
+    0%, 100% { opacity: 0.38; filter: blur(32px); }
+    40%      { opacity: 0.55; filter: blur(40px); }
+    70%      { opacity: 0.42; filter: blur(35px); }
+}
+
+/* Ethereal: медленно меняющий оттенок радужный bloom */
+.vn-vfx-ethereal .vn-fx-bloom {
+    opacity: 0.35;
+    background:
+        radial-gradient(ellipse at 30% 30%,  rgba(180, 120, 255, 0.50) 0%, transparent 45%),
+        radial-gradient(ellipse at 70% 40%,  rgba(80,  200, 255, 0.40) 0%, transparent 42%),
+        radial-gradient(ellipse at 50% 70%,  rgba(255, 160, 200, 0.30) 0%, transparent 40%);
+    filter: blur(32px);
+    animation: vnEtherealBloom 10s ease-in-out infinite;
+}
+
+@keyframes vnEtherealBloom {
+    0%   { opacity: 0.28; filter: blur(28px) hue-rotate(0deg);   }
+    33%  { opacity: 0.42; filter: blur(34px) hue-rotate(60deg);  }
+    66%  { opacity: 0.35; filter: blur(30px) hue-rotate(120deg); }
+    100% { opacity: 0.28; filter: blur(28px) hue-rotate(0deg);   }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FILM GRAIN — .vn-fx-grain
+   Базовая непрозрачность 0.07 задана в vn-fx-base.css.
+   Здесь — только отклонения per-effect.
+   ══════════════════════════════════════════════════════════ */
+
+/* Horror/dark-группа: грубее зерно */
+.vn-vfx-dark         .vn-fx-grain,
+.vn-vfx-eldritch     .vn-fx-grain,
+.vn-vfx-abyss        .vn-fx-grain,
+.vn-vfx-void_breach  .vn-fx-grain,
+.vn-vfx-ghosts       .vn-fx-grain,
+.vn-vfx-blood_moon   .vn-fx-grain,
+.vn-vfx-cosmic_horror .vn-fx-grain { opacity: 0.14; }
+
+.vn-vfx-corruption   .vn-fx-grain,
+.vn-vfx-apocalypse   .vn-fx-grain,
+.vn-vfx-storm        .vn-fx-grain { opacity: 0.11; }
+
+.vn-vfx-moonlight    .vn-fx-grain,
+.vn-vfx-shadow_intrigue .vn-fx-grain { opacity: 0.10; }
+
+/* Нейтральные (уже 0.07 по умолчанию) */
+
+/* Яркие/праздничные: почти незаметно */
+.vn-vfx-divine    .vn-fx-grain,
+.vn-vfx-sacred    .vn-fx-grain,
+.vn-vfx-warm      .vn-fx-grain,
+.vn-vfx-carnival  .vn-fx-grain { opacity: 0.04; }
+
+

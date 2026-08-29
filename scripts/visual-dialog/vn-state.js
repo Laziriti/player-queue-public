@@ -10,6 +10,7 @@ export const MODULE_ID = 'player-queue';
 class VNSceneState {
     static POSITIONS = ['left', 'center', 'right'];
     static SCALE_LIMITS = { MIN: 0.5, MAX: 2.0 };
+    static VISIBILITY_CYCLE = ['visible', 'hidden', 'name-hidden'];
 
     constructor() { this.reset(); }
 
@@ -19,10 +20,12 @@ class VNSceneState {
         this.leftIds = [];
         this.centerIds = [];
         this.rightIds = [];
+        this.presetActors = [];
         this.background = null;
         this.backgroundOverlay = true;
         this.portraitScale = 1.0;
         this.atmosphereEffect = 'particles';
+        this.particlesForeground = false;
         this.speakers = Object.fromEntries(VNSceneState.POSITIONS.map(p => [p, null]));
         this.flipped = {};
         this.visibility = {};
@@ -40,10 +43,13 @@ class VNSceneState {
             leftIds: [...this.leftIds],
             centerIds: [...this.centerIds],
             rightIds: [...this.rightIds],
+            presetActors: [...this.presetActors],
             background: this.background,
             backgroundOverlay: this.backgroundOverlay,
             portraitScale: this.portraitScale,
             atmosphereEffect: this.atmosphereEffect,
+            particlesForeground: this.particlesForeground,
+            speakers: { ...this.speakers },
             flipped: { ...this.flipped },
             visibility: { ...this.visibility },
             musicUuid: this.musicUuid,
@@ -58,11 +64,13 @@ class VNSceneState {
         this.leftIds = [...(p.leftIds ?? [])];
         this.centerIds = [...(p.centerIds ?? [])];
         this.rightIds = [...(p.rightIds ?? [])];
+        this.presetActors = Array.isArray(p.presetActors) ? [...p.presetActors] : [];
         this.background = p.background ?? null;
         this.backgroundOverlay = p.backgroundOverlay ?? true;
         const { MIN, MAX } = VNSceneState.SCALE_LIMITS;
         this.portraitScale = Math.min(Math.max(p.portraitScale ?? 1.0, MIN), MAX);
         this.atmosphereEffect = p.atmosphereEffect ?? 'particles';
+        this.particlesForeground = p.particlesForeground ?? false;
         this.flipped = { ...(p.flipped ?? {}) };
         if (p.visibility) {
             this.visibility = { ...p.visibility };
@@ -79,6 +87,9 @@ class VNSceneState {
         this.portraitImages = { ...(p.portraitImages ?? {}) };
         this.portraitNames = { ...(p.portraitNames ?? {}) };
         this.portraitScales = { ...(p.portraitScales ?? {}) };
+        for (const pos of VNSceneState.POSITIONS) {
+            this.speakers[pos] = p.speakers?.[pos] ?? null;
+        }
         this.active = true;
     }
 

@@ -16,7 +16,6 @@
     --vn-accent: #88c0d0;
     --vn-accent-dim: rgba(136, 192, 208, 0.3);
     --vn-accent-glow: rgba(136, 192, 208, 0.6);
-    --vn-accent-intense: rgba(136, 192, 208, 0.9);
     --vn-gold: #ebcb8b;
     --vn-gold-dim: rgba(235, 203, 139, 0.15);
     --vn-danger: #bf616a;
@@ -34,6 +33,7 @@
     --vn-radius-lg: 12px;
     --vn-transition: 0.2s ease;
     --vn-transition-slow: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    --vn-bg-option: #1e1e28;
 }
 
 
@@ -148,6 +148,10 @@
     z-index: 3;
     pointer-events: none;
     overflow: hidden;
+}
+
+#vn-scene-overlay.vn-particles-fg .vn-particles {
+    z-index: 101;
 }
 
 .vn-particle {
@@ -342,7 +346,7 @@
     box-shadow: 0 0 15px rgba(0,0,0,0.3);
 }
 
-.vn-toolbar-btn:active { transform: scale(0.95); }
+.vn-toolbar-btn:active { transform: scale(0.95); transition: transform 0.08s ease; }
 
 .vn-close-button:hover {
     background: rgba(191, 97, 106, 0.35);
@@ -407,6 +411,8 @@
     z-index: 103;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    min-height: 0;
     background: rgba(8, 12, 20, 0.82);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -862,6 +868,76 @@
     width: 44px;
     font-weight: 700;
     color: var(--vn-accent);
+}
+
+/* ── Help popup ── */
+
+.vn-help-wrap {
+    position: relative;
+}
+
+.vn-help-popup {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 260px;
+    background: rgba(8, 8, 16, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--vn-radius);
+    padding: 8px 10px;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 200;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.vn-help-wrap:hover .vn-help-popup {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.vn-help-popup-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--vn-accent, #c8a96e);
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vn-help-hint {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.vn-help-hint + .vn-help-hint {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vn-help-key {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    padding: 0 6px;
+    font-size: 10px;
+    font-family: inherit;
+    color: rgba(255, 255, 255, 0.9);
+    min-width: 28px;
+    text-align: center;
+    line-height: 18px;
 }
 
 
@@ -1545,6 +1621,21 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     border-color: var(--vn-accent);
 }
 
+.vn-btn:focus-visible,
+.vn-tab-btn:focus-visible,
+.vn-collapsible-header:focus-visible,
+.vn-token-option:focus-visible,
+.vn-bg-option:focus-visible,
+.vn-scale-preset:focus-visible,
+.vn-io-row:focus-visible,
+.vn-music-clear:focus-visible,
+.vn-preset-item:focus-visible,
+.vn-preset-card:focus-visible,
+.vn-io-card:focus-visible {
+    outline: 2px solid var(--vn-accent);
+    outline-offset: 1px;
+}
+
 
 /* ── Scene Dialog Layout ── */
 
@@ -1834,6 +1925,22 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     opacity: 0.6;
 }
 
+.vn-scene-participants {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 2px;
+    min-height: 48px;
+}
+
+.vn-participants-hint {
+    margin: 0 0 6px;
+    font-size: 0.75em;
+    color: var(--vn-text-dim);
+    font-style: italic;
+    line-height: 1.4;
+}
+
 
 /* ── Favorites ── */
 
@@ -1941,14 +2048,16 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     background: rgba(10,10,15,0.85);
     border: 1px solid var(--vn-border);
     color: var(--vn-text);
-    padding: 2px 5px;
+    padding: 4px 7px;
     border-radius: var(--vn-radius-sm);
-    font-size: 0.85em;
+    font-size: 0.82em;
     cursor: pointer;
     outline: none;
-    max-width: 110px;
+    max-width: 120px;
+    transition: border-color var(--vn-transition), box-shadow var(--vn-transition);
 }
-.vn-atmosphere-select:hover, .vn-atmosphere-select:focus { border-color: var(--vn-accent); }
+.vn-atmosphere-select:hover { border-color: var(--vn-border-hover); }
+.vn-atmosphere-select:focus { border-color: var(--vn-accent); box-shadow: 0 0 0 2px var(--vn-accent-dim); }
 
 .vn-custom-path {
     display: flex;
@@ -1968,7 +2077,9 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     font-size: 0.8em;
     transition: border-color var(--vn-transition);
 }
-.vn-custom-path input[type="text"]:focus {
+.vn-custom-path input[type="text"]:focus,
+.vn-preset-save-row input[type="text"]:focus,
+.vn-preset-search:focus {
     border-color: var(--vn-accent);
     outline: none;
     box-shadow: 0 0 0 2px var(--vn-accent-dim);
@@ -2190,19 +2301,26 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 .vn-music-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
     background: none;
-    border: none;
+    border: 1px solid transparent;
+    border-radius: var(--vn-radius-sm);
     color: var(--vn-text-dim);
     cursor: pointer;
-    padding: 2px 4px;
-    border-radius: var(--vn-radius-sm);
-    line-height: 1;
     flex-shrink: 0;
-    transition: color var(--vn-transition);
+    transition: all var(--vn-transition);
+    line-height: 1;
 }
 
 .vn-music-clear:hover {
     color: var(--vn-danger);
+    border-color: rgba(191, 97, 106, 0.3);
+    background: var(--vn-danger-dim);
 }
 
 .vn-music-tab {
@@ -2276,15 +2394,16 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     flex: 1;
     min-width: 0;
     background: none;
-    border: none;
-    border-bottom: 1px solid transparent;
+    border: 1px solid transparent;
+    border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
     font-size: 0.82em;
-    padding: 2px 4px;
+    padding: 3px 6px;
     outline: none;
-    transition: border-color var(--vn-transition);
+    transition: border-color var(--vn-transition), background var(--vn-transition);
 }
-.vn-cue-label-input:focus { border-bottom-color: var(--vn-accent); }
+.vn-cue-label-input:hover { border-color: var(--vn-border); }
+.vn-cue-label-input:focus { border-color: var(--vn-accent); background: rgba(0,0,0,0.2); }
 .vn-cue-label-input::placeholder { color: var(--vn-text-dim); opacity: 0.5; }
 
 
@@ -2345,18 +2464,20 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 .vn-preset-sort {
-    flex: 0 0 72px;
-    width: 72px;
-    padding: 3px 4px;
+    flex: 0 0 80px;
+    width: 80px;
+    padding: 4px 6px;
     background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
-    font-size: 0.75em;
+    font-size: 0.8em;
     cursor: pointer;
+    transition: border-color var(--vn-transition), box-shadow var(--vn-transition);
 }
-.vn-preset-sort:hover, .vn-preset-sort:focus { border-color: var(--vn-accent); outline: none; }
-.vn-preset-sort option { background: #1e1e28; }
+.vn-preset-sort:hover { border-color: var(--vn-border-hover); outline: none; }
+.vn-preset-sort:focus { border-color: var(--vn-accent); outline: none; box-shadow: 0 0 0 2px var(--vn-accent-dim); }
+.vn-preset-sort option { background: var(--vn-bg-option); }
 
 .vn-preset-list { display: flex; flex-direction: column; gap: 4px; max-height: 350px; overflow-y: auto; }
 
@@ -2392,7 +2513,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 .vn-preset-scene-tag i { font-size: 0.85em; flex-shrink: 0; color: var(--vn-accent-dim); }
 
 .vn-preset-dates {
-    font-size: 0.7em; color: var(--vn-text-dim); opacity: 0.65;
+    font-size: 0.7em; color: var(--vn-text-dim);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
@@ -2423,12 +2544,46 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     width: 100%;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid var(--vn-accent);
-    border-radius: 3px;
+    border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
     font-size: 0.85em;
-    padding: 1px 5px;
+    padding: 3px 7px;
     outline: none;
 }
+
+/* ── Macro export dialog ── */
+
+.vn-macro-export { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+
+.vn-macro-hint {
+    margin: 0;
+    font-size: 0.82em;
+    color: var(--vn-text-dim);
+}
+
+.vn-macro-code-row {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.vn-macro-code {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-family: monospace;
+    font-size: 0.8em;
+    padding: 6px 8px;
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+}
+
+.vn-macro-code:focus { border-color: var(--vn-accent); }
+
+.vn-macro-copy-btn { align-self: stretch; }
 
 /* ── Scene pin toggle in save row ── */
 
@@ -2499,7 +2654,8 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     opacity: 0;
     transition: opacity 0.15s ease;
 }
-.vn-preset-scene-group:hover .vn-preset-group-actions {
+.vn-preset-scene-group:hover .vn-preset-group-actions,
+.vn-preset-scene-group:focus-within .vn-preset-group-actions {
     opacity: 1;
 }
 
@@ -2637,15 +2793,18 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 
 .vn-scene-dialog ::-webkit-scrollbar,
 .vn-favorites-section::-webkit-scrollbar,
-.vn-preset-list::-webkit-scrollbar { width: 4px; }
+.vn-preset-list::-webkit-scrollbar,
+.vn-io-preset-list::-webkit-scrollbar { width: 4px; }
 
 .vn-scene-dialog ::-webkit-scrollbar-track,
 .vn-favorites-section::-webkit-scrollbar-track,
-.vn-preset-list::-webkit-scrollbar-track { background: transparent; }
+.vn-preset-list::-webkit-scrollbar-track,
+.vn-io-preset-list::-webkit-scrollbar-track { background: transparent; }
 
 .vn-scene-dialog ::-webkit-scrollbar-thumb,
 .vn-favorites-section::-webkit-scrollbar-thumb,
-.vn-preset-list::-webkit-scrollbar-thumb { background: var(--vn-accent-dim); border-radius: 2px; }
+.vn-preset-list::-webkit-scrollbar-thumb,
+.vn-io-preset-list::-webkit-scrollbar-thumb { background: var(--vn-accent-dim); border-radius: 2px; }
 
 
 /* ══════════════════════════════════════════════════════════
@@ -2671,14 +2830,14 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     gap: 0;
     height: 100%;
     overflow-y: auto;
-    padding: 4px 2px;
+    padding: 4px;
 }
 
 .vn-io-section {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 14px 0 12px;
+    padding: 14px 2px 12px;
 }
 
 .vn-io-divider {
@@ -2688,7 +2847,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 .vn-io-section-title {
-    font-size: 0.8rem;
+    font-size: 0.8em;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -2929,7 +3088,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding-top: 4px;
+    padding-top: 10px;
     border-top: 1px solid var(--vn-border);
 }
 
@@ -2954,11 +3113,10 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    margin-top: 4px;
 }
 .vn-io-apply-nameplate,
 .vn-io-apply-folder {
-    font-size: 0.72rem;
+    font-size: 0.75em;
     opacity: 0.85;
 }
 .vn-io-apply-nameplate:hover,
@@ -2996,10 +3154,11 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 .vn-io-select:focus {
     outline: none;
     border-color: var(--vn-accent);
+    box-shadow: 0 0 0 2px var(--vn-accent-dim);
 }
 
 .vn-io-select option {
-    background: #1e1e28;
+    background: var(--vn-bg-option);
     color: var(--vn-text);
 }
 
@@ -3068,7 +3227,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding-top: 4px;
+    padding-top: 10px;
     border-top: 1px solid var(--vn-border);
 }
 
@@ -3143,18 +3302,6 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     opacity: 1;
 }
 
-
-.vn-chat-panel {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.vn-chat-panel[hidden] {
-    display: none !important;
-}
 
 .vn-chat-panel > #chat {
     position: relative;

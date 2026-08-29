@@ -28,8 +28,6 @@ class VisualNovelScene {
         right:  { enabled: true, maxPerRow: 3, maxRows: 3 }
     };
 
-    static VISIBILITY_CYCLE = ['visible', 'hidden', 'name-hidden'];
-
     static DEFAULTS = {
         PORTRAIT_SCALE: 1.0,
         SCALE_LIMITS: { MIN: 0.5, MAX: 2.0, STEP: 0.1 },
@@ -58,6 +56,7 @@ class VisualNovelScene {
 
         this._chatPanel = new VNChatPanel(() => this.$overlay);
         this._html = new VNSceneHTML(this, VisualNovelScene.ROW_CONFIG);
+        this._persistStateDebounced = VisualNovelScene.debounce(() => this._persistState(), 400);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -138,6 +137,24 @@ class VisualNovelScene {
         }
     }
 
+    _setupPickerDismiss(wrap, picker, listenerKey, onOpen = null) {
+        if (!picker.hidden) { picker.hidden = true; return; }
+        picker.hidden = false;
+        onOpen?.();
+        if (this[listenerKey]) {
+            document.removeEventListener('click', this[listenerKey], true);
+            this[listenerKey] = null;
+        }
+        this[listenerKey] = (ev) => {
+            if (!wrap.contains(ev.target)) {
+                picker.hidden = true;
+                document.removeEventListener('click', this[listenerKey], true);
+                this[listenerKey] = null;
+            }
+        };
+        setTimeout(() => document.addEventListener('click', this[listenerKey], true), 0);
+    }
+
     // ══════════════════════════════════════════════════════════
     // Socket (delegated)
     // ══════════════════════════════════════════════════════════
@@ -152,6 +169,20 @@ class VisualNovelScene {
 
     setParallaxOptions(opts) {
         this._atmosphere._parallax.setOptions(opts);
+    }
+
+    setCameraEnabled(enabled) {
+        this._atmosphere?._camera?.setEnabled(enabled);
+        this._reapplyCameraDof();
+    }
+
+    _reapplyCameraDof() {
+        const overlay = this.$overlay?.[0];
+        if (!overlay) return;
+        const hasSpeaker = Object.values(this.state.speakers).some(Boolean);
+        const cameraOn = game.settings.get(VisualNovelScene.ID, 'cameraEnabled');
+        const dofOn = game.settings.get(VisualNovelScene.ID, 'cameraDoF');
+        overlay.classList.toggle('vn-camera-dof', hasSpeaker && cameraOn && dofOn);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -275,7 +306,26 @@ class VisualNovelScene {
         const charEl = document.querySelector(`${VisualNovelScene.SEL.CHARACTER}[data-token-id="${tokenId}"]`);
         if (charEl) charEl.style.setProperty('--char-scale', scale);
         if (emit) this.emitSocketEvent('setCharacterScale', { tokenId, scale });
-        this._persistState();
+        this._persistStateDebounced();
+    }
+
+    // Normalize portraitScales: for legacy presets where scales are stored under canvas token IDs
+    // instead of actor-based IDs, add actor-based aliases so character() can find the scale.
+    // Handles single-actor case only — multi-instance (same actor N times) requires re-saving the preset.
+    static _normalizePortraitScales(scales) {
+        if (!scales) return {};
+        const result = { ...scales };
+        if (!canvas?.tokens) return result;
+        for (const [key, val] of Object.entries(scales)) {
+            const base = stripDupSuffix(key);
+            if (!parseActorId(base)) {
+                const actorId = canvas.tokens.get(base)?.actor?.id;
+                if (actorId && result[`actor-${actorId}`] === undefined) {
+                    result[`actor-${actorId}`] = val;
+                }
+            }
+        }
+        return result;
     }
 
     applyFlip(tokenId, flip) {
@@ -384,8 +434,21 @@ class VisualNovelScene {
             this._atmosphere.destroy();
             this._atmosphere.init(overlayEl, effect);
             this._updateAtmosphereButton();
+            if (this.state.particlesForeground) overlayEl.classList.add('vn-particles-fg');
         }
         if (emit) { this.emitSocketEvent('setAtmosphereEffect', { effect }); this._persistState(); }
+    }
+
+    setParticlesForeground(enabled, emit = true) {
+        if (emit && !game.user.isGM) return;
+        this.state.particlesForeground = enabled;
+        const overlay = this.$overlay?.[0];
+        if (overlay) {
+            overlay.classList.toggle('vn-particles-fg', enabled);
+            const btn = overlay.querySelector('.vn-particles-fg-btn');
+            if (btn) btn.classList.toggle('active', enabled);
+        }
+        if (emit) { this.emitSocketEvent('setParticlesForeground', { enabled }); this._persistState(); }
     }
 
     _updateAtmosphereButton() {
@@ -503,8 +566,7 @@ class VisualNovelScene {
 
     _setMinimizedSelf(value) {
         if (!game.user.isGM) return;
-        this.state.minimized = value;
-        this.$overlay.toggleClass('minimized', value);
+        this.setMinimized(value, false, false);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -535,10 +597,13 @@ class VisualNovelScene {
             leftIds: payload.leftIds,
             centerIds: payload.centerIds,
             rightIds: payload.rightIds,
+            presetActors: payload.presetActors || [],
             background: payload.background,
             backgroundOverlay: payload.backgroundOverlay ?? true,
             portraitScale: payload.portraitScale ?? VisualNovelScene.DEFAULTS.PORTRAIT_SCALE,
             atmosphereEffect: payload.atmosphereEffect ?? 'particles',
+            particlesForeground: payload.particlesForeground ?? false,
+            speakers: payload.speakers || {},
             flipped: payload.flipped || {},
             visibility: payload.visibility || null,
             hidden: payload.hidden || null,
@@ -548,6 +613,9 @@ class VisualNovelScene {
             portraitNames: payload.portraitNames || {},
             portraitScales: payload.portraitScales || {},
         });
+
+        // Normalize portrait scales: add actor-based aliases for any canvas token ID keys
+        this.state.portraitScales = VisualNovelScene._normalizePortraitScales(this.state.portraitScales);
 
         this._gmOnly = !!(payload.gmOnly) && emit && game.user.isGM;
 
@@ -574,16 +642,20 @@ class VisualNovelScene {
 
         $('body').append(this._html.scene(tokens));
         this._invalidateOverlayCache();
+        this._applyAllPortraitTransforms();
 
         document.querySelectorAll('#vn-scene-overlay .vn-character .vn-character-img').forEach(img => img.style.opacity = '0');
         this._bgManager.applyBackground(this.$overlay, this.state.background, this.state.backgroundOverlay);
 
+        const speakersSnapshot = { ...this.state.speakers };
         setTimeout(() => {
             this.activateSceneListeners();
             this._applyAllPortraitTransforms();
             this._atmosphere.init(this.$overlay[0], this.state.atmosphereEffect);
             this._updateAtmosphereButton();
+            if (this.state.particlesForeground) this.$overlay[0]?.classList.add('vn-particles-fg');
             this._animateInitialCharacters();
+            this._restoreSpeakers(speakersSnapshot);
             if (game.user.isGM) this._updateGmOnlyUI();
         }, VisualNovelScene.DEFAULTS.ANIMATION_DELAY);
 
@@ -599,17 +671,23 @@ class VisualNovelScene {
         this.state.leftIds = payload.leftIds ? [...payload.leftIds] : [];
         this.state.centerIds = payload.centerIds ? [...payload.centerIds] : [];
         this.state.rightIds = payload.rightIds ? [...payload.rightIds] : [];
+        if (payload.presetActors !== undefined) this.state.presetActors = [...(payload.presetActors || [])];
         if (payload.background != null) this.state.background = payload.background;
         if (payload.backgroundOverlay != null) this.state.backgroundOverlay = payload.backgroundOverlay;
         if (payload.flipped !== undefined && payload.flipped !== null) this.state.flipped = { ...payload.flipped };
         if (payload.visibility !== undefined && payload.visibility !== null) this.state.visibility = { ...payload.visibility };
         if (payload.portraitImages !== undefined && payload.portraitImages !== null) this.state.portraitImages = { ...payload.portraitImages };
         if (payload.portraitNames !== undefined && payload.portraitNames !== null) this.state.portraitNames = { ...payload.portraitNames };
-        if (payload.portraitScales !== undefined && payload.portraitScales !== null) this.state.portraitScales = { ...payload.portraitScales };
+        if (payload.portraitScales !== undefined && payload.portraitScales !== null) {
+            this.state.portraitScales = VisualNovelScene._normalizePortraitScales({ ...payload.portraitScales });
+        }
         if (payload.atmosphereEffect != null && this.state.atmosphereEffect !== payload.atmosphereEffect) {
             this.state.atmosphereEffect = payload.atmosphereEffect;
             const overlayEl = this.$overlay?.[0];
             if (overlayEl) { this._atmosphere.destroy(); this._atmosphere.init(overlayEl, payload.atmosphereEffect); this._updateAtmosphereButton(); }
+        }
+        if (payload.particlesForeground != null && this.state.particlesForeground !== payload.particlesForeground) {
+            this.setParticlesForeground(payload.particlesForeground, false);
         }
         if ('musicUuid' in payload && emit && game.user.isGM) {
             const prevMusicUuid = this._sceneMusicUuid;
@@ -672,9 +750,15 @@ class VisualNovelScene {
                 const tid = charEl.dataset.tokenId;
                 const img = charEl.querySelector('.vn-character-img');
                 if (img) img.style.setProperty('--flip-x', this.state.flipped[tid] ? '-1' : '1');
-                if (tid === activeSpeaker) charEl.classList.add('active');
                 if (addingIds.has(tid) && img) img.style.opacity = '0';
             });
+            // Force reflow so the browser registers initial CSS state before .active
+            // is applied — without this, transitions don't play on freshly inserted elements
+            container.offsetHeight;
+            if (activeSpeaker) {
+                container.querySelector(`.vn-character[data-token-id="${activeSpeaker}"]`)
+                    ?.classList.add('active');
+            }
 
             let idx = 0;
             container.querySelectorAll('.vn-character').forEach(charEl => {
@@ -753,7 +837,29 @@ class VisualNovelScene {
             if ($parentRow.length && $parentRow.hasClass('vn-back-row')) $parentRow.addClass('vn-row-promoted');
         }
 
-        if (emit) this.emitSocketEvent('setSpeaker', { tokenId, position });
+        this._atmosphere?.onSpeakerChange(activated ? $char[0] : null);
+        this._reapplyCameraDof();
+
+        if (emit) {
+            this.emitSocketEvent('setSpeaker', { tokenId, position, active: activated });
+            this._persistStateDebounced();
+        }
+    }
+
+    _applyExplicitSpeaker(tokenId, position, active) {
+        this.state.speakers[position] = active ? tokenId : null;
+        $(`.vn-${position}-side .vn-character`).removeClass('active');
+        $(`.vn-${position}-side .vn-row`).removeClass('vn-row-promoted');
+        if (active) {
+            const $char = $(`.vn-character[data-token-id="${tokenId}"]`);
+            $char.addClass('active');
+            const $parentRow = $char.closest('.vn-row');
+            if ($parentRow.length && $parentRow.hasClass('vn-back-row')) $parentRow.addClass('vn-row-promoted');
+            this._atmosphere?.onSpeakerChange($char[0]);
+        } else {
+            this._atmosphere?.onSpeakerChange(null);
+        }
+        this._reapplyCameraDof();
     }
 
     setExclusiveSpeaker(tokenId, emit = true) {
@@ -770,7 +876,14 @@ class VisualNovelScene {
         $char.addClass('active');
         const $row = $char.closest('.vn-row');
         if ($row.hasClass('vn-back-row')) $row.addClass('vn-row-promoted');
-        if (emit) this.emitSocketEvent('setExclusiveSpeaker', { tokenId });
+
+        this._atmosphere?.onSpeakerChange($char[0]);
+        this._reapplyCameraDof();
+
+        if (emit) {
+            this.emitSocketEvent('setExclusiveSpeaker', { tokenId });
+            this._persistStateDebounced();
+        }
     }
 
     // ══════════════════════════════════════════════════════════
@@ -853,17 +966,9 @@ class VisualNovelScene {
                 const wrap = e.currentTarget.closest('.vn-atmo-wrap');
                 const picker = wrap?.querySelector('.vn-atmosphere-picker');
                 if (!picker) return;
-                if (!picker.hidden) { picker.hidden = true; return; }
-                picker.hidden = false;
-                this._removeAtmoOutsideListener();
-                this._atmoOutsideListener = (ev) => {
-                    if (!wrap.contains(ev.target)) {
-                        picker.hidden = true;
-                        this._removeAtmoOutsideListener();
-                    }
-                };
-                setTimeout(() => document.addEventListener('click', this._atmoOutsideListener, true), 0);
-            }
+                this._setupPickerDismiss(wrap, picker, '_atmoOutsideListener');
+            },
+            '.vn-particles-fg-btn': () => this.setParticlesForeground(!this.state.particlesForeground, true)
         };
         for (const [sel, fn] of Object.entries(actions)) $(document).on(`click${ns}`, sel, fn);
 
@@ -874,17 +979,7 @@ class VisualNovelScene {
             const wrap = e.currentTarget.closest('.vn-sounds-wrap');
             const picker = wrap?.querySelector('.vn-sounds-picker');
             if (!picker) return;
-            if (!picker.hidden) { picker.hidden = true; return; }
-            picker.hidden = false;
-            this._updateSoundsPanel();
-            this._removeSoundsOutsideListener();
-            this._soundsOutsideListener = (ev) => {
-                if (!wrap.contains(ev.target)) {
-                    picker.hidden = true;
-                    this._removeSoundsOutsideListener();
-                }
-            };
-            setTimeout(() => document.addEventListener('click', this._soundsOutsideListener, true), 0);
+            this._setupPickerDismiss(wrap, picker, '_soundsOutsideListener', () => this._updateSoundsPanel());
         });
 
         $(document).on(`click${ns}`, '.vn-sound-item', (e) => {
@@ -943,7 +1038,7 @@ class VisualNovelScene {
             e.preventDefault(); e.stopImmediatePropagation();
             const tokenId = $(e.currentTarget).data('token-id');
             const current = this.state.visibility[tokenId] ?? 'visible';
-            const cycle = VisualNovelScene.VISIBILITY_CYCLE;
+            const cycle = VNSceneState.VISIBILITY_CYCLE;
             const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
             this.applyVisibility(tokenId, next, true);
         });

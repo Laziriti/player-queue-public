@@ -27,6 +27,8 @@ export class VisualFXSystem {
 
         if (visual === 'none') return;
 
+        this._injectSVGFilters();
+
         overlayEl.classList.add(`vn-vfx-${visual}`);
         this._ensureFXLayers(overlayEl);
 
@@ -154,6 +156,41 @@ export class VisualFXSystem {
                     : overlayEl.prepend(div);
             }
         }
+    }
+
+    _injectSVGFilters() {
+        if (document.getElementById('vn-svg-filters')) return;
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.id = 'vn-svg-filters';
+        svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;';
+        svg.setAttribute('aria-hidden', 'true');
+        svg.innerHTML = `<defs>
+            <filter id="vn-distort-wave" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.012 0.008" numOctaves="3" seed="5" stitchTiles="stitch" result="noise"/>
+                <feOffset in="noise" result="shifted">
+                    <animate attributeName="dx" values="0;256;0" dur="20s" repeatCount="indefinite" calcMode="linear"/>
+                    <animate attributeName="dy" values="0;128;0" dur="28s" repeatCount="indefinite" calcMode="linear"/>
+                </feOffset>
+                <feDisplacementMap in="SourceGraphic" in2="shifted" scale="14" xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+            <filter id="vn-distort-dream" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+                <feTurbulence type="fractalNoise" baseFrequency="0.007 0.005" numOctaves="2" seed="12" stitchTiles="stitch" result="noise"/>
+                <feOffset in="noise" result="shifted">
+                    <animate attributeName="dx" values="0;150;0" dur="32s" repeatCount="indefinite" calcMode="linear"/>
+                    <animate attributeName="dy" values="0;80;0"  dur="44s" repeatCount="indefinite" calcMode="linear"/>
+                </feOffset>
+                <feDisplacementMap in="SourceGraphic" in2="shifted" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+            <filter id="vn-distort-eldritch" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+                <feTurbulence type="turbulence" baseFrequency="0.025 0.020" numOctaves="4" seed="7" stitchTiles="stitch" result="noise"/>
+                <feOffset in="noise" result="shifted">
+                    <animate attributeName="dx" from="0" to="512" dur="22s" repeatCount="indefinite" calcMode="linear" accumulate="sum"/>
+                    <animate attributeName="dy" from="0" to="256" dur="30s" repeatCount="indefinite" calcMode="linear" accumulate="sum"/>
+                </feOffset>
+                <feDisplacementMap in="SourceGraphic" in2="shifted" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+            </filter>
+        </defs>`;
+        document.body.appendChild(svg);
     }
 
     _startLightning(overlayEl) {

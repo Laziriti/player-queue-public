@@ -19,6 +19,7 @@ export class VNSocketHandler {
         setExclusiveSpeaker:  { gmOnly: true,  required: ['tokenId'] },
         setBackgroundOverlay: { gmOnly: true,  required: ['enabled'] },
         setAtmosphereEffect:  { gmOnly: true,  required: ['effect'] },
+        setParticlesForeground: { gmOnly: true, required: ['enabled'] },
         setVisibility:        { gmOnly: true,  required: ['tokenId', 'visibility'] },
         updateQueue:          { gmOnly: false },
     };
@@ -86,7 +87,13 @@ export class VNSocketHandler {
                 s.createScene(p, false);
                 break;
             case 'close':                s.closeScene(false); break;
-            case 'setSpeaker':           s.setActiveSpeaker(p.tokenId, false, p.position); break;
+            case 'setSpeaker':
+                if (p.active !== undefined) {
+                    s._applyExplicitSpeaker(p.tokenId, p.position, p.active);
+                } else {
+                    s.setActiveSpeaker(p.tokenId, false, p.position);
+                }
+                break;
             case 'updateQueue':          s.updateQueueDisplay(); break;
             case 'updateScene':
                 s.updateSceneLayout({
@@ -96,6 +103,7 @@ export class VNSocketHandler {
                     background: p.background,
                     backgroundOverlay: p.backgroundOverlay,
                     atmosphereEffect: p.atmosphereEffect ?? null,
+                    particlesForeground: p.particlesForeground ?? null,
                     flipped: p.flipped ?? null,
                     visibility: p.visibility ?? null,
                     portraitImages: p.portraitImages ?? null,
@@ -113,6 +121,7 @@ export class VNSocketHandler {
             case 'setExclusiveSpeaker':  s.setExclusiveSpeaker(p.tokenId, false); break;
             case 'setBackgroundOverlay': s.setBackgroundOverlay(!!p.enabled, false); break;
             case 'setAtmosphereEffect':  s.setAtmosphereEffect(p.effect, false); break;
+            case 'setParticlesForeground': s.setParticlesForeground(!!p.enabled, false); break;
             case 'setVisibility':        s.applyVisibility(p.tokenId, p.visibility, false); break;
             default: console.warn(`[VN] No handler for action: ${action}`);
         }

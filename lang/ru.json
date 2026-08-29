@@ -104,6 +104,22 @@
     "parallaxDepth": {
       "name": "🎥 Глубина параллакса",
       "hint": "Насколько сильно фон смещается при движении мыши (0 — нет смещения, 100 — максимум)"
+    },
+    "cameraEnabled": {
+      "name": "🎬 Виртуальная камера",
+      "hint": "Плавный наезд камеры на активного говорящего"
+    },
+    "cameraDoF": {
+      "name": "🔍 Глубина резкости",
+      "hint": "Усиленное размытие неактивных персонажей при активной камере"
+    },
+    "kenBurnsDirection": {
+      "name": "📽 Дрейф фона (Кен Бёрнс)",
+      "hint": "Медленный дрейф фона в указанном направлении",
+      "none": "Выкл",
+      "random": "Случайный",
+      "left": "Влево",
+      "right": "Вправо"
     }
   },
   "soundTest": {
@@ -133,7 +149,27 @@
       "sizeDecrease": "Уменьшить",
       "sizeReset": "Сброс",
       "sizeIncrease": "Увеличить",
-      "sizeSettings": "Настройка"
+      "sizeSettings": "Настройка",
+      "particlesForeground": "Частицы поверх персонажей"
+    },
+    "help": {
+      "btnTitle": "Подсказка по управлению",
+      "titleGM": "Управление сценой",
+      "titlePlayer": "Управление сценой",
+      "k_click": "ЛКМ",
+      "d_click": "активный говорящий",
+      "k_ctrlClick": "Ctrl+ЛКМ",
+      "d_ctrlClick": "только этот говорящий",
+      "k_midClick": "СКМ",
+      "d_midClick": "зеркалить портрет",
+      "k_rightClick": "ПКМ",
+      "d_rightClick": "видимость: показан → скрыт → без имени",
+      "k_altWheel": "Alt+🖱",
+      "d_altWheel": "масштаб конкретного портрета",
+      "k_close": "×",
+      "d_close": "закрыть сцену",
+      "k_chat": "Чат",
+      "d_chat": "встроенный чат"
     },
     "queue": {
       "title": "Очередь",
@@ -198,6 +234,7 @@
     "bg": {
       "header": "Фон сцены",
       "overlay": "Затенение",
+      "particlesForeground": "Частицы поверх",
       "currentScene": "Текущая сцена",
       "pathPlaceholder": "Путь к изображению или видео...",
       "pickFolder": "Выбрать папку",
@@ -302,8 +339,13 @@
       "presetActionUpdate": "Обновить из диалога",
       "presetActionRegen": "Перегенерировать пресет",
       "presetActionAssign": "Изменить сцену",
+      "presetActionMacro": "Сгенерировать макрос",
       "presetActionRename": "Переименовать",
       "presetActionDelete": "Удалить",
+      "macroDialogTitle": "Макрос для пресета «{name}»",
+      "macroDialogHint": "Вставьте этот код в макрос Foundry, чтобы запускать эту сцену одним кликом.",
+      "macroCopyBtn": "Скопировать",
+      "macroCopied": "Код макроса скопирован в буфер обмена",
       "updatePresetTitle": "Обновить пресет",
       "updatePresetConfirm": "Перезаписать пресет «<strong>{name}</strong>» текущими настройками диалога?",
       "deletePresetTitle": "Удалить пресет",
@@ -328,6 +370,8 @@
       "gmOnlyToggleTitle": "Сцена будет видна только вам. Нажмите «Показать игрокам» на самой сцене, чтобы открыть всем.",
       "gmOnlyLabel": "Только ГМ",
       "tokensOnScene": "Доступные на сцене",
+      "participantsLabel": "Участники сцены",
+      "participantsHint": "Перетащите актёров из «Доступных» — они сохранятся в пресет и будут доступны независимо от текущей сцены.",
       "positionLeft": "Лево",
       "positionLeftOrder": "← дальше | ближе →",
       "positionCenter": "Центр",

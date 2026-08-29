@@ -9,6 +9,8 @@ export class ParallaxSystem {
     static MAX_ZOOM_EXTRA = 0.05;   // Дополнительный zoom за время
     static ZOOM_DURATION = 120;     // Время полного zoom (секунды)
     static LERP_FACTOR = 0.03;      // Плавность следования за мышью
+    static KB_SPEED = 0.0000006;    // Скорость дрейфа Ken Burns за тик
+    static KB_MAX = 0.25;           // Макс. смещение KB (доля maxShift)
 
     constructor() {
         this._overlayEl = null;
@@ -23,15 +25,50 @@ export class ParallaxSystem {
         this._boundMouseMove = null;
         this._enabled = true;
         this._maxShift = ParallaxSystem.DEFAULT_SHIFT;
+
+        // Camera system
+        this._camera = null;
+
+        // Ken Burns drift
+        this._kbEnabled = false;
+        this._kbDirectionX = 0;
+        this._kbDirectionY = 0;
+        this._kbOffsetX = 0;
+        this._kbOffsetY = 0;
+    }
+
+    /**
+     * Подключить камеру (вызывается из VNAtmosphere)
+     */
+    setCameraSystem(camera) {
+        this._camera = camera;
     }
 
     /**
      * Обновить параметры на лету (вызывается из onChange настроек)
-     * @param {{ enabled?: boolean, depth?: number }} options
+     * @param {{ enabled?: boolean, depth?: number, kenBurns?: { enabled: boolean, direction: string } }} options
      */
-    setOptions({ enabled, depth } = {}) {
+    setOptions({ enabled, depth, kenBurns } = {}) {
         if (enabled !== undefined) this._enabled = enabled;
         if (depth !== undefined) this._maxShift = depth * 0.24; // 50→12px, 100→24px
+        if (kenBurns !== undefined) {
+            this._kbEnabled = kenBurns.enabled;
+            if (!kenBurns.enabled || kenBurns.direction === 'none') {
+                this._kbDirectionX = 0;
+                this._kbDirectionY = 0;
+            } else if (kenBurns.direction === 'random') {
+                this._kbDirectionX = Math.random() > 0.5 ? 1 : -1;
+                this._kbDirectionY = (Math.random() - 0.5) * 0.6;
+            } else if (kenBurns.direction === 'left') {
+                this._kbDirectionX = -1;
+                this._kbDirectionY = 0.15;
+            } else if (kenBurns.direction === 'right') {
+                this._kbDirectionX = 1;
+                this._kbDirectionY = -0.15;
+            }
+            this._kbOffsetX = 0;
+            this._kbOffsetY = 0;
+        }
     }
 
     /**
@@ -85,6 +122,8 @@ export class ParallaxSystem {
     resetZoom() {
         this._zoomStart = Date.now();
         this._isAnimated = this._checkAnimatedBg();
+        this._kbOffsetX = 0;
+        this._kbOffsetY = 0;
     }
 
     /**
@@ -133,9 +172,24 @@ export class ParallaxSystem {
                 this._currentX += diffX * ParallaxSystem.LERP_FACTOR;
                 this._currentY += diffY * ParallaxSystem.LERP_FACTOR;
             }
-            const dx = (this._currentX - 0.5) * this._maxShift;
-            const dy = (this._currentY - 0.5) * this._maxShift;
-            const t = `translate3d(${-dx.toFixed(2)}px,${-dy.toFixed(2)}px,0) scale(${scale.toFixed(4)})`;
+
+            // Ken Burns drift
+            if (this._kbEnabled && this._kbDirectionX) {
+                const kbMax = this._maxShift * ParallaxSystem.KB_MAX;
+                this._kbOffsetX += this._kbDirectionX * ParallaxSystem.KB_SPEED * this._maxShift;
+                this._kbOffsetY += this._kbDirectionY * ParallaxSystem.KB_SPEED * this._maxShift;
+                this._kbOffsetX = Math.max(-kbMax, Math.min(kbMax, this._kbOffsetX));
+                this._kbOffsetY = Math.max(-kbMax, Math.min(kbMax, this._kbOffsetY));
+            }
+
+            // Camera system
+            this._camera?.tick();
+            const cam = this._camera?.getOffset() ?? { dx: 0, dy: 0, scale: 1.0 };
+
+            const dx = (this._currentX - 0.5) * this._maxShift + cam.dx + this._kbOffsetX;
+            const dy = (this._currentY - 0.5) * this._maxShift + cam.dy + this._kbOffsetY;
+            const finalScale = scale * cam.scale;
+            const t = `translate3d(${-dx.toFixed(2)}px,${-dy.toFixed(2)}px,0) scale(${finalScale.toFixed(4)})`;
             if (t !== this._lastTransform) {
                 this._bgLayer.style.transform = t;
                 this._lastTransform = t;

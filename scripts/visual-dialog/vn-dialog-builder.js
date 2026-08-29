@@ -8,7 +8,6 @@ import { stripDupSuffix, parseActorId, toActorTokenId, parsePlaylistUuid, FALLBA
 import { NAMEPLATE_CONFIGS, applyNameplateImage } from '../settings.js';
 import { countPendingMigrations } from './vn-migrations.js';
 
-const VIS_CYCLE = ['visible', 'hidden', 'name-hidden'];
 const VIS_ICON  = { visible: 'fa-eye', hidden: 'fa-eye-slash', 'name-hidden': 'fa-user-secret' };
 const VIS_TITLE = { visible: 'vn.dialog.vis.visible', hidden: 'vn.dialog.vis.hidden', 'name-hidden': 'vn.dialog.vis.nameHidden' };
 
@@ -29,6 +28,8 @@ export class VNDialogBuilder {
         this._dialogAbortCtrl = null;
         this._dropZones = null;
         this._dragEls = null;
+        this._pendingFlipped = null;
+        this._pendingScales = null;
     }
 
     get dialog() { return this._dialog; }
@@ -117,6 +118,7 @@ export class VNDialogBuilder {
         const getRawIds = (sel) => Array.from(root.querySelectorAll(`${sel} .vn-token-option`))
             .map(el => el.dataset.type === 'token' ? (el.dataset.tokenId || null) : (el.dataset.actorId ? `actor-${el.dataset.actorId}` : null)).filter(Boolean);
 
+        const presetActors = getRawIds('#scene-participants');
         const allRaw = backgroundOnly ? [] : [...getRawIds('#left-tokens'), ...getRawIds('#center-tokens'), ...getRawIds('#right-tokens')];
         const allDeduped = VNDialogBuilder._deduplicateIds(allRaw);
         const leftCount = backgroundOnly ? 0 : root.querySelectorAll('#left-tokens .vn-token-option').length;
@@ -128,6 +130,7 @@ export class VNDialogBuilder {
         const bg = root.querySelector('input[name="background"]:checked')?.value;
         const overlay = root.querySelector('#background-overlay')?.checked ?? true;
         const effect = root.querySelector('#atmosphere-effect')?.value || 'particles';
+        const particlesForeground = root.querySelector('#particles-foreground')?.checked ?? false;
         const musicUuid = root.querySelector('#vn-music-uuid')?.value || null;
         const soundCues = this._gatherSoundCues(root);
 
@@ -137,26 +140,26 @@ export class VNDialogBuilder {
             ? { portraitImages: {}, portraitNames: {} }
             : this._gatherPortraitData(root, allRaw, allDeduped);
 
-        const pendingFlipped = root._vnPendingFlipped ?? null;
-        const pendingScales = root._vnPendingScales ?? null;
-        delete root._vnPendingFlipped;
-        delete root._vnPendingScales;
+        const pendingFlipped = this._pendingFlipped;
+        const pendingScales = this._pendingScales;
+        this._pendingFlipped = null;
+        this._pendingScales = null;
 
         const gmOnly = root.querySelector('#vn-gm-only-toggle')?.checked ?? false;
 
         if (isEdit) this._scene.updateSceneLayout({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
-            flipped: pendingFlipped ?? null, atmosphereEffect: effect,
+            flipped: pendingFlipped ?? null, atmosphereEffect: effect, particlesForeground,
             visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
-            portraitScales: pendingScales ?? null, gmOnly,
+            portraitScales: pendingScales ?? null, gmOnly, presetActors,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
-            flipped: pendingFlipped || {}, atmosphereEffect: effect,
+            flipped: pendingFlipped || {}, atmosphereEffect: effect, particlesForeground,
             visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
-            portraitScales: pendingScales || {}, gmOnly,
+            portraitScales: pendingScales || {}, gmOnly, presetActors,
         });
     }
 
@@ -193,7 +196,7 @@ export class VNDialogBuilder {
             const tokenOpt = btn.closest('.vn-token-option');
             if (!tokenOpt || !tokenOpt.closest('.vn-token-selector')) return;
             const vis = tokenOpt.dataset.visibility ?? 'visible';
-            const next = VIS_CYCLE[(VIS_CYCLE.indexOf(vis) + 1) % VIS_CYCLE.length];
+            const next = VNSceneState.VISIBILITY_CYCLE[(VNSceneState.VISIBILITY_CYCLE.indexOf(vis) + 1) % VNSceneState.VISIBILITY_CYCLE.length];
             tokenOpt.dataset.visibility = next;
             btn.querySelector('i').className = `fas ${VIS_ICON[next]}`;
             btn.title = game.i18n.localize(VIS_TITLE[next]);
@@ -229,7 +232,7 @@ export class VNDialogBuilder {
         };
 
         const signal = this._dialogAbortCtrl?.signal;
-        root.querySelectorAll('.vn-token-selector, .vn-available-tokens, .vn-favorites-section').forEach(zone => {
+        root.querySelectorAll('.vn-token-selector, .vn-available-tokens, .vn-favorites-section, .vn-scene-participants').forEach(zone => {
             if (this._dropZones?.has(zone)) return;
             this._dropZones?.add(zone);
             zone.addEventListener('dragover', (e) => {
@@ -276,7 +279,7 @@ export class VNDialogBuilder {
 
     _setupActorsDragAndDrop(root) {
         const scene = this._scene;
-        root.querySelectorAll('.vn-token-selector, .vn-favorites-section').forEach(zone => {
+        root.querySelectorAll('.vn-token-selector, .vn-favorites-section, .vn-scene-participants').forEach(zone => {
             zone.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
             zone.addEventListener('drop', async (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -297,6 +300,15 @@ export class VNDialogBuilder {
                         }
                         await scene.addToFavorites(actor.id);
                         this._updateFavoritesDisplay(root);
+                    } else if (zone.classList.contains('vn-scene-participants')) {
+                        const existing = zone.querySelector(`.vn-token-option[data-actor-id="${actor.id}"]`);
+                        if (!existing) {
+                            const temp = document.createElement('div');
+                            temp.innerHTML = VNDialogBuilder.generateActorToken(actor);
+                            const newEl = temp.firstElementChild;
+                            zone.append(newEl);
+                            this._makeDraggable(newEl);
+                        }
                     } else {
                         const temp = document.createElement('div');
                         temp.innerHTML = VNDialogBuilder.generateActorToken(actor);
@@ -414,6 +426,8 @@ export class VNDialogBuilder {
         if (oc) oc.checked = state.backgroundOverlay;
         const es = root.querySelector('#atmosphere-effect');
         if (es) es.value = state.atmosphereEffect || 'particles';
+        const pfg = root.querySelector('#particles-foreground');
+        if (pfg) pfg.checked = state.particlesForeground ?? false;
 
         const defaultsUsed = new Set();
         for (const [tokenId, vis] of Object.entries(state.visibility ?? {})) {
@@ -433,8 +447,8 @@ export class VNDialogBuilder {
     }
 
     applyPreset(root, preset) {
-        root._vnPendingFlipped = preset.flipped || {};
-        root._vnPendingScales = preset.portraitScales || {};
+        this._pendingFlipped = preset.flipped || {};
+        this._pendingScales = preset.portraitScales || {};
 
         const allIds = [...(preset.leftIds || []), ...(preset.centerIds || []), ...(preset.rightIds || [])];
         const available = root.querySelector('#available-tokens');
@@ -457,14 +471,50 @@ export class VNDialogBuilder {
                 }
             }
         }
-        if (needed.size) this._setupDragAndDrop(root);
+        // Ensure participant actors have DOM elements
+        const presetActorIds = preset.presetActors || [];
+        for (const id of presetActorIds) {
+            const aid = parseActorId(stripDupSuffix(id));
+            if (!aid) continue;
+            if (!root.querySelector(`.vn-token-option[data-actor-id="${aid}"]`)) {
+                const actor = game.actors.get(aid);
+                if (actor && available) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = VNDialogBuilder.generateActorToken(actor);
+                    available.append(temp.firstElementChild);
+                }
+            }
+        }
+        if (needed.size || presetActorIds.length) this._setupDragAndDrop(root);
         this._moveTokensToPositions(root, preset);
+
+        // Populate #scene-participants from preset.presetActors.
+        // Only pick from #available-tokens — actors already placed in position slots must not be moved out.
+        const participantsEl = root.querySelector('#scene-participants');
+        const availableEl = root.querySelector('#available-tokens');
+        if (participantsEl) {
+            participantsEl.innerHTML = '';
+            const usedInParticipants = new Set();
+            for (const id of presetActorIds) {
+                const aid = parseActorId(stripDupSuffix(id));
+                if (!aid) continue;
+                const el = availableEl?.querySelector(`.vn-token-option[data-actor-id="${aid}"]`);
+                if (el && !usedInParticipants.has(el)) {
+                    usedInParticipants.add(el);
+                    participantsEl.append(el);
+                }
+            }
+            const badge = root.querySelector('.vn-participants-badge');
+            if (badge) badge.textContent = participantsEl.querySelectorAll('.vn-token-option').length;
+        }
 
         this._selectBackground(root, preset.background);
         const overlayCheck = root.querySelector('#background-overlay');
         if (overlayCheck) overlayCheck.checked = preset.backgroundOverlay ?? true;
         const effectSelect = root.querySelector('#atmosphere-effect');
         if (effectSelect) effectSelect.value = preset.atmosphereEffect || 'particles';
+        const pfgCheck = root.querySelector('#particles-foreground');
+        if (pfgCheck) pfgCheck.checked = preset.particlesForeground ?? false;
 
         root.querySelectorAll('.vn-token-option').forEach(el => {
             el.dataset.visibility = 'visible';
@@ -695,6 +745,29 @@ export class VNDialogBuilder {
 
         const visibilityData = this._collectVisibilityData(root, allRaw, allDeduped);
         const { portraitImages, portraitNames } = this._gatherPortraitData(root, allRaw, allDeduped);
+
+        // Build positional canvas-token-ID → deduped-actor-ID mapping.
+        // This is the only point where we know both the canvas token ID (data-token-id on the element)
+        // and the exact deduped position ID (allDeduped[i], e.g. "actor-xyz#2").
+        // Without this, scales stored under canvas IDs can't be matched to #N-suffixed actor IDs at load time.
+        const allPositionEls = [...root.querySelectorAll('#left-tokens .vn-token-option, #center-tokens .vn-token-option, #right-tokens .vn-token-option')];
+        const canvasToActorId = new Map();
+        allPositionEls.forEach((el, i) => {
+            const tid = el.dataset.tokenId;
+            if (tid && !parseActorId(tid)) canvasToActorId.set(tid, allDeduped[i]);
+        });
+
+        // Remap portraitScales: canvas token ID keys → positional actor IDs.
+        // Canvas-mapped values win over stale actor-key values (e.g. from old setCharacterScale behaviour).
+        const rawScales = scene.state.isActive ? { ...scene.state.portraitScales } : { ...(this._pendingScales ?? {}) };
+        const remappedScales = {};
+        for (const [key, val] of Object.entries(rawScales)) {
+            const mappedKey = canvasToActorId.get(key) ?? key;
+            if (canvasToActorId.has(key) || remappedScales[mappedKey] === undefined) {
+                remappedScales[mappedKey] = val;
+            }
+        }
+
         const state = new VNSceneState();
         state.fromPayload({
             leftIds: allDeduped.slice(0, leftCount),
@@ -703,8 +776,9 @@ export class VNDialogBuilder {
             background: root.querySelector('input[name="background"]:checked')?.value || null,
             backgroundOverlay: root.querySelector('#background-overlay')?.checked ?? true,
             atmosphereEffect: root.querySelector('#atmosphere-effect')?.value || 'particles',
+            particlesForeground: root.querySelector('#particles-foreground')?.checked ?? false,
             portraitScale: scene.state.portraitScale,
-            portraitScales: scene.state.isActive ? { ...scene.state.portraitScales } : { ...(root._vnPendingScales ?? {}) },
+            portraitScales: remappedScales,
             visibility: visibilityData,
             musicUuid: root.querySelector('#vn-music-uuid')?.value || null,
             soundCues: this._gatherSoundCues(root),
@@ -718,6 +792,7 @@ export class VNDialogBuilder {
             ),
             portraitImages,
             portraitNames,
+            presetActors: getRawIds('#scene-participants'),
         });
         return state;
     }
@@ -763,6 +838,7 @@ export class VNDialogBuilder {
         { action: 'load',   icon: 'fa-upload',         extra: '',              title: 'vn.dialog.presetActionLoad' },
         { action: 'update', icon: 'fa-arrows-rotate',  extra: '',              title: 'vn.dialog.presetActionUpdate' },
         { action: 'regen',  icon: 'fa-rotate',         extra: '',              title: 'vn.dialog.presetActionRegen' },
+        { action: 'macro',  icon: 'fa-code',           extra: '',              title: 'vn.dialog.presetActionMacro' },
         { action: 'assign', icon: 'fa-map-pin',        extra: '',              title: 'vn.dialog.presetActionAssign' },
         { action: 'rename', icon: 'fa-pen',            extra: '',              title: 'vn.dialog.presetActionRename' },
         { action: 'delete', icon: 'fa-trash',          extra: 'vn-btn-danger', title: 'vn.dialog.presetActionDelete' },
@@ -825,6 +901,7 @@ export class VNDialogBuilder {
             });
             if (!confirmed) return;
             await game.settings.set(MODULE_ID, VNPresets.SETTING_KEY, {});
+            VNPresets.invalidateCache();
             this._refreshPresetList(root);
             this._rebuildExportList(root);
         }, { signal });
@@ -844,7 +921,9 @@ export class VNDialogBuilder {
             const name = nameInput?.value?.trim();
             if (!name) return;
             const attachScene = root.querySelector('#vn-preset-scene-pin')?.classList.contains('active') ?? true;
-            await VNPresets.save(name, this._gatherDialogState(root), attachScene);
+            const gatheredState = this._gatherDialogState(root);
+            await VNPresets.save(name, gatheredState, attachScene);
+            if (this._scene.state.isActive) this._scene.state.presetActors = [...gatheredState.presetActors];
             nameInput.value = '';
             this._refreshPresetList(root);
         }, { signal });
@@ -905,7 +984,9 @@ export class VNDialogBuilder {
                     no: { label: game.i18n.localize('vn.dialog.btnCancel') },
                 });
                 if (!confirmed) return;
-                const sorted = await VNPresets.update(presetId, this._gatherDialogState(root));
+                const updatedState = this._gatherDialogState(root);
+                const sorted = await VNPresets.update(presetId, updatedState);
+                if (this._scene.state.isActive) this._scene.state.presetActors = [...updatedState.presetActors];
                 this._refreshPresetList(root, sorted);
                 break;
             }
@@ -924,6 +1005,34 @@ export class VNDialogBuilder {
                 if (!confirmed) return;
                 await VNPresets.delete(presetId);
                 this._refreshPresetList(root);
+                break;
+            }
+            case 'macro': {
+                const preset = await VNPresets.load(presetId);
+                if (!preset) return;
+                const code = `// ${preset.name}\nawait window.launchVNPreset("${preset.id}");`;
+                const dlg = new foundry.applications.api.DialogV2({
+                    window: { title: game.i18n.format('vn.dialog.macroDialogTitle', { name: preset.name }) },
+                    classes: ['vn-confirm-dialog'],
+                    content: `<div class="vn-macro-export">
+                        <p class="vn-macro-hint">${game.i18n.localize('vn.dialog.macroDialogHint')}</p>
+                        <div class="vn-macro-code-row">
+                            <textarea readonly class="vn-macro-code" rows="2" spellcheck="false">${code}</textarea>
+                            <button type="button" class="vn-btn vn-btn-accent vn-macro-copy-btn" title="${game.i18n.localize('vn.dialog.macroCopyBtn')}"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>`,
+                    buttons: [{ action: 'close', label: game.i18n.localize('vn.dialog.btnClose'), default: true }],
+                    rejectClose: false,
+                });
+                dlg.render({ force: true }).then(() => {
+                    const copyBtn = dlg.element?.querySelector('.vn-macro-copy-btn');
+                    const textarea = dlg.element?.querySelector('.vn-macro-code');
+                    copyBtn?.addEventListener('click', async () => {
+                        await navigator.clipboard.writeText(code);
+                        ui.notifications.info(game.i18n.localize('vn.dialog.macroCopied'));
+                    });
+                    textarea?.addEventListener('click', () => textarea.select());
+                });
                 break;
             }
             case 'assign': {
@@ -1290,6 +1399,7 @@ export class VNDialogBuilder {
         const currentOverlay = sceneState ? sceneState.backgroundOverlay !== false : true;
         const currentBg = sceneState?.background || null;
         const currentEffect = sceneState?.atmosphereEffect || 'particles';
+        const currentParticlesFg = sceneState?.particlesForeground ?? false;
         const currentMusicUuid = sceneState?.musicUuid || null;
         const currentSoundCues = sceneState?.soundCues || [];
 
@@ -1297,6 +1407,17 @@ export class VNDialogBuilder {
         const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${t.id}" data-actor-id="${t.actor.id}" data-type="token" data-visibility="visible">
             <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
             <div class="vn-token-preview"><img src="${t.actor.img || t.document.texture.src}" alt="${t.name}" loading="lazy"><div class="vn-token-name">${t.name}</div></div></div>`).join('');
+
+        const participantTokensHtml = (sceneState?.presetActors || []).map(id => {
+            const aid = parseActorId(id);
+            if (!aid) return '';
+            const actor = game.actors.get(aid);
+            return actor ? VNDialogBuilder.generateActorToken(actor) : '';
+        }).filter(Boolean).join('');
+        const participantCount = (sceneState?.presetActors || []).filter(id => {
+            const aid = parseActorId(id);
+            return aid && game.actors.get(aid);
+        }).length;
 
         return `<div class="vn-scene-dialog">
             <div class="vn-tabs">
@@ -1317,6 +1438,13 @@ export class VNDialogBuilder {
                             <summary class="vn-collapsible-header"><i class="fas fa-map-marker-alt"></i> ${game.i18n.localize('vn.dialog.tokensOnScene')} <span class="vn-badge">${tokens.length}</span><i class="fas fa-chevron-down vn-chevron"></i></summary>
                             <div class="vn-collapsible-body"><div class="vn-available-tokens" id="available-tokens">${tokensHTML || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noTokensOnScene')}</div>`}</div></div>
                         </details>
+                        <details class="vn-collapsible vn-participants-collapsible" open>
+                            <summary class="vn-collapsible-header"><i class="fas fa-users-gear"></i> ${game.i18n.localize('vn.dialog.participantsLabel')} <span class="vn-badge vn-participants-badge">${participantCount}</span><i class="fas fa-chevron-down vn-chevron"></i></summary>
+                            <div class="vn-collapsible-body">
+                                <p class="vn-participants-hint">${game.i18n.localize('vn.dialog.participantsHint')}</p>
+                                <div class="vn-scene-participants" id="scene-participants">${participantTokensHtml}</div>
+                            </div>
+                        </details>
                         <div class="vn-positions-grid">
                             ${this._positionSection('left', game.i18n.localize('vn.dialog.positionLeft'), 'fa-arrow-left', game.i18n.localize('vn.dialog.positionLeftOrder'))}
                             ${this._positionSection('center', game.i18n.localize('vn.dialog.positionCenter'), 'fa-bullseye')}
@@ -1333,7 +1461,7 @@ export class VNDialogBuilder {
                 </div>
             </div>
             <div class="vn-tab-panel" data-tab="background">
-                ${scene._bgManager.generateSelector(currentBg, currentOverlay, currentEffect)}
+                ${scene._bgManager.generateSelector(currentBg, currentOverlay, currentEffect, currentParticlesFg)}
             </div>
             <div class="vn-tab-panel" data-tab="music">
                 ${this._generateMusicTab(currentMusicUuid, currentSoundCues)}

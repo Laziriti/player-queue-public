@@ -5,5 +5,50 @@
     "leave": "Leave Queue",
     "clear": "Clear Queue",
     "empty": "Queue is empty"
+  },
+  "settings": {
+    "cameraEnabled": {
+      "name": "Virtual Camera",
+      "hint": "Smooth camera zoom toward the active speaker"
+    },
+    "cameraDoF": {
+      "name": "Depth of Field",
+      "hint": "Stronger blur on inactive characters when camera is active"
+    },
+    "kenBurnsDirection": {
+      "name": "Background Drift (Ken Burns)",
+      "hint": "Slow background drift direction",
+      "none": "Off",
+      "random": "Random",
+      "left": "Left",
+      "right": "Right"
+    }
+  },
+  "vn": {
+    "toolbar": {
+      "particlesForeground": "Particles in front of characters"
+    },
+    "help": {
+      "btnTitle": "Scene controls help",
+      "titleGM": "Scene controls (GM)",
+      "titlePlayer": "Scene controls",
+      "k_click": "LMB",
+      "d_click": "set active speaker",
+      "k_ctrlClick": "Ctrl+LMB",
+      "d_ctrlClick": "exclusive speaker",
+      "k_midClick": "MMB",
+      "d_midClick": "flip portrait",
+      "k_rightClick": "RMB",
+      "d_rightClick": "visibility: shown → hidden → name hidden",
+      "k_altWheel": "Alt+Wheel",
+      "d_altWheel": "individual portrait scale",
+      "k_close": "×",
+      "d_close": "close scene",
+      "k_chat": "Chat",
+      "d_chat": "embedded scene chat"
+    },
+    "bg": {
+      "particlesForeground": "Particles on top"
+    }
   }
 }

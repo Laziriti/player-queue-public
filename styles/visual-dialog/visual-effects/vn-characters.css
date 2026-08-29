@@ -139,6 +139,12 @@
     animation: none !important;
 }
 
+/* Depth of Field — усиленное размытие при активной камере */
+#vn-scene-overlay.vn-camera-dof .vn-character:not(.active):not(.vn-entering):not(.vn-exiting):not(.vn-character-hidden) .vn-character-img {
+    filter: brightness(0.38) saturate(0.18) blur(2.5px)
+        drop-shadow(0 5px 15px rgba(0, 0, 0, 0.85)) !important;
+}
+
 /* Свечение у неактивных — приглушено */
 .vn-character:not(.active) .vn-character-glow {
     opacity: 0.15 !important;
@@ -373,3 +379,6 @@
     opacity: 0.7;
     font-style: italic;
 }
+
+
+

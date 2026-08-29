@@ -116,12 +116,30 @@ class VNSceneHTML {
             return `<div class="vn-side vn-${side}-side ${t.length ? '' : 'empty'} ${layout.useMultiRow ? 'vn-multi-row' : ''}">${this.sideCharacters(t, side, qd, layout)}</div>`;
         }).join('');
 
-        const controls = isGM ? `<div class="vn-size-controls">
+        const sizeButtons = isGM ? `
             <button type="button" class="vn-size-button" id="decrease-size" title="${game.i18n.localize('vn.toolbar.sizeDecrease')}"><i class="fas fa-minus"></i></button>
             <button type="button" class="vn-size-button vn-size-reset" id="reset-size" title="${game.i18n.localize('vn.toolbar.sizeReset')}">${Math.round(state.portraitScale * 100)}%</button>
             <button type="button" class="vn-size-button" id="increase-size" title="${game.i18n.localize('vn.toolbar.sizeIncrease')}"><i class="fas fa-plus"></i></button>
             <button type="button" class="vn-size-button" id="size-dialog" title="${game.i18n.localize('vn.toolbar.sizeSettings')}"><i class="fas fa-sliders-h"></i></button>
-        </div>` : '';
+        ` : '';
+
+        const mkHint = (k, d) => `<div class="vn-help-hint"><span class="vn-help-key">${k}</span><span>${d}</span></div>`;
+        const helpHints = isGM
+            ? mkHint(game.i18n.localize('vn.help.k_click'),      game.i18n.localize('vn.help.d_click'))
+            + mkHint(game.i18n.localize('vn.help.k_ctrlClick'),  game.i18n.localize('vn.help.d_ctrlClick'))
+            + mkHint(game.i18n.localize('vn.help.k_midClick'),   game.i18n.localize('vn.help.d_midClick'))
+            + mkHint(game.i18n.localize('vn.help.k_rightClick'), game.i18n.localize('vn.help.d_rightClick'))
+            + mkHint(game.i18n.localize('vn.help.k_altWheel'),   game.i18n.localize('vn.help.d_altWheel'))
+            : mkHint(game.i18n.localize('vn.help.k_close'), game.i18n.localize('vn.help.d_close'))
+            + mkHint(game.i18n.localize('vn.help.k_chat'),  game.i18n.localize('vn.help.d_chat'));
+
+        const controls = `<div class="vn-size-controls">${sizeButtons}<div class="vn-help-wrap">
+            <button type="button" class="vn-size-button" title="${game.i18n.localize('vn.help.btnTitle')}"><i class="fas fa-question"></i></button>
+            <div class="vn-help-popup">
+                <div class="vn-help-popup-title">${game.i18n.localize(isGM ? 'vn.help.titleGM' : 'vn.help.titlePlayer')}</div>
+                ${helpHints}
+            </div>
+        </div></div>`;
 
         const atmoEffect = state.atmosphereEffect || 'particles';
 
@@ -145,6 +163,7 @@ class VNSceneHTML {
                         <div class="vn-atmosphere-picker-grid">${pickerItems}</div>
                     </div>
                 </div>
+                ${btn(`vn-particles-fg-btn${state.particlesForeground ? ' active' : ''}`, 'fa-layer-group', game.i18n.localize('vn.toolbar.particlesForeground'))}
                 ${this._scene._generateSoundsWrapHTML()}
                 ${btn('vn-minimize-all-button', 'fa-window-minimize', game.i18n.localize('vn.toolbar.minimizeAll'))}
                 ${btn('vn-minimize-self-button', 'fa-eye-slash', game.i18n.localize('vn.toolbar.minimizeSelf'))}
@@ -167,9 +186,10 @@ class VNSceneHTML {
             <div class="vn-bg-layer"></div><div class="vn-background-overlay"></div>
             <div class="vn-fx-tint"></div><div class="vn-fx-rays"></div><div class="vn-fx-edges"></div><div class="vn-fx-scan"></div><div class="vn-fx-flash"></div>
             <div class="vn-vignette"></div><div class="vn-ambient-light"></div><div class="vn-particles"></div><div class="vn-ground-fog"></div>
+            <div class="vn-fx-bloom"></div>
             ${controls}
             <div class="vn-queue-display">${this.queueDisplay(qd)}</div>
-            ${sides}${toolbar}
+            ${sides}<div class="vn-fx-grain"></div>${toolbar}
             <div class="vn-maximized-bar"><span class="vn-scene-title"><i class="fas fa-theater-masks"></i> ${game.i18n.localize('vn.scene.title')}</span>${maxBar}</div>
             <div class="vn-chat-panel" hidden>
                 <div class="vn-chat-panel-header"><i class="fas fa-comments"></i> ${game.i18n.localize('vn.chat.header')}</div>

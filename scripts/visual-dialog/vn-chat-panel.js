@@ -14,6 +14,7 @@ class VNChatPanel {
         this._originalParent = null;
         this._originalNextSibling = null;
         this._restoreState = null;
+        this._pendingSidebarRestore = null;
     }
 
     get _$overlay() { return this._getOverlay(); }
@@ -45,6 +46,7 @@ class VNChatPanel {
             if (!opened || token !== this._openToken) {
                 panel.hidden = true;
                 panel.style.visibility = '';
+                this._flushSidebarRestore();
                 return;
             }
 
@@ -59,6 +61,7 @@ class VNChatPanel {
 
             panel.hidden = true;
             panel.style.visibility = '';
+            this._flushSidebarRestore();
 
             ui.notifications?.warn(
                 game.i18n.localize('vn.chat.error')
@@ -124,6 +127,7 @@ class VNChatPanel {
         this._originalNextSibling = null;
         this._restoreState = null;
         this._visible = false;
+        this._flushSidebarRestore();
 
         const panel = document.querySelector('#vn-scene-overlay .vn-chat-panel');
         if (panel) {
@@ -153,12 +157,14 @@ class VNChatPanel {
     _chatHasComposer(chat) {
         if (!chat) return false;
 
+        // Check for actual input elements only — NOT bare `form` or `.chat-form`,
+        // because Foundry v14 with card-notifications renders an empty
+        // <form class="chat-form"> in the DOM even when the chat tab is inactive.
         return !!chat.querySelector([
-            '#chat-form',
-            '.chat-form',
-            '#chat-message',
-            'textarea[name="message"]',
-            'form'
+            '#chat-message',            // v14: prose-mirror input id
+            'prose-mirror.chat-input',  // v14: prose-mirror by element + class
+            'textarea[name="message"]', // v13
+            '#chat-form',               // v13: form by id (≠ v14's .chat-form class)
         ].join(','));
     }
 
@@ -255,6 +261,12 @@ class VNChatPanel {
         if (!state.expanded) {
             await this._setSidebarExpanded(false);
         }
+    }
+
+    _flushSidebarRestore() {
+        const state = this._pendingSidebarRestore;
+        this._pendingSidebarRestore = null;
+        if (state) this._restoreSidebarAfterChatInit(state).catch(() => {});
     }
 
     // ──────────────────────────────────────────────────────────
@@ -378,7 +390,10 @@ class VNChatPanel {
             chat.setAttribute('aria-hidden', 'false');
         } finally {
             if (sidebarWasTemporarilyChanged) {
-                await this._restoreSidebarAfterChatInit(sidebarState);
+                // Defer sidebar restoration until the panel closes — calling
+                // changeTab() here triggers Foundry to re-render the chat app,
+                // which strips the composer from the element we just moved.
+                this._pendingSidebarRestore = sidebarState;
             }
         }
 
