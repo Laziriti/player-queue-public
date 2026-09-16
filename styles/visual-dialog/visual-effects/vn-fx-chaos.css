@@ -1,0 +1,945 @@
+/* ══════════════════════════════════════════════════════════
+   VN-FX-CHAOS — Хаотичные и разрушительные эффекты атмосферы
+   Группа: fire, apocalypse, blood_moon, void_breach, cosmic_horror, glass_shatter
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════
+   FIRE (Инферно)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-fire .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at 50% 100%, rgba(200, 60, 0, 0.25) 0%, transparent 50%),
+            radial-gradient(ellipse at center, rgba(150, 40, 0, 0.1) 0%, transparent 70%);
+    animation: vnFireTintPulse 4s ease-in-out infinite;
+}
+
+@keyframes vnFireTintPulse {
+    0%, 100% { opacity: 0.8; }
+    50%      { opacity: 1; }
+}
+
+.vn-vfx-fire .vn-bg-layer {
+    filter: saturate(1.2) brightness(0.85) contrast(1.15);
+    animation: vnHeatHaze 3s ease-in-out infinite !important;
+}
+
+@keyframes vnHeatHaze {
+    0%, 100% { transform: scale(1.03) skewY(0deg); }
+    25%      { transform: scale(1.032) skewY(0.1deg); }
+    50%      { transform: scale(1.028) skewY(-0.1deg); }
+    75%      { transform: scale(1.033) skewY(0.05deg); }
+}
+
+.vn-vfx-fire .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 35%,
+            rgba(100, 20, 0, 0.3) 75%,
+            rgba(40, 5, 0, 0.6) 100%
+    );
+}
+
+.vn-vfx-fire .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(200, 60, 0, 0.4) 0%,
+            rgba(150, 40, 0, 0.2) 15%,
+            rgba(80, 20, 0, 0.1) 30%,
+            transparent 60%
+    );
+    animation: vnFireGroundPulse 5s ease-in-out infinite alternate;
+}
+
+@keyframes vnFireGroundPulse {
+    0%   { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-fire .vn-ambient-light {
+    background:
+            radial-gradient(ellipse at 50% 90%, rgba(255, 100, 0, 0.4) 0%, transparent 50%),
+            radial-gradient(ellipse at 30% 70%, rgba(255, 60, 0, 0.2) 0%, transparent 40%),
+            radial-gradient(ellipse at 70% 75%, rgba(255, 80, 0, 0.25) 0%, transparent 40%) !important;
+    animation: vnFireAmbient 4s ease-in-out infinite !important;
+}
+
+@keyframes vnFireAmbient {
+    0%, 100% { opacity: 0.15; }
+    50%      { opacity: 0.3; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   APOCALYPSE (Апокалипсис)
+   Небо разрывается, земля трещит, всё горит и рушится.
+   Комбинация: красно-оранжевое небо, тряска, вспышки,
+   летящие обломки, пульсирующая тьма по краям.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-apocalypse .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(
+                    ellipse at 50% -30%,
+                    rgba(255, 60, 0, 0.4) 0%,
+                    rgba(200, 30, 0, 0.25) 25%,
+                    rgba(100, 10, 0, 0.15) 50%,
+                    transparent 70%
+            ),
+            radial-gradient(
+                    ellipse at 50% 120%,
+                    rgba(255, 80, 0, 0.3) 0%,
+                    rgba(150, 20, 0, 0.15) 30%,
+                    transparent 60%
+            );
+    animation: vnApocalypseTint 4s ease-in-out infinite;
+}
+
+@keyframes vnApocalypseTint {
+    0%, 100% { opacity: 0.8; }
+    30%      { opacity: 1; }
+    60%      { opacity: 0.7; }
+    80%      { opacity: 0.95; }
+}
+
+.vn-vfx-apocalypse .vn-bg-layer {
+    filter: saturate(1.4) brightness(0.7) contrast(1.3) hue-rotate(-5deg);
+    animation: vnApocalypseShake 0.8s ease-in-out infinite !important;
+}
+
+@keyframes vnApocalypseShake {
+    0%, 100% { transform: scale(1.04) translate(0, 0); }
+    10%      { transform: scale(1.04) translate(1px, -1px); }
+    20%      { transform: scale(1.04) translate(-1px, 2px); }
+    30%      { transform: scale(1.04) translate(2px, 0px); }
+    40%      { transform: scale(1.04) translate(-2px, -1px); }
+    50%      { transform: scale(1.04) translate(0px, 1px); }
+    60%      { transform: scale(1.04) translate(1px, -2px); }
+    70%      { transform: scale(1.04) translate(-1px, 1px); }
+    80%      { transform: scale(1.04) translate(2px, -1px); }
+    90%      { transform: scale(1.04) translate(-1px, 0px); }
+}
+
+.vn-vfx-apocalypse .vn-fx-rays {
+    opacity: 0.5;
+    background:
+            radial-gradient(ellipse at 30% -10%, rgba(255, 100, 0, 0.4) 0%, transparent 35%),
+            radial-gradient(ellipse at 70% -10%, rgba(255, 60, 0, 0.3) 0%, transparent 30%),
+            radial-gradient(ellipse at 50% -5%, rgba(255, 200, 0, 0.2) 0%, transparent 25%);
+    animation: vnApocalypseRays 3s ease-in-out infinite alternate;
+    filter: blur(10px);
+}
+
+@keyframes vnApocalypseRays {
+    0%   { opacity: 0.3; transform: scale(1) translateY(0); }
+    100% { opacity: 0.6; transform: scale(1.1) translateY(-5px); }
+}
+
+/* Пульсирующая тьма наступает с краёв */
+.vn-vfx-apocalypse .vn-fx-edges {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at 0% 50%, rgba(20, 0, 0, 0.7) 0%, transparent 35%),
+            radial-gradient(ellipse at 100% 50%, rgba(20, 0, 0, 0.7) 0%, transparent 35%),
+            radial-gradient(ellipse at 50% 0%, rgba(40, 0, 0, 0.5) 0%, transparent 30%),
+            radial-gradient(ellipse at 50% 100%, rgba(60, 10, 0, 0.6) 0%, transparent 35%);
+    animation: vnApocalypseEdges 5s ease-in-out infinite;
+}
+
+@keyframes vnApocalypseEdges {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    30%      { opacity: 1; transform: scale(1.03); }
+    60%      { opacity: 0.8; transform: scale(0.98); }
+}
+
+.vn-vfx-apocalypse .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 15%,
+            rgba(80, 10, 0, 0.4) 55%,
+            rgba(30, 0, 0, 0.85) 90%,
+            rgba(0, 0, 0, 0.95) 100%
+    );
+    animation: vnApocalypseVignette 6s ease-in-out infinite;
+}
+
+@keyframes vnApocalypseVignette {
+    0%, 100% { transform: scale(1);    opacity: 0.8; }
+    50%      { transform: scale(1.08); opacity: 1; }
+}
+
+/* Вспышки взрывов */
+.vn-vfx-apocalypse .vn-fx-flash {
+    opacity: 0;
+    background: radial-gradient(
+            circle at 50% 30%,
+            rgba(255, 200, 50, 0.6) 0%,
+            rgba(255, 100, 0, 0.3) 30%,
+            transparent 60%
+    );
+    animation: vnApocalypseFlash 8s ease-in-out infinite;
+}
+
+@keyframes vnApocalypseFlash {
+    0%, 85%, 100% { opacity: 0; }
+    88%           { opacity: 0.8; }
+    90%           { opacity: 0.2; }
+    92%           { opacity: 0.6; }
+    95%           { opacity: 0; }
+}
+
+.vn-vfx-apocalypse .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(200, 50, 0, 0.5) 0%,
+            rgba(150, 30, 0, 0.3) 10%,
+            rgba(80, 10, 0, 0.15) 25%,
+            transparent 50%
+    );
+    animation: vnApocalypseGround 3s ease-in-out infinite alternate;
+}
+
+@keyframes vnApocalypseGround {
+    0%   { opacity: 0.7; transform: scaleY(1); }
+    100% { opacity: 1; transform: scaleY(1.2); }
+}
+
+.vn-vfx-apocalypse .vn-ambient-light {
+    background:
+            radial-gradient(ellipse at 50% 20%, rgba(255, 80, 0, 0.4) 0%, transparent 45%),
+            radial-gradient(ellipse at 20% 80%, rgba(255, 50, 0, 0.3) 0%, transparent 40%),
+            radial-gradient(ellipse at 80% 70%, rgba(255, 120, 0, 0.25) 0%, transparent 40%),
+            radial-gradient(ellipse at 50% 90%, rgba(255, 60, 0, 0.35) 0%, transparent 35%) !important;
+    animation: vnApocalypseAmbient 4s ease-in-out infinite !important;
+}
+
+@keyframes vnApocalypseAmbient {
+    0%, 100% { opacity: 0.2; }
+    25%      { opacity: 0.35; }
+    50%      { opacity: 0.15; }
+    75%      { opacity: 0.4; }
+}
+
+.vn-vfx-apocalypse .vn-character.active .vn-character-img {
+    filter: brightness(0.9) contrast(1.3) saturate(1.2)
+    drop-shadow(0 0 30px rgba(255, 80, 0, 0.5))
+    drop-shadow(0 0 60px rgba(200, 30, 0, 0.3))
+    drop-shadow(0 5px 20px rgba(0, 0, 0, 0.8)) !important;
+}
+
+.vn-vfx-apocalypse .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(255, 80, 0, 0.6) 0%,
+            rgba(200, 30, 0, 0.2) 40%,
+            transparent 70%
+    ) !important;
+    animation: vnApocalypseGlow 3s ease-in-out infinite !important;
+}
+
+@keyframes vnApocalypseGlow {
+    0%, 100% { opacity: 0.6; }
+    50%      { opacity: 1; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BLOOD MOON (Кровавая луна)
+   Красная луна заливает мир кровавым светом.
+   Тени удлиняются, силуэты искажаются, тревога нарастает.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-blood_moon .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(
+                    circle at 75% 15%,
+                    rgba(200, 0, 0, 0.3) 0%,
+                    rgba(150, 0, 0, 0.15) 15%,
+                    rgba(80, 0, 0, 0.08) 30%,
+                    transparent 50%
+            ),
+            radial-gradient(
+                    ellipse at center,
+                    rgba(60, 0, 0, 0.05) 0%,
+                    rgba(40, 0, 0, 0.15) 60%,
+                    rgba(20, 0, 0, 0.3) 100%
+            );
+    animation: vnBloodMoonTint 8s ease-in-out infinite;
+}
+
+@keyframes vnBloodMoonTint {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1; }
+}
+
+.vn-vfx-blood_moon .vn-bg-layer {
+    filter: saturate(0.3) brightness(0.5) contrast(1.2) sepia(0.3) hue-rotate(-10deg);
+}
+
+/* Луна — большой красный источник света */
+.vn-vfx-blood_moon .vn-fx-rays {
+    opacity: 0.6;
+    background:
+            radial-gradient(
+                    circle at 75% 15%,
+                    rgba(255, 50, 30, 0.4) 0%,
+                    rgba(200, 20, 10, 0.2) 8%,
+                    rgba(150, 0, 0, 0.1) 15%,
+                    rgba(100, 0, 0, 0.05) 25%,
+                    transparent 40%
+            );
+    animation: vnBloodMoonGlow 6s ease-in-out infinite alternate;
+    filter: blur(5px);
+}
+
+@keyframes vnBloodMoonGlow {
+    0%   { opacity: 0.4; transform: scale(1); }
+    100% { opacity: 0.7; transform: scale(1.05); }
+}
+
+/* Кровавые тени ползут снизу */
+.vn-vfx-blood_moon .vn-fx-edges {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at 0% 100%, rgba(60, 0, 0, 0.7) 0%, transparent 40%),
+            radial-gradient(ellipse at 100% 100%, rgba(60, 0, 0, 0.6) 0%, transparent 35%),
+            radial-gradient(ellipse at 50% 100%, rgba(80, 0, 0, 0.5) 0%, transparent 30%),
+            linear-gradient(to top, rgba(30, 0, 0, 0.4) 0%, transparent 25%);
+    animation: vnBloodMoonEdges 10s ease-in-out infinite;
+}
+
+@keyframes vnBloodMoonEdges {
+    0%, 100% { opacity: 0.6; transform: scale(1) translateY(0); }
+    50%      { opacity: 1; transform: scale(1.02) translateY(-5px); }
+}
+
+.vn-vfx-blood_moon .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 25%,
+            rgba(40, 0, 0, 0.4) 60%,
+            rgba(15, 0, 0, 0.8) 90%,
+            rgba(0, 0, 0, 0.95) 100%
+    );
+}
+
+/* Пульсация — как сердцебиение */
+.vn-vfx-blood_moon .vn-fx-flash {
+    opacity: 0;
+    background: radial-gradient(
+            ellipse at center,
+            rgba(150, 0, 0, 0.15) 0%,
+            rgba(100, 0, 0, 0.08) 40%,
+            transparent 70%
+    );
+    animation: vnBloodMoonPulse 2s ease-in-out infinite;
+}
+
+@keyframes vnBloodMoonPulse {
+    0%, 100% { opacity: 0; }
+    15%      { opacity: 0.6; }
+    30%      { opacity: 0.1; }
+    40%      { opacity: 0.4; }
+    60%      { opacity: 0; }
+}
+
+.vn-vfx-blood_moon .vn-ambient-light {
+    background:
+            radial-gradient(ellipse at 75% 15%, rgba(200, 30, 0, 0.5) 0%, transparent 40%),
+            radial-gradient(ellipse at 25% 80%, rgba(100, 0, 0, 0.2) 0%, transparent 40%),
+            radial-gradient(ellipse at 60% 60%, rgba(150, 10, 0, 0.15) 0%, transparent 35%) !important;
+    animation: vnBloodMoonAmbient 6s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnBloodMoonAmbient {
+    0%   { opacity: 0.15; }
+    100% { opacity: 0.3; }
+}
+
+.vn-vfx-blood_moon .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(60, 0, 0, 0.6) 0%,
+            rgba(40, 0, 0, 0.3) 15%,
+            rgba(20, 0, 0, 0.1) 30%,
+            transparent 50%
+    );
+    animation: vnBloodFog 8s ease-in-out infinite alternate;
+}
+
+@keyframes vnBloodFog {
+    0%   { opacity: 0.6; transform: scaleY(1); }
+    100% { opacity: 1; transform: scaleY(1.3); }
+}
+
+.vn-vfx-blood_moon .vn-character.active .vn-character-img {
+    filter: brightness(0.8) contrast(1.25) saturate(0.5) sepia(0.2) hue-rotate(-10deg)
+    drop-shadow(0 0 25px rgba(200, 0, 0, 0.5))
+    drop-shadow(0 0 60px rgba(100, 0, 0, 0.3))
+    drop-shadow(0 8px 20px rgba(0, 0, 0, 0.8)) !important;
+}
+
+.vn-vfx-blood_moon .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(200, 0, 0, 0.5) 0%,
+            rgba(120, 0, 0, 0.2) 40%,
+            transparent 70%
+    ) !important;
+    animation: vnBloodMoonCharGlow 2s ease-in-out infinite !important;
+}
+
+@keyframes vnBloodMoonCharGlow {
+    0%, 100% { opacity: 0.5; }
+    15%      { opacity: 0.9; }
+    30%      { opacity: 0.4; }
+    40%      { opacity: 0.7; }
+    60%      { opacity: 0.5; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   VOID BREACH — Разрыв в Пустоту (v3)
+
+   Трещины — отдельные DOM-элементы .vn-void-crack (JS).
+   Общие FX-слои — только атмосфера (тинт, края, туман).
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-void_breach .vn-fx-tint {
+    background: radial-gradient(
+        ellipse at center,
+        rgba(10, 0, 22, 0.06) 0%,
+        rgba(5, 0, 16, 0.18) 50%,
+        rgba(0, 0, 6, 0.38) 100%
+    );
+    /* opacity управляется JS через inline style */
+    opacity: 0.78;
+}
+
+.vn-vfx-void_breach .vn-bg-layer {
+    filter: saturate(0.38) brightness(0.68) contrast(1.18);
+    animation: vnVoidBgSlow 30s ease-in-out infinite !important;
+}
+
+@keyframes vnVoidBgSlow {
+    0%, 100% { filter: saturate(0.38) brightness(0.68) contrast(1.18) hue-rotate(0deg); }
+    50%      { filter: saturate(0.30) brightness(0.62) contrast(1.22) hue-rotate(4deg); }
+}
+
+/* ── Рассеянное фиолетовое сияние (ambient glow, не трещины) ── */
+.vn-vfx-void_breach .vn-fx-rays {
+    opacity: 1;
+    background:
+        radial-gradient(ellipse at 30% 40%, rgba(120, 40, 255, 0.08) 0%, transparent 35%),
+        radial-gradient(ellipse at 70% 60%, rgba(100, 20, 220, 0.06) 0%, transparent 30%),
+        radial-gradient(ellipse at 50% 20%, rgba(140, 60, 255, 0.05) 0%, transparent 25%);
+    filter: blur(8px);
+    animation: vnVoidAmbientGlow 14s ease-in-out infinite alternate;
+}
+
+@keyframes vnVoidAmbientGlow {
+    0%   { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* ── Scan: лёгкий шум глубины пустоты ── */
+.vn-vfx-void_breach .vn-fx-scan {
+    opacity: 0.025;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(100, 20, 200, 0.03) 3px,
+        rgba(100, 20, 200, 0.03) 4px
+    );
+}
+
+/* ── Тьма наступает с углов ── */
+.vn-vfx-void_breach .vn-fx-edges {
+    opacity: 0.72;
+    background:
+        radial-gradient(ellipse at 0% 0%,   rgba(0, 0, 0, 0.85) 0%, transparent 26%),
+        radial-gradient(ellipse at 100% 0%,  rgba(0, 0, 0, 0.75) 0%, transparent 22%),
+        radial-gradient(ellipse at 0% 100%,  rgba(0, 0, 0, 0.80) 0%, transparent 24%),
+        radial-gradient(ellipse at 100% 100%, rgba(0, 0, 0, 0.90) 0%, transparent 30%);
+    animation: vnVoidEdgesCreep 20s ease-in-out infinite alternate;
+}
+
+@keyframes vnVoidEdgesCreep {
+    0%   { opacity: 0.55; transform: scale(1); }
+    100% { opacity: 0.88; transform: scale(1.05); }
+}
+
+.vn-vfx-void_breach .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 18%,
+        rgba(10, 0, 22, 0.28) 42%,
+        rgba(4, 0, 12, 0.65) 72%,
+        rgba(0, 0, 0, 0.94) 100%
+    );
+    animation: vnVoidVignette 12s ease-in-out infinite alternate;
+}
+
+@keyframes vnVoidVignette {
+    0%   { opacity: 0.82; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-void_breach .vn-ambient-light {
+    background:
+        radial-gradient(ellipse at 50% 50%, rgba(140, 60, 255, 0.12) 0%, transparent 32%),
+        radial-gradient(ellipse at 28% 30%, rgba(100, 0, 200, 0.08) 0%, transparent 28%),
+        radial-gradient(ellipse at 72% 68%, rgba(120, 40, 220, 0.08) 0%, transparent 25%) !important;
+    animation: vnVoidAmbient 12s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnVoidAmbient {
+    0%   { opacity: 0.08; }
+    100% { opacity: 0.22; }
+}
+
+.vn-vfx-void_breach .vn-ground-fog {
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.72) 0%,
+        rgba(20, 0, 42, 0.32) 10%,
+        rgba(38, 0, 78, 0.09) 22%,
+        transparent 38%
+    );
+    animation: vnVoidFog 15s ease-in-out infinite alternate;
+}
+
+@keyframes vnVoidFog {
+    0%   { opacity: 0.52; }
+    100% { opacity: 0.78; }
+}
+
+.vn-vfx-void_breach .vn-character.active .vn-character-img {
+    filter: brightness(0.85) contrast(1.2) saturate(0.55)
+        drop-shadow(0 0 18px rgba(140, 60, 255, 0.38))
+        drop-shadow(0 0 48px rgba(80, 0, 200, 0.22))
+        drop-shadow(0 5px 16px rgba(0, 0, 0, 0.82)) !important;
+}
+
+.vn-vfx-void_breach .vn-character-glow {
+    background: radial-gradient(
+        ellipse at center,
+        rgba(140, 60, 255, 0.42) 0%,
+        rgba(80, 0, 200, 0.16) 35%,
+        transparent 65%
+    ) !important;
+    animation: vnVoidCharGlow 8s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnVoidCharGlow {
+    0%   { opacity: 0.5; }
+    100% { opacity: 0.82; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   VOID CRACK — SVG-трещины (v4)
+
+   Создаются JS (_buildCrackSVG). Каждая трещина = один <svg>
+   с тремя <path> (glow / edge / core). Рост и закрытие —
+   WAAPI strokeDashoffset. Пульсация свечения — CSS animation.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-void-crack-svg {
+    animation: vnCrackSvgPulse 3.2s ease-in-out infinite;
+}
+
+@keyframes vnCrackSvgPulse {
+    0%, 100% {
+        filter:
+            drop-shadow(0 0 3px  rgba(160,  60, 255, 0.70))
+            drop-shadow(0 0 10px rgba(110,  15, 225, 0.40));
+    }
+    50% {
+        filter:
+            drop-shadow(0 0 5px  rgba(200, 120, 255, 0.90))
+            drop-shadow(0 0 16px rgba(140,  30, 245, 0.58))
+            drop-shadow(0 0 30px rgba( 90,   0, 200, 0.28));
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   COSMIC HORROR — Космический Ужас (v2)
+
+   Фикс: никакого scale на контейнере. Глаз выраженнее.
+   Спираль видимее. Концентрические круги расходятся.
+   Всё плавно.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-cosmic_horror .vn-fx-tint {
+    opacity: 0.8;
+    background:
+        /* Зрачок — чёткий, тёмный */
+            radial-gradient(
+                    circle at 50% 35%,
+                    rgba(0, 0, 0, 1) 0%,
+                    rgba(0, 0, 0, 0.98) 2.5%,
+                    rgba(15, 0, 30, 0.9) 4%,
+                    rgba(40, 0, 60, 0.6) 6%,
+                    transparent 9%
+            ),
+                /* Радужка — цветное кольцо */
+            radial-gradient(
+                    circle at 50% 35%,
+                    transparent 4%,
+                    rgba(80, 0, 140, 0.3) 6%,
+                    rgba(120, 20, 180, 0.4) 8%,
+                    rgba(100, 0, 160, 0.35) 10%,
+                    rgba(60, 0, 100, 0.2) 13%,
+                    rgba(40, 0, 70, 0.1) 16%,
+                    transparent 20%
+            ),
+                /* Внешнее свечение глаза */
+            radial-gradient(
+                    circle at 50% 35%,
+                    transparent 15%,
+                    rgba(60, 0, 100, 0.06) 20%,
+                    rgba(30, 0, 50, 0.03) 30%,
+                    transparent 40%
+            );
+    animation: vnCosmicEyePulse 12s ease-in-out infinite;
+    transition: opacity 2s ease;
+}
+
+@keyframes vnCosmicEyePulse {
+    0%, 100% { opacity: 0.6; }
+    30%      { opacity: 0.8; }
+    60%      { opacity: 0.65; }
+    85%      { opacity: 0.9; }
+}
+
+.vn-vfx-cosmic_horror .vn-bg-layer {
+    filter: saturate(0.2) brightness(0.5) contrast(1.3);
+    /* НЕ scale — только filter */
+    animation: vnCosmicBgWarp 30s ease-in-out infinite !important;
+}
+
+@keyframes vnCosmicBgWarp {
+    0%, 100% { filter: saturate(0.2) brightness(0.5) contrast(1.3) hue-rotate(0deg); }
+    33%      { filter: saturate(0.25) brightness(0.45) contrast(1.35) hue-rotate(5deg); }
+    66%      { filter: saturate(0.15) brightness(0.55) contrast(1.25) hue-rotate(-3deg); }
+}
+
+/* ── Спираль — более видимая, с glow ── */
+.vn-vfx-cosmic_horror .vn-fx-rays {
+    opacity: 0.6;
+    background:
+            conic-gradient(
+                    from 0deg at 50% 35%,
+                    transparent 0deg,
+                    rgba(100, 20, 180, 0.15) 10deg,
+                    transparent 20deg,
+                    transparent 45deg,
+                    rgba(80, 0, 160, 0.12) 55deg,
+                    transparent 65deg,
+                    transparent 90deg,
+                    rgba(120, 40, 200, 0.18) 100deg,
+                    transparent 110deg,
+                    transparent 135deg,
+                    rgba(90, 10, 170, 0.1) 145deg,
+                    transparent 155deg,
+                    transparent 180deg,
+                    rgba(110, 30, 190, 0.14) 190deg,
+                    transparent 200deg,
+                    transparent 225deg,
+                    rgba(80, 0, 160, 0.12) 235deg,
+                    transparent 245deg,
+                    transparent 270deg,
+                    rgba(120, 40, 200, 0.16) 280deg,
+                    transparent 290deg,
+                    transparent 315deg,
+                    rgba(90, 10, 170, 0.1) 325deg,
+                    transparent 335deg,
+                    transparent 360deg
+            );
+    animation: vnCosmicSpiralRotate 80s linear infinite;
+    filter: blur(4px);
+    transform-origin: 50% 35%;
+}
+
+@keyframes vnCosmicSpiralRotate {
+    from { transform: rotate(0deg) scale(2.5); }
+    to   { transform: rotate(360deg) scale(2.5); }
+}
+
+/* ── Вторая спираль — противоположная, другой оттенок ── */
+.vn-vfx-cosmic_horror .vn-fx-edges {
+    opacity: 0.35;
+    background:
+            conic-gradient(
+                    from 180deg at 50% 35%,
+                    transparent 0deg,
+                    rgba(40, 80, 140, 0.1) 15deg,
+                    transparent 30deg,
+                    transparent 60deg,
+                    rgba(30, 60, 120, 0.08) 75deg,
+                    transparent 90deg,
+                    transparent 120deg,
+                    rgba(50, 90, 150, 0.1) 135deg,
+                    transparent 150deg,
+                    transparent 180deg,
+                    rgba(35, 70, 130, 0.08) 195deg,
+                    transparent 210deg,
+                    transparent 240deg,
+                    rgba(45, 85, 140, 0.1) 255deg,
+                    transparent 270deg,
+                    transparent 300deg,
+                    rgba(40, 80, 140, 0.08) 315deg,
+                    transparent 330deg,
+                    transparent 360deg
+            );
+    animation: vnCosmicSpiralCounter 110s linear infinite;
+    filter: blur(8px);
+    transform-origin: 50% 35%;
+}
+
+@keyframes vnCosmicSpiralCounter {
+    from { transform: rotate(360deg) scale(3); }
+    to   { transform: rotate(0deg) scale(3); }
+}
+
+/* ── Концентрические круги — расходятся от центра ── */
+.vn-vfx-cosmic_horror .vn-fx-scan {
+    opacity: 0.15;
+    background:
+            repeating-radial-gradient(
+                    circle at 50% 35%,
+                    transparent 0px,
+                    transparent 50px,
+                    rgba(100, 0, 180, 0.06) 51px,
+                    rgba(100, 0, 180, 0.06) 53px,
+                    transparent 54px
+            );
+    animation: vnCosmicRippleExpand 12s linear infinite;
+}
+
+@keyframes vnCosmicRippleExpand {
+    from {
+        background-size: 100% 100%;
+        opacity: 0.15;
+    }
+    to {
+        background-size: 200% 200%;
+        opacity: 0.05;
+    }
+}
+
+.vn-vfx-cosmic_horror .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 15%,
+            rgba(10, 0, 20, 0.25) 30%,
+            rgba(5, 0, 10, 0.6) 55%,
+            rgba(0, 0, 5, 0.88) 80%,
+            rgba(0, 0, 0, 1) 100%
+    );
+}
+
+/* ── Гравитационная волна — плавная, без scale контейнера ── */
+.vn-gravity-wave .vn-fx-tint {
+    animation: vnGravityWaveTint 3s ease-in-out forwards !important;
+}
+
+@keyframes vnGravityWaveTint {
+    0%   { opacity: 0.7; filter: none; }
+    40%  { opacity: 1; filter: brightness(1.2); }
+    100% { opacity: 0.7; filter: none; }
+}
+
+.vn-gravity-wave .vn-fx-scan {
+    animation: vnGravityWaveRipple 3s ease-in-out forwards !important;
+}
+
+@keyframes vnGravityWaveRipple {
+    0%   { opacity: 0.15; transform: scale(1); }
+    40%  { opacity: 0.35; transform: scale(1.1); }
+    100% { opacity: 0.15; transform: scale(1); }
+}
+
+.vn-gravity-wave .vn-vignette {
+    animation: vnGravityWaveVignette 3s ease-in-out forwards !important;
+}
+
+@keyframes vnGravityWaveVignette {
+    0%   { opacity: 1; }
+    40%  { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-cosmic_horror .vn-ambient-light {
+    background:
+            radial-gradient(circle at 50% 35%, rgba(100, 0, 180, 0.2) 0%, transparent 25%),
+            radial-gradient(ellipse at 20% 70%, rgba(60, 0, 120, 0.1) 0%, transparent 30%),
+            radial-gradient(ellipse at 80% 60%, rgba(80, 20, 150, 0.08) 0%, transparent 25%) !important;
+    animation: vnCosmicAmbient 15s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnCosmicAmbient {
+    0%   { opacity: 0.08; }
+    100% { opacity: 0.18; }
+}
+
+.vn-vfx-cosmic_horror .vn-character.active .vn-character-img {
+    filter: brightness(0.75) contrast(1.3) saturate(0.4)
+    drop-shadow(0 0 25px rgba(100, 0, 180, 0.4))
+    drop-shadow(0 0 60px rgba(60, 0, 120, 0.25))
+    drop-shadow(0 5px 20px rgba(0, 0, 0, 0.9)) !important;
+}
+
+.vn-vfx-cosmic_horror .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(100, 0, 180, 0.35) 0%,
+            rgba(60, 0, 120, 0.12) 35%,
+            transparent 65%
+    ) !important;
+    animation: vnCosmicCharGlow 12s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnCosmicCharGlow {
+    0%   { opacity: 0.4; }
+    100% { opacity: 0.7; }
+}
+
+.vn-vfx-cosmic_horror .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(0, 0, 0, 0.6) 0%,
+            rgba(20, 0, 40, 0.25) 10%,
+            rgba(40, 0, 60, 0.08) 20%,
+            transparent 35%
+    );
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   GLASS SHATTER (Разбитое стекло)
+   ══════════════════════════════════════════════════════════ */
+
+/* Container for all glass shards */
+.vn-glass-container {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 3;
+    isolation: isolate;
+    contain: layout style;
+}
+
+/* Each shard — full-overlay div clipped to polygon shape */
+.vn-glass-shard {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform;
+}
+
+/* Glass tint overlay — cool blue-white translucent surface */
+.vn-glass-shard::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(175, 215, 255, 0.09);
+    backface-visibility: hidden;
+}
+
+/* Per-shard directional sheen — angle driven by JS via --shard-shine */
+.vn-glass-shard::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(
+        var(--shard-shine, 135deg),
+        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.22) 15%,
+        transparent 32%,
+        rgba(255, 255, 255, 0.06) 55%,
+        transparent 72%
+    );
+    backface-visibility: hidden;
+}
+
+/* Dim the actual bg layer — gaps between tilted shards show it as dark cracks */
+.vn-vfx-glass_shatter .vn-bg-layer {
+    filter: brightness(0.28) saturate(0.5);
+}
+
+/* Subtle dark vignette around screen edges */
+.vn-vfx-glass_shatter .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 38%,
+        rgba(5, 8, 18, 0.30) 70%,
+        rgba(2, 4, 12, 0.55) 100%
+    );
+}
+
+/* Smooth filter transition when speaker activates/deactivates */
+.vn-vfx-glass_shatter .vn-character-img {
+    transition: filter 0.3s ease;
+}
+
+/* Active character: cold glass-blue rim light */
+.vn-vfx-glass_shatter .vn-character.active .vn-character-img {
+    filter: brightness(1.05) contrast(1.08)
+        drop-shadow(0 0 20px rgba(160, 210, 255, 0.40))
+        drop-shadow(0 0 8px rgba(200, 230, 255, 0.30))
+        drop-shadow(0 5px 18px rgba(0, 0, 0, 0.65)) !important;
+}
+
+.vn-vfx-glass_shatter .vn-character-glow {
+    background: radial-gradient(
+        ellipse at center,
+        rgba(160, 210, 255, 0.45) 0%,
+        rgba(100, 170, 230, 0.15) 40%,
+        transparent 70%
+    ) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BLOOM — хаотичная группа
+   ══════════════════════════════════════════════════════════ */
+
+/* Fire: оранжевое свечение снизу, имитация отсвета огня */
+.vn-vfx-fire .vn-fx-bloom {
+    opacity: 0.45;
+    background:
+        radial-gradient(ellipse at 50% 100%, rgba(255, 110,  10, 0.80) 0%, transparent 45%),
+        radial-gradient(ellipse at 25%  85%, rgba(255,  70,   0, 0.40) 0%, transparent 38%),
+        radial-gradient(ellipse at 75%  85%, rgba(255,  90,   5, 0.35) 0%, transparent 36%);
+    filter: blur(36px);
+    animation: vnFireBloom 3.5s ease-in-out infinite;
+}
+
+@keyframes vnFireBloom {
+    0%, 100% { opacity: 0.38; filter: blur(32px); }
+    40%      { opacity: 0.55; filter: blur(40px); }
+    70%      { opacity: 0.42; filter: blur(35px); }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FILM GRAIN overrides — хаотичная группа
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-void_breach   .vn-fx-grain,
+.vn-vfx-blood_moon    .vn-fx-grain,
+.vn-vfx-cosmic_horror .vn-fx-grain { opacity: 0.14; }
+
+.vn-vfx-apocalypse    .vn-fx-grain { opacity: 0.11; }

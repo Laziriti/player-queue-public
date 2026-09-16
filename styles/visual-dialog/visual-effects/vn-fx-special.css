@@ -1,0 +1,253 @@
+/* ══════════════════════════════════════════════════════════
+   VN-FX-SPECIAL — Особые и уникальные эффекты атмосферы
+   Группа: carnival, ghosts
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════
+   CARNIVAL (Праздник / Карнавал)
+   Конфетти, серпантин, тёплый праздничный свет.
+   Таверна, победа, коронация.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-carnival .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+        ellipse at 50% -10%,
+        rgba(255, 222, 80, 0.08) 0%,
+        rgba(255, 180, 50, 0.04) 40%,
+        transparent 70%
+    );
+    animation: vnCarnivalTint 8s ease-in-out infinite alternate;
+}
+
+@keyframes vnCarnivalTint {
+    0%   { opacity: 0.8; }
+    100% { opacity: 1.0; }
+}
+
+.vn-vfx-carnival .vn-bg-layer {
+    filter: saturate(1.08) brightness(1.04) contrast(0.97);
+}
+
+/* Праздничные прожекторы сверху */
+.vn-vfx-carnival .vn-fx-rays {
+    opacity: 0.4;
+    background:
+        radial-gradient(ellipse at 22%  0%, rgba(255, 222, 80, 0.28) 0%, transparent 28%),
+        radial-gradient(ellipse at 50%  0%, rgba(255, 200, 60, 0.22) 0%, transparent 24%),
+        radial-gradient(ellipse at 78%  0%, rgba(255, 180, 120, 0.22) 0%, transparent 28%);
+    animation: vnCarnivalLights 6s ease-in-out infinite;
+    filter: blur(14px);
+}
+
+@keyframes vnCarnivalLights {
+    0%, 100% { opacity: 0.30; transform: translateY(0); }
+    33%      { opacity: 0.52; transform: translateY(-5px); }
+    66%      { opacity: 0.35; transform: translateY(3px); }
+}
+
+.vn-vfx-carnival .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 55%,
+        rgba(30, 15, 5, 0.12) 82%,
+        rgba(15, 8, 0, 0.28) 100%
+    );
+}
+
+.vn-vfx-carnival .vn-ambient-light {
+    opacity: 0.22 !important;
+    background:
+        radial-gradient(ellipse at 50% 15%, rgba(255, 222, 80, 0.45) 0%, transparent 45%),
+        radial-gradient(ellipse at 18% 75%, rgba(255, 100, 180, 0.22) 0%, transparent 35%),
+        radial-gradient(ellipse at 82% 70%, rgba(100, 155, 255, 0.18) 0%, transparent 32%) !important;
+    animation: vnCarnivalAmbient 7s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnCarnivalAmbient {
+    0%   { opacity: 0.18; }
+    100% { opacity: 0.28; }
+}
+
+.vn-vfx-carnival .vn-character.active .vn-character-img {
+    filter: brightness(1.06) contrast(1.02) saturate(1.10)
+        drop-shadow(0 0 22px rgba(255, 210, 60, 0.45))
+        drop-shadow(0 5px 14px rgba(0, 0, 0, 0.40)) !important;
+}
+
+.vn-vfx-carnival .vn-character-glow {
+    background: radial-gradient(
+        ellipse at center,
+        rgba(255, 210, 60, 0.55) 0%,
+        rgba(255, 170, 30, 0.20) 40%,
+        transparent 70%
+    ) !important;
+    animation: vnCarnivalGlow 4s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnCarnivalGlow {
+    0%   { opacity: 0.70; }
+    100% { opacity: 1.00; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   GHOSTS (Призраки)
+   Кладбищенская атмосфера: холодный лунный свет,
+   густой синий туман, медленно дрейфующие формы.
+   Не космик — кладбище.
+   ══════════════════════════════════════════════════════════ */
+
+/* Фон: сильно десатурирован, холодный, медленное дыхание */
+.vn-vfx-ghosts .vn-bg-layer {
+    animation: vnGhostsBgBreath 14s ease-in-out infinite;
+}
+
+@keyframes vnGhostsBgBreath {
+    0%, 100% { filter: saturate(0.20) brightness(0.60) contrast(1.12) hue-rotate(-8deg); }
+    50%      { filter: saturate(0.18) brightness(0.55) contrast(1.15) hue-rotate(-10deg); }
+}
+
+/* Холодный синеватый тинт (overlay blend от base CSS) */
+.vn-vfx-ghosts .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+        ellipse at 58% 40%,
+        rgba(90,  130, 200, 0.14) 0%,
+        rgba(65,  100, 175, 0.24) 45%,
+        rgba(30,   55, 140, 0.38) 100%
+    );
+    animation: vnGhostsTint 18s ease-in-out infinite;
+}
+
+@keyframes vnGhostsTint {
+    0%, 100% { opacity: 0.85; }
+    35%      { opacity: 1.00; }
+    70%      { opacity: 0.80; }
+}
+
+/* Лунный свет с правого верхнего угла (screen blend от base CSS) */
+.vn-vfx-ghosts .vn-fx-rays {
+    opacity: 0.70;
+    background:
+        radial-gradient(ellipse at 74% 0%, rgba(210, 228, 255, 0.30) 0%, transparent 35%),
+        radial-gradient(ellipse at 80% 0%, rgba(185, 210, 248, 0.18) 0%, transparent 28%);
+    filter: blur(3px);
+    animation: vnGhostsMoonlight 22s ease-in-out infinite;
+}
+
+@keyframes vnGhostsMoonlight {
+    0%, 100% { opacity: 0.60; }
+    45%      { opacity: 0.80; }
+    70%      { opacity: 0.55; }
+}
+
+/* Тёмные холодные углы */
+.vn-vfx-ghosts .vn-fx-edges {
+    opacity: 1;
+    background:
+        linear-gradient(to right,  rgba(5,  10, 35, 0.62) 0%, transparent 28%),
+        linear-gradient(to left,   rgba(8,  12, 40, 0.52) 0%, transparent 24%),
+        linear-gradient(to bottom, rgba(3,   8, 30, 0.45) 0%, transparent 20%),
+        linear-gradient(to top,    rgba(2,   6, 25, 0.50) 0%, transparent 18%);
+}
+
+/* Глубокое холодное виньетирование */
+.vn-vfx-ghosts .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 25%,
+        rgba(2,  5, 22, 0.35) 55%,
+        rgba(0,  2, 14, 0.82) 100%
+    );
+}
+
+/* Густой сине-серый туман у земли */
+.vn-vfx-ghosts .vn-ground-fog {
+    background: linear-gradient(
+        to top,
+        rgba(148, 182, 225, 0.78) 0%,
+        rgba(118, 155, 210, 0.52) 8%,
+        rgba( 90, 128, 195, 0.28) 22%,
+        rgba( 65, 100, 175, 0.10) 42%,
+        transparent 62%
+    );
+    animation: vnGhostsGroundFog 10s ease-in-out infinite alternate;
+}
+
+@keyframes vnGhostsGroundFog {
+    0%   { opacity: 0.85; transform: scaleY(1.00) scaleX(1.00); }
+    40%  { opacity: 1.00; transform: scaleY(1.12) scaleX(1.02); }
+    100% { opacity: 0.90; transform: scaleY(1.22) scaleX(1.04); }
+}
+
+/* Холодный рассеянный лунный ambient */
+.vn-vfx-ghosts .vn-ambient-light {
+    opacity: 0.18 !important;
+    background:
+        radial-gradient(ellipse at 72%  8%, rgba(200, 220, 255, 0.55) 0%, transparent 40%),
+        radial-gradient(ellipse at 35% 50%, rgba(140, 168, 225, 0.18) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 95%, rgba(148, 182, 225, 0.30) 0%, transparent 35%) !important;
+    animation: vnGhostsAmbient 16s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnGhostsAmbient {
+    0%   { opacity: 0.14; }
+    100% { opacity: 0.22; }
+}
+
+/* Призрачное присутствие — мягкое холодное свечение в случайной точке */
+.vn-vfx-ghosts .vn-fx-flash.vn-ghost-presence {
+    background: radial-gradient(
+        circle at var(--ghost-x, 50%) var(--ghost-y, 50%),
+        rgba(190, 218, 255, 0.18) 0%,
+        rgba(148, 188, 240, 0.08) 35%,
+        transparent 62%
+    );
+    mix-blend-mode: screen;
+    animation: vnGhostPresence 8s ease-in-out forwards;
+}
+
+@keyframes vnGhostPresence {
+    0%   { opacity: 0; }
+    15%  { opacity: 1; }
+    72%  { opacity: 0.85; }
+    100% { opacity: 0; }
+}
+
+/* Персонажи: холодные, десатурированные */
+.vn-vfx-ghosts .vn-character-img {
+    filter: saturate(0.28) brightness(0.82) contrast(1.05);
+    transition: filter 0.5s ease;
+}
+
+.vn-vfx-ghosts .vn-character.active .vn-character-img {
+    filter: saturate(0.32) brightness(0.88) contrast(1.08)
+        drop-shadow(0 0 28px rgba(148, 188, 240, 0.35))
+        drop-shadow(0 0 10px rgba(190, 218, 255, 0.22))
+        drop-shadow(0 6px 20px rgba(0, 0, 0, 0.78)) !important;
+}
+
+.vn-vfx-ghosts .vn-character-glow {
+    background: radial-gradient(
+        ellipse at center,
+        rgba(148, 188, 240, 0.42) 0%,
+        rgba(100, 148, 218, 0.15) 40%,
+        transparent 70%
+    ) !important;
+    animation: vnGhostsCharGlow 12s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnGhostsCharGlow {
+    0%   { opacity: 0.50; }
+    100% { opacity: 0.85; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FILM GRAIN overrides — особая группа
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-ghosts   .vn-fx-grain { opacity: 0.14; }
+.vn-vfx-carnival .vn-fx-grain { opacity: 0.04; }

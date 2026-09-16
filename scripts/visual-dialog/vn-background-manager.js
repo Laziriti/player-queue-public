@@ -174,20 +174,21 @@ export class VNBackgroundManager {
         const folderLabel = customFolder
             ? customFolder.split('/').pop() || customFolder
             : `${this.moduleId}/assets/scenes`;
+        const thumbSize = parseInt(localStorage.getItem('player-queue.bg-thumb-size')) || 120;
 
         return `<details class="vn-collapsible vn-bg-section" open>
             <summary class="vn-collapsible-header"><i class="fas fa-image"></i> ${game.i18n.localize('vn.bg.header')} <i class="fas fa-chevron-down vn-chevron"></i></summary>
             <div class="vn-collapsible-body">
                 <div class="vn-bg-toolbar">
                     <label class="vn-overlay-toggle">
-                        <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span>${game.i18n.localize('vn.bg.overlay')}</span>
+                        <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${game.i18n.localize('vn.bg.overlay')}</span>
+                    </label>
+                    <label class="vn-overlay-toggle">
+                        <input type="checkbox" id="particles-foreground" ${currentParticlesFg ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${game.i18n.localize('vn.bg.particlesForeground')}</span>
                     </label>
                     <label class="vn-overlay-toggle">
                         <i class="fas fa-magic"></i>
                         <select id="atmosphere-effect" class="vn-atmosphere-select">${effectOptions}</select>
-                    </label>
-                    <label class="vn-overlay-toggle">
-                        <input type="checkbox" id="particles-foreground" ${currentParticlesFg ? 'checked' : ''}><span>${game.i18n.localize('vn.bg.particlesForeground')}</span>
                     </label>
                     ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${sceneBg}"><i class="fas fa-map"></i> ${game.i18n.localize('vn.bg.currentScene')}</button>` : ''}
                     <div class="vn-custom-path">
@@ -201,8 +202,9 @@ export class VNBackgroundManager {
                     <span class="vn-folder-row-label" title="${customFolder || this._defaultPath}">${folderLabel}</span>
                     <button type="button" class="vn-btn vn-btn-sm vn-pick-folder-btn" title="${game.i18n.localize('vn.bg.pickFolderTitle')}"><i class="fas fa-search"></i> ${game.i18n.localize('vn.bg.pickFolder')}</button>
                     ${customFolder ? `<button type="button" class="vn-btn vn-btn-sm vn-reset-folder-btn" title="${game.i18n.localize('vn.bg.resetFolderTitle')}"><i class="fas fa-undo"></i></button>` : ''}
+                    <label class="vn-bg-size-ctrl" title="Card size"><i class="fas fa-th-large"></i><input type="range" class="vn-bg-size-slider" min="72" max="240" step="8" value="${thumbSize}"></label>
                 </div>
-                <div class="vn-background-gallery">${this.generateGalleryContent(currentBg)}</div>
+                <div class="vn-background-gallery" style="--vn-bg-thumb-w: ${thumbSize}px">${this.generateGalleryContent(currentBg)}</div>
             </div></details>`;
     }
 
@@ -346,6 +348,14 @@ export class VNBackgroundManager {
                 const video = e.target.closest('.vn-bg-option')?.querySelector('.vn-bg-preview-video');
                 if (video) { video.pause(); video.currentTime = 0; }
             }, true);
+
+            root.addEventListener('input', (e) => {
+                const slider = e.target.closest('.vn-bg-size-slider');
+                if (!slider) return;
+                const val = slider.value;
+                root.querySelector('.vn-background-gallery')?.style.setProperty('--vn-bg-thumb-w', val + 'px');
+                localStorage.setItem('player-queue.bg-thumb-size', val);
+            });
         }
 
         this._onNavigate = onNavigate;

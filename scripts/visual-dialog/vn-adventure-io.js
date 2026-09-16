@@ -3,6 +3,7 @@
 // ============================================================
 
 import { MODULE_ID } from './vn-state.js';
+import { applyMigrations } from './vn-migrations.js';
 const PRESETS_FILE = 'vn-presets.json';
 const INTEGRATION_SUBPATH = 'integrations/player-queue';
 
@@ -71,9 +72,10 @@ export class VNAdventureIO {
         let added = 0;
         for (const p of presets) {
             const id = p.id || foundry.utils.randomID();
-            if (!existing[id] || overwrite) { existing[id] = { ...p, id }; added++; }
+            if (!existing[id] || overwrite) { existing[id] = applyMigrations({ ...p, id }); added++; }
         }
         await game.settings.set(MODULE_ID, VNPresets.SETTING_KEY, existing);
+        VNPresets.invalidateCache();
         return added;
     }
 

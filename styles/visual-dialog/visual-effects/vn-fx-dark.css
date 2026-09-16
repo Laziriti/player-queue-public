@@ -1,0 +1,616 @@
+/* ══════════════════════════════════════════════════════════
+   VN-FX-DARK — Тёмные и мрачные эффекты атмосферы
+   Группа: eldritch, dark, corruption, abyss, shadow_intrigue
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════
+   ELDRITCH (Ктулху / Элдритч)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-eldritch .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(
+                    ellipse at center,
+                    rgba(0, 60, 40, 0.15) 0%,
+                    rgba(0, 80, 50, 0.25) 40%,
+                    rgba(0, 40, 30, 0.4) 80%,
+                    rgba(0, 20, 15, 0.5) 100%
+            );
+    animation: vnEldritchTintPulse 10s ease-in-out infinite;
+}
+
+@keyframes vnEldritchTintPulse {
+    0%, 100% { opacity: 0.8; }
+    30%      { opacity: 1; }
+    60%      { opacity: 0.85; }
+}
+
+.vn-vfx-eldritch .vn-bg-layer {
+    animation: vnEldritchDistort 15s ease-in-out infinite !important;
+}
+
+@keyframes vnEldritchDistort {
+    0%, 100% { filter: saturate(0.5) hue-rotate(0deg)                     url(#vn-distort-eldritch); }
+    25%      { filter: saturate(0.6) hue-rotate(5deg)                     url(#vn-distort-eldritch); }
+    50%      { filter: saturate(0.4) hue-rotate(-3deg) brightness(0.95)   url(#vn-distort-eldritch); }
+    75%      { filter: saturate(0.55) hue-rotate(8deg)                    url(#vn-distort-eldritch); }
+}
+
+.vn-vfx-eldritch .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 30%,
+            rgba(0, 50, 35, 0.7) 75%,
+            rgba(0, 25, 15, 0.9) 100%
+    );
+    animation: vnEldritchVignette 8s ease-in-out infinite;
+}
+
+@keyframes vnEldritchVignette {
+    0%, 100% { transform: scale(1);    opacity: 0.55; }
+    50%      { transform: scale(1.12); opacity: 1; }
+}
+
+.vn-vfx-eldritch .vn-fx-scan {
+    opacity: 0.15;
+    background: repeating-linear-gradient(
+            to bottom,
+            transparent 0px,
+            transparent 2px,
+            rgba(0, 255, 100, 0.03) 2px,
+            rgba(0, 255, 100, 0.03) 4px
+    );
+    animation: vnScanlineMove 4s linear infinite;
+}
+
+@keyframes vnScanlineMove {
+    from { background-position: 0 0; }
+    to   { background-position: 0 200px; }
+}
+
+.vn-vfx-eldritch .vn-fx-edges {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at 0% 100%, rgba(0, 40, 30, 0.6) 0%, transparent 40%),
+            radial-gradient(ellipse at 100% 100%, rgba(0, 40, 30, 0.5) 0%, transparent 35%),
+            radial-gradient(ellipse at 0% 0%, rgba(0, 30, 20, 0.4) 0%, transparent 30%),
+            radial-gradient(ellipse at 100% 0%, rgba(0, 30, 20, 0.3) 0%, transparent 30%);
+    animation: vnEldritchEdges 12s ease-in-out infinite alternate;
+}
+
+@keyframes vnEldritchEdges {
+    0%   { opacity: 0.7; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.05); }
+}
+
+.vn-vfx-eldritch .vn-ambient-light {
+    background:
+            radial-gradient(ellipse at 20% 80%, rgba(0, 180, 100, 0.3) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 70%, rgba(0, 150, 80, 0.2) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 30%, rgba(80, 200, 120, 0.15) 0%, transparent 40%) !important;
+    animation: vnEldritchAmbient 6s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnEldritchAmbient {
+    0%   { opacity: 0.1; }
+    100% { opacity: 0.2; }
+}
+
+.vn-vfx-eldritch .vn-character.active .vn-character-img {
+    filter: brightness(0.9) contrast(1.1) saturate(0.7) hue-rotate(15deg)
+    drop-shadow(0 0 20px rgba(0, 180, 100, 0.4))
+    drop-shadow(0 0 50px rgba(0, 100, 60, 0.3))
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.7)) !important;
+}
+
+.vn-vfx-eldritch .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(0, 180, 100, 0.5) 0%,
+            rgba(0, 120, 60, 0.15) 40%,
+            transparent 70%
+    ) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   DARK (Тёмный ритуал)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-dark .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+            ellipse at center,
+            rgba(40, 0, 0, 0.1) 0%,
+            rgba(30, 0, 10, 0.3) 50%,
+            rgba(15, 0, 5, 0.6) 85%,
+            rgba(5, 0, 0, 0.8) 100%
+    );
+    animation: vnDarkTintPulse 10s ease-in-out infinite;
+}
+
+@keyframes vnDarkTintPulse {
+    0%, 100% { opacity: 0.8; }
+    50%      { opacity: 1; }
+}
+
+.vn-vfx-dark .vn-bg-layer {
+    filter: saturate(0.3) brightness(0.7) contrast(1.1);
+}
+
+.vn-vfx-dark .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 20%,
+            rgba(60, 0, 10, 0.55) 65%,
+            rgba(20, 0, 0, 0.9) 100%
+    );
+    animation: vnDarkVignettePulse 8s ease-in-out infinite;
+}
+
+@keyframes vnDarkVignettePulse {
+    0%, 100% { transform: scale(1);    opacity: 0.6; }
+    50%      { transform: scale(1.15); opacity: 1; }
+}
+
+.vn-vfx-dark .vn-fx-edges {
+    opacity: 0.6;
+    background:
+            radial-gradient(ellipse at 50% 100%, rgba(80, 0, 0, 0.3) 0%, transparent 50%),
+            radial-gradient(ellipse at 0% 50%, rgba(40, 0, 20, 0.4) 0%, transparent 40%),
+            radial-gradient(ellipse at 100% 50%, rgba(40, 0, 20, 0.4) 0%, transparent 40%);
+    animation: vnDarkEdgeBreath 12s ease-in-out infinite alternate;
+}
+
+@keyframes vnDarkEdgeBreath {
+    0%   { opacity: 0.4; }
+    100% { opacity: 0.8; }
+}
+
+.vn-vfx-dark .vn-ambient-light {
+    background:
+            radial-gradient(ellipse at 50% 80%, rgba(150, 20, 30, 0.2) 0%, transparent 50%),
+            radial-gradient(ellipse at 30% 50%, rgba(100, 0, 40, 0.15) 0%, transparent 40%) !important;
+}
+
+.vn-vfx-dark .vn-character.active .vn-character-img {
+    filter: brightness(0.85) contrast(1.15) saturate(0.6)
+    drop-shadow(0 0 25px rgba(150, 20, 30, 0.4))
+    drop-shadow(0 0 50px rgba(80, 0, 20, 0.3))
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.8)) !important;
+}
+
+.vn-vfx-dark .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(150, 20, 30, 0.5) 0%,
+            rgba(80, 0, 20, 0.15) 40%,
+            transparent 70%
+    ) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CORRUPTION (Порча / Глитч)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-corruption .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+            ellipse at center,
+            rgba(60, 0, 80, 0.1) 0%,
+            rgba(40, 0, 60, 0.2) 50%,
+            rgba(20, 0, 30, 0.4) 100%
+    );
+    animation: vnCorruptionTint 6s ease-in-out infinite;
+}
+
+@keyframes vnCorruptionTint {
+    0%, 100% { opacity: 0.9; }
+    40%      { opacity: 0.65; }
+    70%      { opacity: 1; }
+}
+
+.vn-vfx-corruption .vn-bg-layer {
+    filter: saturate(0.3) contrast(1.2) brightness(0.7);
+    animation: vnCorruptionDistort 8s ease-in-out infinite !important;
+}
+
+@keyframes vnCorruptionDistort {
+    0%, 100% { filter: saturate(0.3) contrast(1.2) brightness(0.7) hue-rotate(0deg); }
+    25%      { filter: saturate(0.4) contrast(1.3) brightness(0.65) hue-rotate(10deg); }
+    50%      { filter: saturate(0.2) contrast(1.15) brightness(0.75) hue-rotate(-5deg); }
+    75%      { filter: saturate(0.35) contrast(1.25) brightness(0.68) hue-rotate(15deg); }
+}
+
+/* Глитч-полосы */
+.vn-vfx-corruption .vn-fx-scan {
+    opacity: 0.2;
+    background:
+            repeating-linear-gradient(
+                    to bottom,
+                    transparent 0px,
+                    transparent 3px,
+                    rgba(200, 0, 255, 0.04) 3px,
+                    rgba(200, 0, 255, 0.04) 4px
+            );
+}
+
+/* Сильный глитч */
+.vn-vfx-corruption.vn-glitch-active {
+    animation: vnCorruptionGlitch 0.1s steps(2) infinite;
+}
+
+@keyframes vnCorruptionGlitch {
+    0%   { transform: translate(0); filter: hue-rotate(0deg); }
+    25%  { transform: translate(-3px, 1px); filter: hue-rotate(20deg); }
+    50%  { transform: translate(2px, -1px); filter: hue-rotate(-15deg); }
+    75%  { transform: translate(-1px, 3px); filter: hue-rotate(10deg); }
+    100% { transform: translate(3px, -2px); filter: hue-rotate(-5deg); }
+}
+
+.vn-vfx-corruption .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 30%,
+            rgba(40, 0, 60, 0.45) 75%,
+            rgba(15, 0, 25, 0.8) 100%
+    );
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ABYSS — Бездна (v2)
+
+   Фикс: биолюминесценция рандомная через CSS vars.
+   Давление — только виньетка. Всё плавно.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-abyss .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+            ellipse at center,
+            rgba(0, 5, 15, 0.1) 0%,
+            rgba(0, 3, 10, 0.4) 25%,
+            rgba(0, 2, 8, 0.7) 45%,
+            rgba(0, 0, 5, 0.92) 70%,
+            rgba(0, 0, 0, 0.98) 100%
+    );
+    animation: vnAbyssTintBreath 10s ease-in-out infinite alternate;
+}
+
+@keyframes vnAbyssTintBreath {
+    0%   { opacity: 0.85; }
+    100% { opacity: 0.95; }
+}
+
+.vn-vfx-abyss .vn-bg-layer {
+    filter: saturate(0.15) brightness(0.35) contrast(1.2) hue-rotate(10deg);
+    /* Без scale-анимации — стабильный */
+}
+
+/* ── Экстремальная виньетка ── */
+.vn-vfx-abyss .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 8%,
+            rgba(0, 2, 8, 0.25) 14%,
+            rgba(0, 1, 5, 0.55) 22%,
+            rgba(0, 0, 3, 0.8) 35%,
+            rgba(0, 0, 0, 0.94) 50%,
+            rgba(0, 0, 0, 1) 65%
+    );
+    transition: transform 2s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 2s ease;
+}
+
+/* ── Биолюминесценция — позиция через CSS vars ── */
+.vn-vfx-abyss .vn-fx-rays {
+    opacity: 0;
+    background:
+            radial-gradient(
+                    circle at var(--biolum-x, 30%) var(--biolum-y, 60%),
+                    hsla(calc(var(--biolum-hue, 190)), 100%, 60%, 0.2) 0%,
+                    hsla(calc(var(--biolum-hue, 190)), 80%, 40%, 0.08) 5%,
+                    transparent 12%
+            );
+    filter: blur(6px);
+    animation: vnAbyssBiolumIdle 20s ease-in-out infinite;
+    transition: opacity 3s ease;
+}
+
+@keyframes vnAbyssBiolumIdle {
+    0%, 65%, 100% { opacity: 0; }
+    70%           { opacity: 0.25; }
+    75%           { opacity: 0.1; }
+    80%           { opacity: 0.2; }
+    88%           { opacity: 0; }
+}
+
+/* ── Давление — тёмные массы ── */
+.vn-vfx-abyss .vn-fx-edges {
+    opacity: 0.85;
+    background:
+            radial-gradient(ellipse at 0% 50%, rgba(0, 0, 0, 0.95) 0%, transparent 28%),
+            radial-gradient(ellipse at 100% 50%, rgba(0, 0, 0, 0.95) 0%, transparent 28%),
+            radial-gradient(ellipse at 50% 0%, rgba(0, 0, 0, 0.9) 0%, transparent 22%),
+            radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.9) 0%, transparent 22%);
+    animation: vnAbyssEdgesSlow 12s ease-in-out infinite alternate;
+    transition: transform 2s ease, opacity 2s ease;
+}
+
+@keyframes vnAbyssEdgesSlow {
+    0%   { opacity: 0.75; transform: scale(1); }
+    100% { opacity: 0.9; transform: scale(1.03); }
+}
+
+/* ── Волна давления — только виньетка сжимается ── */
+.vn-pressure-wave .vn-vignette {
+    transform: scale(0.94) !important;
+    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.vn-pressure-wave .vn-fx-edges {
+    opacity: 1 !important;
+    transform: scale(1.05) !important;
+    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Снятие — медленнее */
+.vn-vfx-abyss .vn-vignette {
+    transition: transform 2.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.vn-vfx-abyss .vn-fx-edges {
+    transition: transform 2.5s ease, opacity 2.5s ease;
+}
+
+/* ── Биолюминесцентная вспышка (JS добавляет класс) ── */
+.vn-fx-flash.vn-biolum-flash {
+    background: radial-gradient(
+            circle at var(--biolum-x, 30%) var(--biolum-y, 60%),
+            hsla(calc(var(--biolum-hue, 190)), 100%, 65%, 0.3) 0%,
+            hsla(calc(var(--biolum-hue, 190)), 90%, 50%, 0.15) 4%,
+            hsla(calc(var(--biolum-hue, 190)), 80%, 40%, 0.06) 8%,
+            transparent 15%
+    );
+    filter: blur(4px);
+    animation: vnBiolumFlashSmooth 2.5s ease-in-out forwards;
+}
+
+@keyframes vnBiolumFlashSmooth {
+    0%   { opacity: 0; }
+    20%  { opacity: 0.7; }
+    40%  { opacity: 0.4; }
+    60%  { opacity: 0.6; }
+    80%  { opacity: 0.3; }
+    100% { opacity: 0; }
+}
+
+/* ── Глубинный туман ── */
+.vn-vfx-abyss .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(0, 0, 0, 0.9) 0%,
+            rgba(0, 5, 15, 0.5) 8%,
+            rgba(0, 10, 20, 0.2) 15%,
+            transparent 30%
+    );
+}
+
+/* ── Scan — лёгкая текстура глубины ── */
+.vn-vfx-abyss .vn-fx-scan {
+    opacity: 0.04;
+    background: repeating-linear-gradient(
+            to bottom,
+            transparent 0px,
+            transparent 4px,
+            rgba(0, 100, 150, 0.02) 4px,
+            rgba(0, 100, 150, 0.02) 5px
+    );
+}
+
+.vn-vfx-abyss .vn-ambient-light {
+    background:
+            radial-gradient(circle at 50% 50%, rgba(0, 80, 120, 0.08) 0%, transparent 20%) !important;
+    animation: vnAbyssAmbient 12s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnAbyssAmbient {
+    0%   { opacity: 0.03; }
+    100% { opacity: 0.08; }
+}
+
+.vn-vfx-abyss .vn-character.active .vn-character-img {
+    filter: brightness(0.6) contrast(1.3) saturate(0.2)
+    drop-shadow(0 0 12px rgba(0, 150, 200, 0.25))
+    drop-shadow(0 0 35px rgba(0, 80, 120, 0.15))
+    drop-shadow(0 5px 20px rgba(0, 0, 0, 0.9)) !important;
+}
+
+.vn-vfx-abyss .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(0, 120, 160, 0.2) 0%,
+            rgba(0, 60, 100, 0.08) 30%,
+            transparent 60%
+    ) !important;
+    animation: vnAbyssCharGlow 10s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnAbyssCharGlow {
+    0%   { opacity: 0.2; }
+    100% { opacity: 0.45; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   SHADOW INTRIGUE — Тени и интриги
+
+   Тёмная комната, свет единственной свечи снизу.
+   Заговорщики, воры, плуты. Тяжёлые тени, пыль в воздухе.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Тинт: холодный синеватый мрак + тёплый огонёк снизу ── */
+.vn-vfx-shadow_intrigue .vn-fx-tint {
+    opacity: 1;
+    background:
+        radial-gradient(
+            ellipse at 50% 115%,
+            rgba(200, 130, 40, 0.18) 0%,
+            rgba(140, 80, 20, 0.08) 25%,
+            transparent 50%
+        ),
+        linear-gradient(
+            to bottom,
+            rgba(20, 25, 40, 0.4) 0%,
+            rgba(15, 18, 32, 0.2) 55%,
+            rgba(8, 10, 18, 0.05) 100%
+        );
+    animation: vnIntrigueTintBreath 18s ease-in-out infinite;
+}
+
+@keyframes vnIntrigueTintBreath {
+    0%, 100% { opacity: 0.85; }
+    30%      { opacity: 1; }
+    65%      { opacity: 0.9; }
+}
+
+/* ── Лучи: тени, ползущие со сторон ── */
+.vn-vfx-shadow_intrigue .vn-fx-rays {
+    opacity: 0.6;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.45) 0%,
+            rgba(8, 12, 22, 0.18) 18%,
+            transparent 38%,
+            transparent 62%,
+            rgba(8, 12, 22, 0.18) 82%,
+            rgba(0, 0, 0, 0.45) 100%
+        );
+    animation: vnIntrigueSideShadows 22s ease-in-out infinite alternate;
+}
+
+@keyframes vnIntrigueSideShadows {
+    0%   { opacity: 0.5; transform: scaleX(1); }
+    50%  { opacity: 0.7; transform: scaleX(1.04); }
+    100% { opacity: 0.55; transform: scaleX(1); }
+}
+
+/* ── Края: тяжёлая виньетка, углы почти чёрные ── */
+.vn-vfx-shadow_intrigue .vn-fx-edges {
+    opacity: 1;
+    background: radial-gradient(
+        ellipse at center,
+        transparent 22%,
+        rgba(5, 7, 14, 0.28) 48%,
+        rgba(2, 3, 8, 0.65) 72%,
+        rgba(0, 0, 2, 0.92) 100%
+    );
+    animation: vnIntrigueEdgePulse 25s ease-in-out infinite alternate;
+}
+
+@keyframes vnIntrigueEdgePulse {
+    0%   { opacity: 0.9; }
+    50%  { opacity: 1; }
+    100% { opacity: 0.95; }
+}
+
+/* ── Фон: приглушён, чуть холоднее ── */
+.vn-vfx-shadow_intrigue .vn-bg-layer {
+    filter: saturate(0.55) brightness(0.65) contrast(1.1);
+    animation: vnIntrigueBgBreath 30s ease-in-out infinite !important;
+}
+
+@keyframes vnIntrigueBgBreath {
+    0%, 100% { filter: saturate(0.55) brightness(0.65) contrast(1.1); }
+    50%      { filter: saturate(0.5) brightness(0.6) contrast(1.12); }
+}
+
+/* ── Туман: тонкий слой у пола ── */
+.vn-vfx-shadow_intrigue .vn-ground-fog {
+    background: linear-gradient(
+        to top,
+        rgba(10, 8, 5, 0.55) 0%,
+        rgba(18, 14, 8, 0.25) 12%,
+        rgba(12, 10, 6, 0.08) 25%,
+        transparent 45%
+    );
+    animation: vnIntrigueFogShift 20s ease-in-out infinite alternate;
+}
+
+@keyframes vnIntrigueFogShift {
+    0%   { opacity: 0.7; transform: scaleY(1); }
+    100% { opacity: 1; transform: scaleY(1.15); }
+}
+
+/* ── Виньетка: синевато-чёрная ── */
+.vn-vfx-shadow_intrigue .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 28%,
+        rgba(5, 8, 18, 0.35) 58%,
+        rgba(0, 2, 8, 0.8) 100%
+    );
+}
+
+/* ── Амбиент: мерцающий свет свечи снизу ── */
+.vn-vfx-shadow_intrigue .vn-ambient-light {
+    opacity: 0.22 !important;
+    background:
+        radial-gradient(ellipse at 50% 115%, rgba(230, 155, 50, 0.55) 0%, transparent 38%),
+        radial-gradient(ellipse at 25% 90%,  rgba(160, 90, 25, 0.2) 0%, transparent 28%),
+        radial-gradient(ellipse at 75% 90%,  rgba(160, 90, 25, 0.2) 0%, transparent 28%) !important;
+    animation: vnIntrigueCandleFlicker 7s ease-in-out infinite !important;
+}
+
+@keyframes vnIntrigueCandleFlicker {
+    0%   { opacity: 0.18; }
+    15%  { opacity: 0.28; }
+    30%  { opacity: 0.2; }
+    48%  { opacity: 0.3; }
+    62%  { opacity: 0.22; }
+    78%  { opacity: 0.25; }
+    100% { opacity: 0.18; }
+}
+
+/* ── Активный персонаж: подсвечен снизу, как от свечи ── */
+.vn-vfx-shadow_intrigue .vn-character.active .vn-character-img {
+    filter: brightness(0.88) contrast(1.12) saturate(0.7)
+        drop-shadow(0 12px 28px rgba(200, 120, 30, 0.28))
+        drop-shadow(0 0 15px rgba(150, 80, 20, 0.15))
+        drop-shadow(0 5px 20px rgba(0, 0, 0, 0.85)) !important;
+}
+
+.vn-vfx-shadow_intrigue .vn-character-glow {
+    background: radial-gradient(
+        ellipse at center 80%,
+        rgba(210, 140, 45, 0.35) 0%,
+        rgba(140, 80, 20, 0.12) 40%,
+        transparent 70%
+    ) !important;
+    animation: vnIntrigueCharGlow 7s ease-in-out infinite !important;
+}
+
+@keyframes vnIntrigueCharGlow {
+    0%, 100% { opacity: 0.55; }
+    35%      { opacity: 0.85; }
+    55%      { opacity: 0.5; }
+    80%      { opacity: 0.75; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FILM GRAIN overrides — тёмная группа
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-dark         .vn-fx-grain,
+.vn-vfx-eldritch     .vn-fx-grain,
+.vn-vfx-abyss        .vn-fx-grain { opacity: 0.14; }
+
+.vn-vfx-corruption      .vn-fx-grain { opacity: 0.11; }
+
+.vn-vfx-shadow_intrigue .vn-fx-grain { opacity: 0.10; }

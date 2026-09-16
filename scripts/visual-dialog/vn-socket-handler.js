@@ -100,6 +100,7 @@ export class VNSocketHandler {
                     leftIds: p.leftIds,
                     centerIds: p.centerIds,
                     rightIds: p.rightIds,
+                    presetActors: p.presetActors ?? null,
                     background: p.background,
                     backgroundOverlay: p.backgroundOverlay,
                     atmosphereEffect: p.atmosphereEffect ?? null,

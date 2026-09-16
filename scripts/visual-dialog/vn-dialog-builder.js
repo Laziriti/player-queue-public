@@ -19,6 +19,7 @@ export class VNDialogBuilder {
         this._scaleDialog = null;
         this._presetSearchQuery = '';
         this._presetSceneFilter = false;
+        this._presetTagFilter = null;
         this._presetViewMode = 'list';
         this._presetSortMode = 'newest';
         this._ioViewMode = 'detailed';
@@ -30,6 +31,7 @@ export class VNDialogBuilder {
         this._dragEls = null;
         this._pendingFlipped = null;
         this._pendingScales = null;
+        this._selectedPresetId = null;
     }
 
     get dialog() { return this._dialog; }
@@ -45,6 +47,9 @@ export class VNDialogBuilder {
 
     async _show(isEdit) {
         if (this._dialog) { try { this._dialog.close(); } catch {} }
+        this._pendingFlipped = null;
+        this._pendingScales = null;
+        this._selectedPresetId = null;
         this._dialogAbortCtrl?.abort();
         this._dialogAbortCtrl = new AbortController();
         this._dropZones = new WeakSet();
@@ -114,9 +119,29 @@ export class VNDialogBuilder {
         });
     }
 
+    // Remap portraitScales keys: canvas token IDs → positional actor IDs.
+    // Shared by _handleSubmit (preset launch) and _gatherDialogState (preset save).
+    static _remapScalesToActorIds(root, scales) {
+        if (!scales || !Object.keys(scales).length) return scales;
+        const allPositionEls = [...root.querySelectorAll('#left-tokens .vn-token-option, #center-tokens .vn-token-option, #right-tokens .vn-token-option')];
+        const actorRaw = allPositionEls.map(el => el.dataset.actorId ? `actor-${el.dataset.actorId}` : el.dataset.tokenId || '');
+        const actorDeduped = VNDialogBuilder._deduplicateIds(actorRaw);
+        const canvasToActorId = new Map();
+        allPositionEls.forEach((el, i) => {
+            const tid = el.dataset.tokenId;
+            if (tid && !parseActorId(tid)) canvasToActorId.set(tid, actorDeduped[i]);
+        });
+        const remapped = {};
+        for (const [key, val] of Object.entries(scales)) {
+            const mappedKey = canvasToActorId.get(key) ?? key;
+            if (canvasToActorId.has(key) || remapped[mappedKey] === undefined) remapped[mappedKey] = val;
+        }
+        return remapped;
+    }
+
     _handleSubmit(root, isEdit, backgroundOnly = false) {
         const getRawIds = (sel) => Array.from(root.querySelectorAll(`${sel} .vn-token-option`))
-            .map(el => el.dataset.type === 'token' ? (el.dataset.tokenId || null) : (el.dataset.actorId ? `actor-${el.dataset.actorId}` : null)).filter(Boolean);
+            .map(el => el.dataset.actorId ? `actor-${el.dataset.actorId}` : el.dataset.tokenId || null).filter(Boolean);
 
         const presetActors = getRawIds('#scene-participants');
         const allRaw = backgroundOnly ? [] : [...getRawIds('#left-tokens'), ...getRawIds('#center-tokens'), ...getRawIds('#right-tokens')];
@@ -141,7 +166,9 @@ export class VNDialogBuilder {
             : this._gatherPortraitData(root, allRaw, allDeduped);
 
         const pendingFlipped = this._pendingFlipped;
-        const pendingScales = this._pendingScales;
+        const pendingScales = this._pendingScales
+            ? VNDialogBuilder._remapScalesToActorIds(root, this._pendingScales)
+            : null;
         this._pendingFlipped = null;
         this._pendingScales = null;
 
@@ -225,28 +252,49 @@ export class VNDialogBuilder {
 
         const getAfter = (container, x) => {
             const els = [...container.querySelectorAll('.vn-token-option:not(.dragging)')];
-            return els.reduce((closest, child) => {
-                const offset = x - child.getBoundingClientRect().left - child.offsetWidth / 2;
-                return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
-            }, { offset: -Infinity }).element;
+            // Batch-read all rects before any comparison to avoid interleaved read/write reflows
+            const mids = els.map(el => el.getBoundingClientRect().left + el.offsetWidth * 0.5);
+            let bestOffset = -Infinity, bestEl;
+            for (let i = 0; i < els.length; i++) {
+                const offset = x - mids[i];
+                if (offset < 0 && offset > bestOffset) { bestOffset = offset; bestEl = els[i]; }
+            }
+            return bestEl;
         };
 
         const signal = this._dialogAbortCtrl?.signal;
         root.querySelectorAll('.vn-token-selector, .vn-available-tokens, .vn-favorites-section, .vn-scene-participants').forEach(zone => {
             if (this._dropZones?.has(zone)) return;
             this._dropZones?.add(zone);
+
+            let rafId = null;
+            let pendingX = 0;
+
             zone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
                 zone.classList.add('drag-over');
                 if (this._draggedEl?.classList.contains('vn-token-option')) {
-                    const after = getAfter(zone, e.clientX);
-                    after ? zone.insertBefore(this._draggedEl, after) : zone.appendChild(this._draggedEl);
+                    pendingX = e.clientX;
+                    if (rafId === null) {
+                        rafId = requestAnimationFrame(() => {
+                            rafId = null;
+                            if (!this._draggedEl) return;
+                            const after = getAfter(zone, pendingX);
+                            after ? zone.insertBefore(this._draggedEl, after) : zone.appendChild(this._draggedEl);
+                        });
+                    }
                 }
             }, { signal });
-            zone.addEventListener('dragleave', (e) => { if (e.target === zone) zone.classList.remove('drag-over'); }, { signal });
+            zone.addEventListener('dragleave', (e) => {
+                if (!zone.contains(e.relatedTarget)) {
+                    zone.classList.remove('drag-over');
+                    if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+                }
+            }, { signal });
             zone.addEventListener('drop', async (e) => {
                 e.preventDefault();
+                if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
                 zone.classList.remove('drag-over');
                 try {
                     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
@@ -268,11 +316,13 @@ export class VNDialogBuilder {
         el.addEventListener('dragstart', (e) => {
             this._draggedEl = el;
             el.classList.add('dragging');
+            document.body.classList.add('vn-dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', JSON.stringify({ internal: true, actorId: el.dataset.actorId, tokenId: el.dataset.tokenId }));
         }, { signal });
         el.addEventListener('dragend', () => {
             el.classList.remove('dragging');
+            document.body.classList.remove('vn-dragging');
             this._draggedEl = null;
         }, { signal });
     }
@@ -308,6 +358,8 @@ export class VNDialogBuilder {
                             const newEl = temp.firstElementChild;
                             zone.append(newEl);
                             this._makeDraggable(newEl);
+                            const badge = root.querySelector('.vn-participants-badge');
+                            if (badge) badge.textContent = zone.querySelectorAll('.vn-token-option').length;
                         }
                     } else {
                         const temp = document.createElement('div');
@@ -557,39 +609,50 @@ export class VNDialogBuilder {
 
         return `<div class="vn-presets-content">
             <div class="vn-presets-description"><i class="fas fa-info-circle"></i> ${game.i18n.localize('vn.dialog.presetsDescription')}</div>
-            <div class="vn-preset-save-row">
-                <input type="text" id="vn-preset-name" placeholder="${game.i18n.localize('vn.dialog.presetNamePlaceholder')}">
-                <button type="button" class="vn-btn vn-btn-xs vn-preset-scene-pin${hasCurrent ? ' active' : ''}" id="vn-preset-scene-pin"
-                    title="${hasCurrent ? game.i18n.format('vn.dialog.pinToScene', {sceneName: currentSceneName}) : game.i18n.localize('vn.dialog.noActiveScenePin')}"
-                    data-scene-name="${currentSceneName || ''}"${!hasCurrent ? ' disabled' : ''}>
-                    <i class="fas fa-map-pin"></i>
-                </button>
-                <button type="button" class="vn-btn vn-btn-sm vn-btn-accent vn-preset-save-btn"><i class="fas fa-save"></i> ${game.i18n.localize('vn.dialog.btnSavePreset')}</button>
-            </div>
-            <div class="vn-preset-controls">
-                <input type="text" class="vn-preset-search" placeholder="${game.i18n.localize('vn.dialog.searchPresetsPlaceholder')}">
-                <div class="vn-preset-view-toggle">
-                    <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'list' ? 'active' : ''}" data-view="list" title="${game.i18n.localize('vn.dialog.viewList')}"><i class="fas fa-list"></i></button>
-                    <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'cards' ? 'active' : ''}" data-view="cards" title="${game.i18n.localize('vn.dialog.viewCards')}"><i class="fas fa-th-large"></i></button>
+            <div class="vn-presets-split">
+                <div class="vn-presets-list-pane">
+                    <div class="vn-preset-save-row">
+                        <input type="text" id="vn-preset-name" placeholder="${game.i18n.localize('vn.dialog.presetNamePlaceholder')}">
+                        <button type="button" class="vn-btn vn-btn-xs vn-preset-scene-pin${hasCurrent ? ' active' : ''}" id="vn-preset-scene-pin"
+                            title="${hasCurrent ? game.i18n.format('vn.dialog.pinToScene', {sceneName: currentSceneName}) : game.i18n.localize('vn.dialog.noActiveScenePin')}"
+                            data-scene-name="${currentSceneName || ''}"${!hasCurrent ? ' disabled' : ''}>
+                            <i class="fas fa-map-pin"></i>
+                        </button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-btn-accent vn-preset-save-btn"><i class="fas fa-save"></i> ${game.i18n.localize('vn.dialog.btnSavePreset')}</button>
+                    </div>
+                    <div class="vn-preset-controls">
+                        <input type="text" class="vn-preset-search" placeholder="${game.i18n.localize('vn.dialog.searchPresetsPlaceholder')}">
+                        <div class="vn-preset-view-toggle">
+                            <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'list' ? 'active' : ''}" data-view="list" title="${game.i18n.localize('vn.dialog.viewList')}"><i class="fas fa-list"></i></button>
+                            <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'cards' ? 'active' : ''}" data-view="cards" title="${game.i18n.localize('vn.dialog.viewCards')}"><i class="fas fa-th-large"></i></button>
+                        </div>
+                        <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter${this._presetSceneFilter ? ' active' : ''}" title="${game.i18n.format('vn.dialog.filterBySceneTitle', {sceneName: currentSceneName || game.i18n.localize('vn.dialog.thisSceneDefault')})}" data-scene-id="${currentSceneId || ''}">
+                            <i class="fas fa-map"></i> ${game.i18n.localize('vn.dialog.thisScene')}
+                        </button>
+                        <select class="vn-preset-sort" title="${game.i18n.localize('vn.dialog.sortingTitle')}">
+                            <option value="newest"${this._presetSortMode === 'newest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortNewest')}</option>
+                            <option value="oldest"${this._presetSortMode === 'oldest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortOldest')}</option>
+                            <option value="az"${this._presetSortMode === 'az' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortAZ')}</option>
+                            <option value="za"${this._presetSortMode === 'za' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortZA')}</option>
+                        </select>
+                        <button type="button" class="vn-btn vn-btn-sm vn-btn-danger vn-preset-clear-all" title="${game.i18n.localize('vn.dialog.deleteAllPresetsTitle')}">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </div>
+                    <div class="vn-preset-tag-bar" hidden>
+                        <input type="text" class="vn-tag-bar-search" placeholder="${game.i18n.localize('vn.dialog.tagBarSearch') || '…'}" autocomplete="off" spellcheck="false">
+                        <div class="vn-tag-bar-chips"></div>
+                    </div>
+                    <div class="vn-preset-list-header">
+                        <i class="fas fa-list"></i> ${game.i18n.localize('vn.dialog.savedPresetsHeader')} <span class="vn-badge">${sorted.length}</span>
+                        <button type="button" class="vn-btn vn-btn-xs vn-preset-regen-all" title="${game.i18n.localize('vn.dialog.regenAllTitle')}"><i class="fas fa-camera"></i> ${game.i18n.localize('vn.dialog.btnRegenAll')}</button>
+                    </div>
+                    <div class="vn-preset-list${this._presetViewMode === 'cards' ? ' vn-preset-list--cards' : ''}">${itemsHtml}</div>
                 </div>
-                <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter${this._presetSceneFilter ? ' active' : ''}" title="${game.i18n.format('vn.dialog.filterBySceneTitle', {sceneName: currentSceneName || game.i18n.localize('vn.dialog.thisSceneDefault')})}" data-scene-id="${currentSceneId || ''}">
-                    <i class="fas fa-map"></i> ${game.i18n.localize('vn.dialog.thisScene')}
-                </button>
-                <select class="vn-preset-sort" title="${game.i18n.localize('vn.dialog.sortingTitle')}">
-                    <option value="newest"${this._presetSortMode === 'newest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortNewest')}</option>
-                    <option value="oldest"${this._presetSortMode === 'oldest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortOldest')}</option>
-                    <option value="az"${this._presetSortMode === 'az' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortAZ')}</option>
-                    <option value="za"${this._presetSortMode === 'za' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortZA')}</option>
-                </select>
-                <button type="button" class="vn-btn vn-btn-sm vn-btn-danger vn-preset-clear-all" title="${game.i18n.localize('vn.dialog.deleteAllPresetsTitle')}">
-                    <i class="fas fa-trash-can"></i>
-                </button>
+                <div class="vn-preset-detail-panel">
+                    <div class="vn-panel-empty-hint"><i class="fas fa-hand-point-left"></i><span>${game.i18n.localize('vn.dialog.panelSelectHint')}</span></div>
+                </div>
             </div>
-            <div class="vn-preset-list-header">
-                <i class="fas fa-list"></i> ${game.i18n.localize('vn.dialog.savedPresetsHeader')} <span class="vn-badge">${sorted.length}</span>
-                <button type="button" class="vn-btn vn-btn-xs vn-preset-regen-all" title="${game.i18n.localize('vn.dialog.regenAllTitle')}"><i class="fas fa-rotate"></i> ${game.i18n.localize('vn.dialog.btnRegenAll')}</button>
-            </div>
-            <div class="vn-preset-list${this._presetViewMode === 'cards' ? ' vn-preset-list--cards' : ''}">${itemsHtml}</div>
         </div>`;
     }
 
@@ -635,7 +698,7 @@ export class VNDialogBuilder {
                     <i class="fas fa-map-pin"></i> ${label}
                     <span class="vn-badge">${group.length}</span>
                     <div class="vn-preset-group-actions">
-                        <button type="button" class="vn-btn vn-btn-xs vn-preset-group-regen" data-group-key="${key}" title="${game.i18n.format('vn.dialog.regenGroupTitle', {label})}"><i class="fas fa-rotate"></i></button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-preset-group-regen" data-group-key="${key}" title="${game.i18n.format('vn.dialog.regenGroupTitle', {label})}"><i class="fas fa-camera"></i></button>
                         <button type="button" class="vn-btn vn-btn-xs vn-btn-danger vn-preset-group-delete" data-group-key="${key}" title="${game.i18n.format('vn.dialog.deleteGroupTitle', {label})}"><i class="fas fa-trash-can"></i></button>
                     </div>
                 </div>
@@ -661,10 +724,13 @@ export class VNDialogBuilder {
         const metaHtml = (sceneTag || dateText || versionHtml || migrationHtml)
             ? `<div class="vn-preset-meta">${sceneTag}<span class="vn-preset-dates">${dateText}</span>${versionHtml}${migrationHtml}</div>`
             : '';
-        return `<div class="vn-preset-item" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}">
+        const tagsHtml = p.tags?.length
+            ? `<div class="vn-preset-tags">${p.tags.map(t => `<span class="vn-tag-chip" data-tag="${t}">${t}</span>`).join('')}</div>`
+            : '';
+        return `<div class="vn-preset-item" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}" data-tags="${(p.tags || []).join(',')}">
             <div class="vn-preset-info">
                 <span class="vn-preset-name" title="${p.name}">${p.name}</span>
-                ${metaHtml}
+                ${metaHtml}${tagsHtml}
             </div>
             <div class="vn-preset-actions">${this._presetActionButtons(p.id)}</div>
         </div>`;
@@ -672,26 +738,50 @@ export class VNDialogBuilder {
 
     _buildPresetCardHtml(p) {
         const bgSrc = p.thumbnailData || (p.background && p.background !== 'none' ? p.background : null);
-        const thumbHtml = bgSrc
+        const imgHtml = bgSrc
             ? `<img class="vn-preset-card-img" src="${bgSrc}" loading="lazy" decoding="async" alt="">`
-            : `<div class="vn-preset-card-placeholder"><i class="fas fa-image"></i></div>`;
+            : `<div class="vn-preset-card-placeholder"><i class="fas fa-film"></i></div>`;
+
         const allIds = [...(p.leftIds || []), ...(p.centerIds || []), ...(p.rightIds || [])];
-        const actorsHtml = this._buildActorPips(allIds, 5, p.portraitImages || {});
+        const maxPips = 4;
+        const pipsHtml = allIds.length
+            ? `<div class="vn-preset-card-pips">${
+                allIds.slice(0, maxPips).map(id => {
+                    const src = this._resolveActorImg(id, p.portraitImages || {});
+                    const name = (p.portraitNames || {})[id] || '';
+                    return `<img class="vn-preset-card-pip" src="${src}" loading="lazy" decoding="async" alt="${name}" title="${name}">`;
+                }).join('')
+              }${allIds.length > maxPips ? `<span class="vn-preset-card-pip vn-preset-card-pip--more">+${allIds.length - maxPips}</span>` : ''}</div>`
+            : '';
+
         const pendingMigrations = countPendingMigrations(p);
-        const migrationBadge = pendingMigrations
-            ? `<span class="vn-preset-migration-badge" title="${game.i18n.format('vn.dialog.presetMigrationHint', { count: pendingMigrations })}"><i class="fas fa-wrench"></i> ${pendingMigrations}</span>`
+        const migrationIcon = pendingMigrations
+            ? `<i class="fas fa-wrench" title="${game.i18n.format('vn.dialog.presetMigrationHint', { count: pendingMigrations })}"></i>`
             : '';
-        const versionHtml = (p.version || pendingMigrations)
-            ? `<div class="vn-preset-card-version">${p.version ? `v${p.version}` : ''}${migrationBadge}</div>`
+        const verHtml = (p.version || pendingMigrations)
+            ? `<div class="vn-preset-card-ver">${migrationIcon}${p.version ? `v${p.version}` : ''}</div>`
             : '';
-        return `<div class="vn-preset-card" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}">
-            <div class="vn-preset-card-thumb">${thumbHtml}</div>
-            <div class="vn-preset-card-body">
-                <div class="vn-preset-card-name" title="${p.name}">${p.name}</div>
-                ${versionHtml}
-                ${actorsHtml ? `<div class="vn-preset-card-actors">${actorsHtml}</div>` : ''}
-                <div class="vn-preset-card-actions">${this._presetActionButtons(p.id)}</div>
+
+        const MAX_CARD_TAGS = 3;
+        const visibleTags = (p.tags || []).slice(0, MAX_CARD_TAGS);
+        const hiddenCount = (p.tags?.length || 0) - visibleTags.length;
+        const tagsHtml = visibleTags.length
+            ? `<div class="vn-preset-tags">${visibleTags.map(t => `<span class="vn-tag-chip" data-tag="${t}">${t}</span>`).join('')}${hiddenCount > 0 ? `<span class="vn-preset-tags-more">+${hiddenCount}</span>` : ''}</div>`
+            : '';
+
+        return `<div class="vn-preset-card" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}" data-tags="${(p.tags || []).join(',')}">
+            <div class="vn-preset-card-poster">
+                ${imgHtml}
+                ${pipsHtml}
+                ${verHtml}
+                <div class="vn-preset-card-footer">
+                    <div class="vn-preset-card-name" title="${p.name}">${p.name}</div>
+                </div>
+                <div class="vn-preset-card-overlay">
+                    <button type="button" class="vn-preset-card-launch vn-preset-action" data-action="launch" data-preset="${p.id}" title="${game.i18n.localize('vn.dialog.presetActionLaunch')}"><i class="fas fa-play"></i></button>
+                </div>
             </div>
+            ${tagsHtml}
         </div>`;
     }
 
@@ -800,14 +890,17 @@ export class VNDialogBuilder {
     _applyPresetFilters(root) {
         const q = this._presetSearchQuery.toLowerCase();
         const filterScene = this._presetSceneFilter;
+        const activeTag = this._presetTagFilter;
         const currentSceneId = root.querySelector('.vn-preset-scene-filter')?.dataset.sceneId || null;
         let anyVisible = false;
 
         root.querySelectorAll('.vn-preset-item, .vn-preset-card').forEach(item => {
             const name = (item.dataset.presetName || '').toLowerCase();
-            const matchSearch = !q || name.includes(q);
+            const itemTags = (item.dataset.tags || '').split(',').filter(Boolean);
+            const matchSearch = !q || name.includes(q) || itemTags.some(t => t.includes(q));
             const matchScene = !filterScene || item.dataset.sceneId === currentSceneId;
-            const visible = matchSearch && matchScene;
+            const matchTag = !activeTag || itemTags.includes(activeTag);
+            const visible = matchSearch && matchScene && matchTag;
             item.style.display = visible ? '' : 'none';
             if (visible) anyVisible = true;
         });
@@ -834,14 +927,8 @@ export class VNDialogBuilder {
     }
 
     static PRESET_ACTIONS = [
-        { action: 'launch', icon: 'fa-play',           extra: 'vn-btn-accent', title: 'vn.dialog.presetActionLaunch' },
-        { action: 'load',   icon: 'fa-upload',         extra: '',              title: 'vn.dialog.presetActionLoad' },
-        { action: 'update', icon: 'fa-arrows-rotate',  extra: '',              title: 'vn.dialog.presetActionUpdate' },
-        { action: 'regen',  icon: 'fa-rotate',         extra: '',              title: 'vn.dialog.presetActionRegen' },
-        { action: 'macro',  icon: 'fa-code',           extra: '',              title: 'vn.dialog.presetActionMacro' },
-        { action: 'assign', icon: 'fa-map-pin',        extra: '',              title: 'vn.dialog.presetActionAssign' },
-        { action: 'rename', icon: 'fa-pen',            extra: '',              title: 'vn.dialog.presetActionRename' },
-        { action: 'delete', icon: 'fa-trash',          extra: 'vn-btn-danger', title: 'vn.dialog.presetActionDelete' },
+        { action: 'launch', icon: 'fa-play',  extra: 'vn-btn-accent', title: 'vn.dialog.presetActionLaunch' },
+        { action: 'delete', icon: 'fa-trash', extra: 'vn-btn-danger',  title: 'vn.dialog.presetActionDelete' },
     ];
 
     _presetBtn(action, presetId, icon, extraClass = '', title = '') {
@@ -855,6 +942,7 @@ export class VNDialogBuilder {
     _attachPresetListeners(root) {
         this._attachPresetControlListeners(root);
         this._attachPresetItemListeners(root);
+        this._attachPanelListeners(root);
     }
 
     _attachPresetControlListeners(root) {
@@ -873,6 +961,44 @@ export class VNDialogBuilder {
             filterBtn.classList.toggle('active', this._presetSceneFilter);
             this._applyPresetFilters(root);
         }, { signal });
+
+        root.querySelector('.vn-preset-tag-bar')?.addEventListener('click', (e) => {
+            const chip = e.target.closest('.vn-tag-filter-chip');
+            if (!chip) return;
+            const tag = chip.dataset.tag;
+            this._presetTagFilter = this._presetTagFilter === tag ? null : tag;
+            this._refreshTagFilterBar(root);
+            this._applyPresetFilters(root);
+        }, { signal });
+
+        root.querySelector('.vn-preset-tag-bar')?.addEventListener('input', (e) => {
+            if (!e.target.classList.contains('vn-tag-bar-search')) return;
+            this._refreshTagFilterBar(root);
+        }, { signal });
+
+        root.querySelector('.vn-preset-tag-bar')?.addEventListener('contextmenu', async (e) => {
+            const chip = e.target.closest('.vn-tag-filter-chip');
+            if (!chip) return;
+            e.preventDefault();
+            const tag = chip.dataset.tag;
+            const confirmed = await foundry.applications.api.DialogV2.confirm({
+                window: { title: game.i18n.localize('vn.dialog.deleteTagGlobalTitle') },
+                classes: ['vn-confirm-dialog'],
+                content: `<p>${game.i18n.format('vn.dialog.deleteTagGlobalConfirm', { tag })}</p>`,
+                yes: { label: game.i18n.localize('vn.dialog.btnDelete'), icon: 'fas fa-trash' },
+                no: { label: game.i18n.localize('vn.dialog.btnCancel') },
+            });
+            if (!confirmed) return;
+            const presets = await VNPresets.getAll();
+            const affected = Object.values(presets).filter(p => (p.tags || []).includes(tag));
+            for (const p of affected) {
+                await VNPresets.setTags(p.id, (p.tags || []).filter(t => t !== tag));
+            }
+            if (this._presetTagFilter === tag) this._presetTagFilter = null;
+            this._refreshPresetList(root);
+        }, { signal });
+
+        this._refreshTagFilterBar(root);
 
         root.querySelectorAll('.vn-preset-view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -949,6 +1075,15 @@ export class VNDialogBuilder {
             e.preventDefault();
             e.stopPropagation();
 
+            const tagChip = e.target.closest('.vn-tag-chip[data-tag]');
+            if (tagChip && !tagChip.closest('.vn-tag-popover')) {
+                const tag = tagChip.dataset.tag;
+                this._presetTagFilter = this._presetTagFilter === tag ? null : tag;
+                this._refreshTagFilterBar(root);
+                this._applyPresetFilters(root);
+                return;
+            }
+
             const actionBtn = e.target.closest('.vn-preset-action[data-action]');
             if (actionBtn) {
                 await this._handlePresetAction(actionBtn.dataset.action, actionBtn.dataset.preset, actionBtn, root);
@@ -957,7 +1092,10 @@ export class VNDialogBuilder {
             const groupDeleteBtn = e.target.closest('.vn-preset-group-delete');
             if (groupDeleteBtn) { await this._handleGroupDelete(groupDeleteBtn, root); return; }
             const groupRegenBtn = e.target.closest('.vn-preset-group-regen');
-            if (groupRegenBtn) { await this._handleGroupRegen(groupRegenBtn, root); }
+            if (groupRegenBtn) { await this._handleGroupRegen(groupRegenBtn, root); return; }
+
+            const item = e.target.closest('.vn-preset-item, .vn-preset-card');
+            if (item?.dataset.preset) this._selectPreset(root, item.dataset.preset);
         }, { signal: this._dialogAbortCtrl?.signal });
     }
 
@@ -975,7 +1113,7 @@ export class VNDialogBuilder {
                 break;
             }
             case 'update': {
-                const presetName = btn.closest('.vn-preset-item, .vn-preset-card')?.dataset.presetName || '';
+                const presetName = btn.closest('[data-preset-name]')?.dataset.presetName || '';
                 const confirmed = await foundry.applications.api.DialogV2.confirm({
                     window: { title: game.i18n.localize('vn.dialog.updatePresetTitle') },
                     classes: ['vn-confirm-dialog'],
@@ -990,11 +1128,14 @@ export class VNDialogBuilder {
                 this._refreshPresetList(root, sorted);
                 break;
             }
+            case 'tags':
+                await this._handlePresetTags(btn, presetId, root);
+                break;
             case 'rename':
                 this._handlePresetRename(btn, presetId, root);
                 break;
             case 'delete': {
-                const presetName = btn.closest('.vn-preset-item, .vn-preset-card')?.dataset.presetName || '';
+                const presetName = btn.closest('[data-preset-name]')?.dataset.presetName || '';
                 const confirmed = await foundry.applications.api.DialogV2.confirm({
                     window: { title: game.i18n.localize('vn.dialog.deletePresetTitle') },
                     classes: ['vn-confirm-dialog'],
@@ -1122,6 +1263,303 @@ export class VNDialogBuilder {
         input.addEventListener('blur', commit);
     }
 
+    async _handlePresetTags(btn, presetId, root) {
+        root.querySelector('.vn-tag-popover')?.remove();
+
+        const preset = await VNPresets.load(presetId);
+        if (!preset) return;
+        const tags = [...(preset.tags || [])];
+
+        const popover = document.createElement('div');
+        popover.className = 'vn-tag-popover';
+
+        const render = () => {
+            popover.innerHTML = `
+                <div class="vn-tag-popover-chips">
+                    ${tags.map((t, i) => `<span class="vn-tag-chip vn-tag-chip--rm"><span>${t}</span><button type="button" class="vn-tag-rm-btn" data-index="${i}" title="Remove">×</button></span>`).join('')}
+                </div>
+                <div class="vn-tag-popover-input">
+                    <input type="text" class="vn-tag-input" placeholder="New tag…" autocomplete="off" spellcheck="false">
+                    <button type="button" class="vn-btn vn-btn-xs vn-tag-add-btn" title="Add"><i class="fas fa-plus"></i></button>
+                </div>`;
+            popover.querySelector('.vn-tag-input')?.focus();
+        };
+
+        const addTag = () => {
+            const input = popover.querySelector('.vn-tag-input');
+            const val = input.value.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 32);
+            if (val && !tags.includes(val)) { tags.push(val); render(); }
+            else input.value = '';
+        };
+
+        const commit = async () => {
+            document.removeEventListener('mousedown', onOutside, true);
+            const sorted = await VNPresets.setTags(presetId, tags);
+            popover.remove();
+            if (sorted) this._refreshPresetList(root, sorted);
+        };
+
+        const onOutside = (e) => {
+            if (!popover.contains(e.target) && e.target !== btn) commit();
+        };
+
+        popover.addEventListener('click', (e) => {
+            const rmBtn = e.target.closest('.vn-tag-rm-btn');
+            if (rmBtn) { tags.splice(Number(rmBtn.dataset.index), 1); render(); return; }
+            if (e.target.closest('.vn-tag-add-btn')) addTag();
+        });
+        popover.addEventListener('keydown', (e) => {
+            if (!e.target.classList.contains('vn-tag-input')) return;
+            if (e.key === 'Enter') { e.preventDefault(); addTag(); }
+            else if (e.key === 'Escape') { e.preventDefault(); commit(); }
+        });
+
+        render();
+        btn.closest('.vn-preset-item, .vn-preset-card')?.appendChild(popover);
+        setTimeout(() => document.addEventListener('mousedown', onOutside, true), 0);
+    }
+
+    _refreshTagFilterBar(root) {
+        const bar = root.querySelector('.vn-preset-tag-bar');
+        if (!bar) return;
+        const chipsEl = bar.querySelector('.vn-tag-bar-chips');
+        const allTags = new Set();
+        root.querySelectorAll('.vn-preset-item[data-tags], .vn-preset-card[data-tags]').forEach(item => {
+            (item.dataset.tags || '').split(',').filter(Boolean).forEach(t => allTags.add(t));
+        });
+        if (!allTags.size) {
+            if (chipsEl) chipsEl.innerHTML = '';
+            bar.hidden = true;
+            if (this._presetTagFilter) this._presetTagFilter = null;
+            return;
+        }
+        bar.hidden = false;
+        if (this._presetTagFilter && !allTags.has(this._presetTagFilter)) this._presetTagFilter = null;
+        const query = (bar.querySelector('.vn-tag-bar-search')?.value || '').trim().toLowerCase();
+        const visible = [...allTags].sort().filter(t => !query || t.includes(query));
+        if (chipsEl) {
+            chipsEl.innerHTML = visible.map(tag =>
+                `<button type="button" class="vn-tag-filter-chip${this._presetTagFilter === tag ? ' active' : ''}" data-tag="${tag}">${tag}</button>`
+            ).join('');
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Preset Detail Panel
+    // ══════════════════════════════════════════════════════════
+
+    _getAllExistingTags(root) {
+        const tags = new Set();
+        root.querySelectorAll('.vn-preset-item[data-tags], .vn-preset-card[data-tags]').forEach(el => {
+            (el.dataset.tags || '').split(',').filter(Boolean).forEach(t => tags.add(t));
+        });
+        return [...tags].sort();
+    }
+
+    _markSelectedItem(root, presetId) {
+        root.querySelectorAll('.vn-preset-item, .vn-preset-card').forEach(el => {
+            el.classList.toggle('vn-preset-selected', el.dataset.preset === presetId);
+        });
+    }
+
+    async _selectPreset(root, presetId) {
+        this._selectedPresetId = presetId;
+        this._markSelectedItem(root, presetId);
+        const preset = await VNPresets.load(presetId);
+        this._renderPresetPanel(root, preset);
+        this._attachPanelListeners(root);
+    }
+
+    _renderPresetPanel(root, preset) {
+        const panel = root.querySelector('.vn-preset-detail-panel');
+        if (!panel) return;
+
+        if (!preset) {
+            panel.removeAttribute('data-preset-id');
+            panel.removeAttribute('data-preset-name');
+            panel.innerHTML = `<div class="vn-panel-empty-hint"><i class="fas fa-hand-point-left"></i><span>${game.i18n.localize('vn.dialog.panelSelectHint')}</span></div>`;
+            return;
+        }
+
+        panel.dataset.presetId = preset.id;
+        panel.dataset.presetName = preset.name;
+
+        const tags = [...(preset.tags || [])];
+        const allTags = this._getAllExistingTags(root);
+        const suggestions = allTags.filter(t => !tags.includes(t));
+        const dateCreated = this._formatDate(preset.createdAt || preset.savedAt);
+        const dateUpdated = (preset.updatedAt && preset.updatedAt !== preset.createdAt) ? this._formatDate(preset.updatedAt) : null;
+
+        const tagsChipsHtml = tags.map((t, i) =>
+            `<span class="vn-tag-chip vn-tag-chip--rm" data-tag="${t}"><span>${t}</span><button type="button" class="vn-tag-rm-btn" data-index="${i}">×</button></span>`
+        ).join('');
+        const suggestHtml = suggestions.map(t =>
+            `<button type="button" class="vn-panel-tag-suggest" data-tag="${t}">${t}</button>`
+        ).join('');
+
+        panel.innerHTML = `
+            <div class="vn-panel-header">
+                <span class="vn-panel-title"><i class="fas fa-pen-to-square"></i> ${preset.name}</span>
+                <button type="button" class="vn-btn vn-btn-xs vn-panel-close-btn" title="${game.i18n.localize('vn.dialog.btnClose')}"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="vn-panel-body">
+                <div class="vn-panel-section">
+                    <label class="vn-panel-label">${game.i18n.localize('vn.dialog.panelLabelName')}</label>
+                    <input type="text" class="vn-panel-name-input" value="${preset.name.replace(/"/g, '&quot;')}" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="vn-panel-section">
+                    <div class="vn-panel-actions">
+                        <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="load" data-preset="${preset.id}"><i class="fas fa-upload"></i> ${game.i18n.localize('vn.dialog.presetActionLoad')}</button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="update" data-preset="${preset.id}"><i class="fas fa-arrows-rotate"></i> ${game.i18n.localize('vn.dialog.presetActionUpdate')}</button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="regen" data-preset="${preset.id}"><i class="fas fa-camera"></i> ${game.i18n.localize('vn.dialog.presetActionRegen')}</button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="macro" data-preset="${preset.id}"><i class="fas fa-code"></i> ${game.i18n.localize('vn.dialog.presetActionMacro')}</button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="assign" data-preset="${preset.id}"><i class="fas fa-location-dot"></i> ${game.i18n.localize('vn.dialog.presetActionAssign')}</button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-btn-danger vn-panel-action vn-panel-action--delete" data-action="delete" data-preset="${preset.id}"><i class="fas fa-trash"></i> ${game.i18n.localize('vn.dialog.presetActionDelete')}</button>
+                    </div>
+                </div>
+                <hr class="vn-panel-section-divider">
+                <div class="vn-panel-section">
+                    <div class="vn-panel-info">
+                        ${preset.version ? `<span class="vn-panel-info-row"><i class="fas fa-code-branch"></i><span>v${preset.version}</span></span>` : ''}
+                        ${dateCreated ? `<span class="vn-panel-info-row"><i class="fas fa-calendar-plus"></i><span>${dateCreated}</span></span>` : ''}
+                        ${dateUpdated ? `<span class="vn-panel-info-row"><i class="fas fa-calendar-check"></i><span>${dateUpdated}</span></span>` : ''}
+                        ${preset.sceneName ? `<span class="vn-panel-info-row"><i class="fas fa-map-pin"></i><span>${preset.sceneName}</span></span>` : ''}
+                    </div>
+                </div>
+                <hr class="vn-panel-section-divider">
+                <div class="vn-panel-section">
+                    <label class="vn-panel-label">${game.i18n.localize('vn.dialog.panelLabelTags')}</label>
+                    <div class="vn-panel-tags-chips">${tagsChipsHtml}</div>
+                    <div class="vn-panel-tag-input-wrap">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input type="text" class="vn-panel-tag-input" placeholder="${game.i18n.localize('vn.dialog.tagAddPlaceholder')}" autocomplete="off" spellcheck="false" maxlength="32">
+                    </div>
+                    <div class="vn-panel-tag-dropdown">${suggestHtml}</div>
+                </div>
+            </div>`;
+    }
+
+    _attachPanelListeners(root) {
+        const panel = root.querySelector('.vn-preset-detail-panel');
+        if (!panel || panel._panelListenerAttached) return;
+        panel._panelListenerAttached = true;
+        const signal = this._dialogAbortCtrl?.signal;
+
+        panel.addEventListener('click', async (e) => {
+            if (e.target.closest('.vn-panel-close-btn')) {
+                this._selectedPresetId = null;
+                this._markSelectedItem(root, null);
+                this._renderPresetPanel(root, null);
+                return;
+            }
+
+            const rmBtn = e.target.closest('.vn-tag-rm-btn');
+            if (rmBtn) {
+                const presetId = this._selectedPresetId;
+                if (!presetId) return;
+                const preset = await VNPresets.load(presetId);
+                if (!preset) return;
+                const tags = [...(preset.tags || [])];
+                tags.splice(Number(rmBtn.dataset.index), 1);
+                const sorted = await VNPresets.setTags(presetId, tags);
+                if (sorted) this._refreshPresetList(root, sorted);
+                return;
+            }
+
+            const suggest = e.target.closest('.vn-panel-tag-suggest');
+            if (suggest) {
+                const presetId = this._selectedPresetId;
+                if (!presetId) return;
+                const tag = suggest.dataset.tag;
+                const preset = await VNPresets.load(presetId);
+                if (!preset) return;
+                const tags = [...(preset.tags || [])];
+                if (!tags.includes(tag)) {
+                    tags.push(tag);
+                    const sorted = await VNPresets.setTags(presetId, tags);
+                    if (sorted) this._refreshPresetList(root, sorted);
+                }
+                return;
+            }
+
+            const actionBtn = e.target.closest('.vn-panel-action[data-action]');
+            if (actionBtn) {
+                await this._handlePresetAction(actionBtn.dataset.action, actionBtn.dataset.preset, actionBtn, root);
+            }
+        }, { signal });
+
+        panel.addEventListener('input', (e) => {
+            if (!e.target.classList.contains('vn-panel-tag-input')) return;
+            const query = e.target.value.trim().toLowerCase();
+            const currentTags = new Set(
+                [...panel.querySelectorAll('.vn-panel-tags-chips .vn-tag-chip span')].map(el => el.textContent.trim())
+            );
+            const allTags = this._getAllExistingTags(root);
+            const available = allTags.filter(t => !currentTags.has(t));
+            const filtered = query ? available.filter(t => t.includes(query)) : available;
+            const dropdown = panel.querySelector('.vn-panel-tag-dropdown');
+            if (dropdown) {
+                dropdown.innerHTML = filtered.map(t =>
+                    `<button type="button" class="vn-panel-tag-suggest" data-tag="${t}">${t}</button>`
+                ).join('');
+            }
+        }, { signal });
+
+        panel.addEventListener('keydown', async (e) => {
+            if (e.target.classList.contains('vn-panel-tag-input')) {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                const presetId = this._selectedPresetId;
+                if (!presetId) return;
+                const val = e.target.value.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 32);
+                if (!val) return;
+                const preset = await VNPresets.load(presetId);
+                if (!preset) return;
+                const tags = [...(preset.tags || [])];
+                if (!tags.includes(val)) { tags.push(val); }
+                e.target.value = '';
+                const sorted = await VNPresets.setTags(presetId, tags);
+                if (sorted) this._refreshPresetList(root, sorted);
+                root.querySelector('.vn-preset-detail-panel')?.querySelector('.vn-panel-tag-input')?.focus();
+            } else if (e.target.classList.contains('vn-panel-name-input')) {
+                if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+                else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    const preset = await VNPresets.load(this._selectedPresetId);
+                    if (preset) e.target.value = preset.name;
+                    e.target.blur();
+                }
+            }
+        }, { signal });
+
+        panel.addEventListener('blur', async (e) => {
+            if (!e.target.classList.contains('vn-panel-name-input')) return;
+            const presetId = this._selectedPresetId;
+            if (!presetId) return;
+            const preset = await VNPresets.load(presetId);
+            if (!preset) return;
+            const newName = e.target.value.trim();
+            if (newName && newName !== preset.name) {
+                const sorted = await VNPresets.rename(presetId, newName);
+                if (sorted) this._refreshPresetList(root, sorted);
+            }
+        }, { capture: true, signal });
+
+        panel.addEventListener('contextmenu', async (e) => {
+            if (!e.target.closest('.vn-panel-tags-chips')) return;
+            const chip = e.target.closest('.vn-tag-chip');
+            if (!chip) return;
+            e.preventDefault();
+            const presetId = this._selectedPresetId;
+            if (!presetId) return;
+            const tag = chip.dataset.tag;
+            const preset = await VNPresets.load(presetId);
+            if (!preset) return;
+            const sorted = await VNPresets.setTags(presetId, (preset.tags || []).filter(t => t !== tag));
+            if (sorted) this._refreshPresetList(root, sorted);
+        }, { signal });
+    }
+
     async _handleGroupDelete(btn, root) {
         const groupKey = btn.dataset.groupKey;
         const label = groupKey || game.i18n.localize('vn.dialog.noScene');
@@ -1163,7 +1601,20 @@ export class VNDialogBuilder {
             : this._buildPresetItemsHtml(sorted);
 
         this._attachPresetListeners(root);
+        this._refreshTagFilterBar(root);
         this._applyPresetFilters(root);
+
+        if (this._selectedPresetId) {
+            const still = sorted.find(p => p.id === this._selectedPresetId);
+            if (still) {
+                this._markSelectedItem(root, this._selectedPresetId);
+                this._renderPresetPanel(root, still);
+            } else {
+                this._selectedPresetId = null;
+                this._renderPresetPanel(root, null);
+            }
+        }
+        this._attachPanelListeners(root);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1427,7 +1878,7 @@ export class VNDialogBuilder {
                 <button type="button" class="vn-tab-btn" data-tab="presets"><i class="fas fa-bookmark"></i> ${game.i18n.localize('vn.dialog.tabPresets')}</button>
                 <button type="button" class="vn-tab-btn" data-tab="adventure-io"><i class="fas fa-boxes-stacked"></i> ${game.i18n.localize('vn.dialog.tabAdventures')}</button>
                 <label class="vn-gm-only-toggle" title="${game.i18n.localize('vn.dialog.gmOnlyToggleTitle')}">
-                    <input type="checkbox" id="vn-gm-only-toggle">
+                    <input type="checkbox" id="vn-gm-only-toggle"><span class="vn-toggle-track"></span>
                     <i class="fas fa-eye-slash"></i> ${game.i18n.localize('vn.dialog.gmOnlyLabel')}
                 </label>
             </div>
@@ -1631,32 +2082,46 @@ export class VNDialogBuilder {
 
     _buildIOCardDetailed(preset, idPrefix, checked) {
         const cbId = `${idPrefix}-cb-${preset.id}`;
-        const allIds = [...(preset.leftIds || []), ...(preset.centerIds || []), ...(preset.rightIds || [])];
-        const actorsHtml = this._buildActorPips(allIds, 4);
         const bgSrc = preset.thumbnailData || (preset.background && preset.background !== 'none' ? preset.background : null);
-        const thumbHtml = bgSrc
-            ? `<img class="vn-io-card-bg-img" src="${bgSrc}" width="160" height="100" loading="lazy" decoding="async" alt="">`
-            : `<div class="vn-io-card-bg-placeholder"><i class="fas fa-image"></i></div>`;
+        const imgHtml = bgSrc
+            ? `<img class="vn-io-card-bg-img" src="${bgSrc}" loading="lazy" decoding="async" alt="">`
+            : `<div class="vn-io-card-bg-placeholder"><i class="fas fa-film"></i></div>`;
 
-        return `<div class="vn-io-card" data-preset-id="${preset.id}">
-            <div class="vn-io-card-thumb">${thumbHtml}</div>
-            <div class="vn-io-card-body">
-                <div class="vn-io-card-name" title="${preset.name}">${preset.name}</div>
-                ${actorsHtml ? `<div class="vn-io-card-actors">${actorsHtml}</div>` : ''}
-                <label class="vn-io-card-check"><input type="checkbox" class="vn-io-preset-cb" id="${cbId}" value="${preset.id}"${checked ? ' checked' : ''}></label>
+        const allIds = [...(preset.leftIds || []), ...(preset.centerIds || []), ...(preset.rightIds || [])];
+        const MAX_PIPS = 4;
+        const pipsHtml = allIds.length
+            ? `<div class="vn-io-card-pips">${
+                allIds.slice(0, MAX_PIPS).map(id => {
+                    const src = this._resolveActorImg(id, preset.portraitImages || {});
+                    const name = (preset.portraitNames || {})[id] || '';
+                    return `<img class="vn-io-actor-pip" src="${src}" loading="lazy" decoding="async" alt="${name}" title="${name}">`;
+                }).join('')
+              }${allIds.length > MAX_PIPS ? `<span class="vn-io-actor-more">+${allIds.length - MAX_PIPS}</span>` : ''}</div>`
+            : '';
+
+        return `<label class="vn-io-card" data-preset-id="${preset.id}">
+            <div class="vn-io-card-poster">
+                ${imgHtml}
+                ${pipsHtml}
+                <div class="vn-io-card-footer">
+                    <div class="vn-io-card-name" title="${preset.name}">${preset.name}</div>
+                </div>
+                <div class="vn-io-card-check-corner">
+                    <input type="checkbox" class="vn-io-preset-cb" id="${cbId}" value="${preset.id}"${checked ? ' checked' : ''}>
+                </div>
             </div>
-        </div>`;
+        </label>`;
     }
 
     _buildIORowCompact(preset, idPrefix, checked) {
         const cbId = `${idPrefix}-cb-${preset.id}`;
         const sceneTag = preset.sceneName
             ? `<span class="vn-io-row-scene"><i class="fas fa-map-pin"></i>${preset.sceneName}</span>` : '';
-        return `<div class="vn-io-row" data-preset-id="${preset.id}">
-            <label class="vn-io-row-check"><input type="checkbox" class="vn-io-preset-cb" id="${cbId}" value="${preset.id}"${checked ? ' checked' : ''}></label>
+        return `<label class="vn-io-row" data-preset-id="${preset.id}">
+            <input type="checkbox" class="vn-io-preset-cb" id="${cbId}" value="${preset.id}"${checked ? ' checked' : ''}>
             <span class="vn-io-row-name" title="${preset.name}">${preset.name}</span>
             ${sceneTag}
-        </div>`;
+        </label>`;
     }
 
     _buildActorPips(ids, maxVisible, portraitImages = {}) {

@@ -328,6 +328,22 @@ class VisualNovelScene {
         return result;
     }
 
+    static _normalizeFlipped(flipped) {
+        if (!flipped) return {};
+        const result = { ...flipped };
+        if (!canvas?.tokens) return result;
+        for (const [key, val] of Object.entries(flipped)) {
+            const base = stripDupSuffix(key);
+            if (!parseActorId(base)) {
+                const actorId = canvas.tokens.get(base)?.actor?.id;
+                if (actorId && result[`actor-${actorId}`] === undefined) {
+                    result[`actor-${actorId}`] = val;
+                }
+            }
+        }
+        return result;
+    }
+
     applyFlip(tokenId, flip) {
         this.state.flipped[tokenId] = flip;
         this._applyAllPortraitTransforms();
@@ -614,8 +630,9 @@ class VisualNovelScene {
             portraitScales: payload.portraitScales || {},
         });
 
-        // Normalize portrait scales: add actor-based aliases for any canvas token ID keys
+        // Normalize portrait scales and flip state: add actor-based aliases for any canvas token ID keys
         this.state.portraitScales = VisualNovelScene._normalizePortraitScales(this.state.portraitScales);
+        this.state.flipped = VisualNovelScene._normalizeFlipped(this.state.flipped);
 
         this._gmOnly = !!(payload.gmOnly) && emit && game.user.isGM;
 
@@ -674,7 +691,7 @@ class VisualNovelScene {
         if (payload.presetActors !== undefined) this.state.presetActors = [...(payload.presetActors || [])];
         if (payload.background != null) this.state.background = payload.background;
         if (payload.backgroundOverlay != null) this.state.backgroundOverlay = payload.backgroundOverlay;
-        if (payload.flipped !== undefined && payload.flipped !== null) this.state.flipped = { ...payload.flipped };
+        if (payload.flipped !== undefined && payload.flipped !== null) this.state.flipped = VisualNovelScene._normalizeFlipped({ ...payload.flipped });
         if (payload.visibility !== undefined && payload.visibility !== null) this.state.visibility = { ...payload.visibility };
         if (payload.portraitImages !== undefined && payload.portraitImages !== null) this.state.portraitImages = { ...payload.portraitImages };
         if (payload.portraitNames !== undefined && payload.portraitNames !== null) this.state.portraitNames = { ...payload.portraitNames };

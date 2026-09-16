@@ -10,7 +10,11 @@
    ══════════════════════════════════════════════════════════ */
 
 @import url('./vn-fx-base.css');
-@import url('./vn-fx-effects.css');
+@import url('./vn-fx-magic.css');
+@import url('./vn-fx-dark.css');
+@import url('./vn-fx-chaos.css');
+@import url('./vn-fx-nature.css');
+@import url('./vn-fx-special.css');
 @import url('./vn-particles.css');
 @import url('./vn-characters.css');
 @import url('./vn-fx-theming.css');

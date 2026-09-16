@@ -132,11 +132,13 @@ class VNPresets {
 
     static _migrated = false;
     static _cache = null;
+    static _migrationPromise = null;
 
     static invalidateCache() { this._cache = null; }
 
     static async getAll() {
         if (this._cache !== null) return this._cache;
+        if (this._migrationPromise) return this._migrationPromise;
         try {
             const raw = game.settings.get(MODULE_ID, this.SETTING_KEY) || {};
             if (this._migrated) { this._cache = raw; return raw; }
@@ -149,10 +151,11 @@ class VNPresets {
                 const ts = val.savedAt || Date.now();
                 migrated[id] = { ...val, id, name: key, createdAt: ts, updatedAt: ts };
             }
-            await game.settings.set(MODULE_ID, this.SETTING_KEY, migrated);
-            this._migrated = true;
-            this._cache = migrated;
-            return migrated;
+            this._migrationPromise = game.settings.set(MODULE_ID, this.SETTING_KEY, migrated)
+                .then(() => { this._migrated = true; this._cache = migrated; return migrated; })
+                .catch(() => ({}))
+                .finally(() => { this._migrationPromise = null; });
+            return this._migrationPromise;
         } catch { return {}; }
     }
 
@@ -200,24 +203,72 @@ class VNPresets {
         await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
     }
 
-    static _makeThumbnail(src, w = 160, h = 100) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                try {
-                    const cvs = document.createElement('canvas');
-                    cvs.width = w; cvs.height = h;
-                    const ctx = cvs.getContext('2d');
-                    const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
-                    const sw = img.naturalWidth * scale, sh = img.naturalHeight * scale;
-                    ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh);
-                    resolve(cvs.toDataURL('image/jpeg', 0.8));
-                } catch (e) { reject(e); }
-            };
-            img.onerror = reject;
-            img.src = src;
-        });
+    static _srcThumbName(src) {
+        let h = 0;
+        for (let i = 0; i < src.length; i++) h = (Math.imul(31, h) + src.charCodeAt(i)) | 0;
+        const base = src.split('/').pop().replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 32);
+        return `${base}_${Math.abs(h).toString(36)}.webp`;
+    }
+
+    static async _makeThumbnail(src, w = 240, h = 150) {
+        const ext = src.split('.').pop().split('?')[0].toLowerCase();
+        const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(ext);
+
+        const cvs = isVideo
+            ? await new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.crossOrigin = 'anonymous';
+                video.muted = true;
+                video.playsInline = true;
+                video.preload = 'metadata';
+                const capture = () => {
+                    try {
+                        if (!video.videoWidth || !video.videoHeight) return reject(new Error('no video dimensions'));
+                        const c = document.createElement('canvas');
+                        c.width = w; c.height = h;
+                        const ctx = c.getContext('2d');
+                        const scale = Math.max(w / video.videoWidth, h / video.videoHeight);
+                        const sw = video.videoWidth * scale, sh = video.videoHeight * scale;
+                        ctx.drawImage(video, (w - sw) / 2, (h - sh) / 2, sw, sh);
+                        video.src = '';
+                        resolve(c);
+                    } catch (e) { reject(e); }
+                };
+                video.addEventListener('seeked', capture, { once: true });
+                video.addEventListener('loadedmetadata', () => {
+                    video.currentTime = Math.min(0.5, (video.duration || 1) * 0.25);
+                }, { once: true });
+                video.addEventListener('error', reject, { once: true });
+                video.src = src;
+            })
+            : await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const c = document.createElement('canvas');
+                        c.width = w; c.height = h;
+                        const ctx = c.getContext('2d');
+                        const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+                        const sw = img.naturalWidth * scale, sh = img.naturalHeight * scale;
+                        ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh);
+                        resolve(c);
+                    } catch (e) { reject(e); }
+                };
+                img.onerror = reject;
+                img.src = src;
+            });
+
+        const blob = await new Promise((resolve, reject) =>
+            cvs.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', 0.82)
+        );
+        const file = new File([blob], this._srcThumbName(src), { type: 'image/webp' });
+        const dir = `worlds/${game.world.id}/player-queue-thumbnails`;
+        const FPImpl = foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+        try { await FPImpl.createDirectory('data', dir, {}); } catch {}
+        const result = await FPImpl.upload('data', dir, file, {}, { notify: false });
+        if (!result?.path) throw new Error('upload returned no path');
+        return result.path;
     }
 
     static async load(id) {
@@ -236,11 +287,23 @@ class VNPresets {
         return this._sortedFrom(presets);
     }
 
+    static async setTags(id, tags) {
+        const presets = await this.getAll();
+        if (!presets[id]) return null;
+        presets[id] = { ...presets[id], tags: tags.map(t => t.trim()).filter(Boolean), updatedAt: Date.now() };
+        await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
+        return this._sortedFrom(presets);
+    }
+
     static async update(id, sceneState) {
         const presets = await this.getAll();
         if (!presets[id]) return null;
-        const { id: pid, name, createdAt, sceneId, sceneName } = presets[id];
-        presets[id] = { ...sceneState.toPayload(), id: pid, name, version: game.modules.get(MODULE_ID)?.version ?? '0.0.0', createdAt, updatedAt: Date.now(), sceneId, sceneName };
+        const { id: pid, name, createdAt, sceneId, sceneName, thumbnailData: oldThumb } = presets[id];
+        let thumbnailData = oldThumb ?? null;
+        if (sceneState.background && sceneState.background !== 'none') {
+            try { thumbnailData = await this._makeThumbnail(sceneState.background); } catch {}
+        }
+        presets[id] = { ...sceneState.toPayload(), id: pid, name, version: game.modules.get(MODULE_ID)?.version ?? '0.0.0', createdAt, updatedAt: Date.now(), sceneId, sceneName, ...(thumbnailData ? { thumbnailData } : {}) };
         await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
         return this._sortedFrom(presets);
     }
@@ -293,7 +356,7 @@ class VNPresets {
         const store = {};
         for (const p of presets) {
             const id = p.id || foundry.utils.randomID();
-            store[id] = { ...p, id };
+            store[id] = applyMigrations({ ...p, id });
         }
         await game.settings.set(MODULE_ID, this.SETTING_KEY, store);
         this._cache = null;
