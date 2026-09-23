@@ -178,6 +178,93 @@ window.debugQueue = () => {
 
 window.openVisualNovelScene = () => window.visualNovelScene?.openSceneDialog();
 
+window.openScenePresets = async () => {
+    if (!game.user.isGM) return;
+
+    const vnScene = window.visualNovelScene;
+    if (!vnScene) { ui.notifications.warn('Visual Novel Scene не инициализирован'); return; }
+
+    const currentScene = canvas?.scene;
+    if (!currentScene) {
+        ui.notifications.warn(game.i18n.localize('vn.scenePresets.noScene'));
+        return;
+    }
+
+    const allPresets = await VNPresets.getSorted();
+    const scenePresets = allPresets.filter(p => p.sceneId === currentScene.id);
+
+    const gmOnlyLabel = game.i18n.localize('vn.dialog.gmOnlyLabel');
+    const gmOnlyTitle = game.i18n.localize('vn.dialog.gmOnlyToggleTitle');
+    const unnamedLabel = game.i18n.localize('vn.scenePresets.unnamed');
+
+    let listHtml;
+    if (scenePresets.length === 0) {
+        listHtml = `<p style="text-align:center;padding:32px 0;color:var(--vn-text-dim)">${game.i18n.localize('vn.scenePresets.empty')}</p>`;
+    } else {
+        const cards = scenePresets.map(p => {
+            const img = p.thumbnailData
+                ? `<img class="vn-preset-card-img" src="${p.thumbnailData}" loading="lazy" alt="">`
+                : `<div class="vn-preset-card-placeholder"><i class="fas fa-film"></i></div>`;
+            const name = p.name ?? unnamedLabel;
+            return `
+                <div class="vn-preset-card vn-sp-card" data-preset-id="${p.id}">
+                    <div class="vn-preset-card-poster">
+                        ${img}
+                        <div class="vn-preset-card-footer">
+                            <div class="vn-preset-card-name" title="${name.replace(/"/g, '&quot;')}">${name}</div>
+                        </div>
+                        <div class="vn-preset-card-overlay">
+                            <button type="button" class="vn-preset-card-launch" tabindex="-1">
+                                <i class="fas fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
+        listHtml = `<div class="vn-preset-cards">${cards}</div>`;
+    }
+
+    const content = `
+        <div class="vn-scene-dialog">
+            <div style="display:flex;align-items:center;padding:10px 12px 8px;border-bottom:1px solid var(--vn-border);gap:8px;flex-shrink:0">
+                <i class="fas fa-map" style="color:var(--vn-text-dim);flex-shrink:0"></i>
+                <span style="font-weight:600;color:var(--vn-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${currentScene.name}</span>
+                <label class="vn-gm-only-toggle" title="${gmOnlyTitle}">
+                    <input type="checkbox" id="vn-sp-gm-only">
+                    <span class="vn-toggle-track"></span>
+                    <i class="fas fa-eye-slash"></i> ${gmOnlyLabel}
+                </label>
+            </div>
+            <div style="padding:10px">${listHtml}</div>
+        </div>`;
+
+    const dialog = new foundry.applications.api.DialogV2({
+        window: {
+            title: game.i18n.format('vn.scenePresets.title', { scene: currentScene.name }),
+            icon: 'fas fa-theater-masks',
+            resizable: true,
+        },
+        position: { width: 560, height: 500 },
+        content,
+        buttons: [{ label: game.i18n.localize('Cancel'), action: 'cancel', icon: 'fas fa-times' }],
+    });
+
+    dialog.addEventListener('render', () => {
+        dialog.element.querySelectorAll('.vn-sp-card').forEach(card => {
+            card.addEventListener('click', async () => {
+                const presetId = card.dataset.presetId;
+                const gmOnly = dialog.element.querySelector('#vn-sp-gm-only')?.checked ?? false;
+                const preset = await VNPresets.load(presetId);
+                if (!preset) { ui.notifications.error(game.i18n.localize('vn.scenePresets.notFound')); return; }
+                try { dialog.close(); } catch {}
+                vnScene.createScene({ ...preset, gmOnly });
+            });
+        });
+    });
+
+    dialog.render({ force: true });
+};
+
 window.launchVNPreset = async (presetId) => {
     const scene = window.visualNovelScene;
     if (!scene) { ui.notifications.warn('Visual Novel Scene is not initialized'); return; }

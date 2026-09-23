@@ -34,8 +34,9 @@ class VNAtmosphere {
      * Инициализировать атмосферу
      * @param {HTMLElement} overlayEl — корневой overlay-элемент
      * @param {string} effect — ID эффекта из EFFECTS
+     * @param {number} particleIntensity — множитель количества частиц (1–20)
      */
-    init(overlayEl, effect = 'particles') {
+    init(overlayEl, effect = 'particles', particleIntensity = 1) {
         if (!overlayEl) return;
 
         this._active = true;
@@ -47,7 +48,7 @@ class VNAtmosphere {
         // Запуск подсистем
         const particleContainer = overlayEl.querySelector('.vn-particles');
         if (particleContainer) {
-            this._particles.fill(particleContainer, preset.particles);
+            this._particles.fill(particleContainer, preset.particles, particleIntensity);
         }
 
         this._visualFX.apply(overlayEl, preset.visual);

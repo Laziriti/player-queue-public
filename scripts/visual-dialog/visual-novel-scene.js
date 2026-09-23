@@ -2,7 +2,7 @@
 // visual-novel-scene.js — v4.0 (refactored core)
 // ============================================================
 
-import { VNSceneState, VNPresets } from './vn-state.js';
+import { VNSceneState, VNPresets, VNFolders } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { QueueBridge } from './vn-queue-bridge.js';
 import { VNTransitions } from './visual-effects/vn-transitions.js';
@@ -67,6 +67,7 @@ class VisualNovelScene {
         vnLog('initialized');
         this._registerSettings();
         VNPresets.register();
+        VNFolders.register();
         await this._bgManager.load();
         await this.loadFavoriteActors();
     }
@@ -448,7 +449,7 @@ class VisualNovelScene {
         const overlayEl = this.$overlay?.[0];
         if (overlayEl) {
             this._atmosphere.destroy();
-            this._atmosphere.init(overlayEl, effect);
+            this._atmosphere.init(overlayEl, effect, this.state.particleIntensity);
             this._updateAtmosphereButton();
             if (this.state.particlesForeground) overlayEl.classList.add('vn-particles-fg');
         }
@@ -619,6 +620,7 @@ class VisualNovelScene {
             portraitScale: payload.portraitScale ?? VisualNovelScene.DEFAULTS.PORTRAIT_SCALE,
             atmosphereEffect: payload.atmosphereEffect ?? 'particles',
             particlesForeground: payload.particlesForeground ?? false,
+            particleIntensity: payload.particleIntensity ?? 1,
             speakers: payload.speakers || {},
             flipped: payload.flipped || {},
             visibility: payload.visibility || null,
@@ -668,7 +670,7 @@ class VisualNovelScene {
         setTimeout(() => {
             this.activateSceneListeners();
             this._applyAllPortraitTransforms();
-            this._atmosphere.init(this.$overlay[0], this.state.atmosphereEffect);
+            this._atmosphere.init(this.$overlay[0], this.state.atmosphereEffect, this.state.particleIntensity);
             this._updateAtmosphereButton();
             if (this.state.particlesForeground) this.$overlay[0]?.classList.add('vn-particles-fg');
             this._animateInitialCharacters();
@@ -698,10 +700,17 @@ class VisualNovelScene {
         if (payload.portraitScales !== undefined && payload.portraitScales !== null) {
             this.state.portraitScales = VisualNovelScene._normalizePortraitScales({ ...payload.portraitScales });
         }
-        if (payload.atmosphereEffect != null && this.state.atmosphereEffect !== payload.atmosphereEffect) {
-            this.state.atmosphereEffect = payload.atmosphereEffect;
+        const intensityChanged = payload.particleIntensity != null && this.state.particleIntensity !== payload.particleIntensity;
+        if (intensityChanged) {
+            this.state.particleIntensity = Math.min(Math.max(Math.round(payload.particleIntensity), 1), 20);
+        }
+        if (payload.atmosphereEffect != null && (this.state.atmosphereEffect !== payload.atmosphereEffect || intensityChanged)) {
+            this.state.atmosphereEffect = payload.atmosphereEffect ?? this.state.atmosphereEffect;
             const overlayEl = this.$overlay?.[0];
-            if (overlayEl) { this._atmosphere.destroy(); this._atmosphere.init(overlayEl, payload.atmosphereEffect); this._updateAtmosphereButton(); }
+            if (overlayEl) { this._atmosphere.destroy(); this._atmosphere.init(overlayEl, this.state.atmosphereEffect, this.state.particleIntensity); this._updateAtmosphereButton(); }
+        } else if (intensityChanged) {
+            const overlayEl = this.$overlay?.[0];
+            if (overlayEl) { this._atmosphere.destroy(); this._atmosphere.init(overlayEl, this.state.atmosphereEffect, this.state.particleIntensity); this._updateAtmosphereButton(); }
         }
         if (payload.particlesForeground != null && this.state.particlesForeground !== payload.particlesForeground) {
             this.setParticlesForeground(payload.particlesForeground, false);

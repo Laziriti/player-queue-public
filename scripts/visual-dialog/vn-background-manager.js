@@ -163,7 +163,7 @@ export class VNBackgroundManager {
     // HTML Generation
     // ══════════════════════════════════════════════════════════
 
-    generateSelector(currentBg = null, currentOverlay = true, currentEffect = 'particles', currentParticlesFg = false) {
+    generateSelector(currentBg = null, currentOverlay = true, currentEffect = 'particles', currentParticlesFg = false, currentParticleIntensity = 1) {
         const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
         const effectOptions = VNAtmosphere.EFFECT_GROUPS
             .map(g => `<optgroup label="${game.i18n.localize(g.label)}">${
@@ -189,6 +189,11 @@ export class VNBackgroundManager {
                     <label class="vn-overlay-toggle">
                         <i class="fas fa-magic"></i>
                         <select id="atmosphere-effect" class="vn-atmosphere-select">${effectOptions}</select>
+                    </label>
+                    <label class="vn-overlay-toggle vn-particle-intensity-ctrl" title="${game.i18n.localize('vn.bg.particleIntensity')}">
+                        <i class="fas fa-snowflake"></i>
+                        <input type="range" id="particle-intensity" min="1" max="20" step="1" value="${currentParticleIntensity}">
+                        <span class="vn-particle-intensity-val">${currentParticleIntensity}</span>
                     </label>
                     ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${sceneBg}"><i class="fas fa-map"></i> ${game.i18n.localize('vn.bg.currentScene')}</button>` : ''}
                     <div class="vn-custom-path">
@@ -350,11 +355,18 @@ export class VNBackgroundManager {
             }, true);
 
             root.addEventListener('input', (e) => {
-                const slider = e.target.closest('.vn-bg-size-slider');
-                if (!slider) return;
-                const val = slider.value;
-                root.querySelector('.vn-background-gallery')?.style.setProperty('--vn-bg-thumb-w', val + 'px');
-                localStorage.setItem('player-queue.bg-thumb-size', val);
+                const sizeSlider = e.target.closest('.vn-bg-size-slider');
+                if (sizeSlider) {
+                    const val = sizeSlider.value;
+                    root.querySelector('.vn-background-gallery')?.style.setProperty('--vn-bg-thumb-w', val + 'px');
+                    localStorage.setItem('player-queue.bg-thumb-size', val);
+                    return;
+                }
+                const intensitySlider = e.target.closest('#particle-intensity');
+                if (intensitySlider) {
+                    const valEl = intensitySlider.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val');
+                    if (valEl) valEl.textContent = intensitySlider.value;
+                }
             });
         }
 
@@ -384,7 +396,8 @@ export class VNBackgroundManager {
         const currentOverlay = root.querySelector('#background-overlay')?.checked ?? true;
         const currentEffect = root.querySelector('#atmosphere-effect')?.value ?? 'particles';
         const currentParticlesFg = root.querySelector('#particles-foreground')?.checked ?? false;
-        const newHtml = this.generateSelector(currentBg, currentOverlay, currentEffect, currentParticlesFg);
+        const currentParticleIntensity = parseInt(root.querySelector('#particle-intensity')?.value) || 1;
+        const newHtml = this.generateSelector(currentBg, currentOverlay, currentEffect, currentParticlesFg, currentParticleIntensity);
         section.outerHTML = newHtml;
         this.attachListeners(root, (name) => this.refreshGallery(root, name));
     }

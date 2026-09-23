@@ -15,18 +15,27 @@ export class ParticleSystem {
      * Заполнить контейнер частицами указанного типа
      * @param {HTMLElement} container — элемент .vn-particles
      * @param {string} particleType — ключ из PARTICLE_CONFIGS
+     * @param {number} intensity — множитель количества частиц (1 = базовое, 1–20)
      */
-    fill(container, particleType) {
+    fill(container, particleType, intensity = 1) {
         this._container = container;
         this._type = particleType;
 
         container.innerHTML = '';
         if (particleType === 'none') return;
 
+        const safeIntensity = Math.min(Math.max(intensity, 1), 20);
+
+        // Призраки — особая структура: souls + vapor, offset-path анимация
+        if (particleType === 'ghosts') {
+            this._fillGhosts(container, safeIntensity);
+            return;
+        }
+
         // Специальные фабрики для нестандартных частиц
         const factory = this._getSpecialFactory(particleType);
         if (factory) {
-            this._fillWithFactory(container, factory);
+            this._fillWithFactory(container, factory, safeIntensity);
             return;
         }
 
@@ -34,7 +43,7 @@ export class ParticleSystem {
         const config = PARTICLE_CONFIGS[particleType];
         if (!config) return;
 
-        this._fillFromConfig(container, config);
+        this._fillFromConfig(container, config, safeIntensity);
     }
 
     /**
@@ -56,11 +65,12 @@ export class ParticleSystem {
 
     // ─── Private ─────────────────────────────────────────────
 
-    _fillFromConfig(container, config) {
+    _fillFromConfig(container, config, intensity = 1) {
         const { className, count, sizeMin, sizeRange, style } = config;
+        const actualCount = Math.round(count * intensity);
         const fragment = document.createDocumentFragment();
 
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < actualCount; i++) {
             const p = document.createElement('span');
             p.className = className;
             const size = sizeMin + Math.random() * sizeRange;
@@ -71,9 +81,10 @@ export class ParticleSystem {
         container.appendChild(fragment);
     }
 
-    _fillWithFactory(container, factory) {
+    _fillWithFactory(container, factory, intensity = 1) {
         const config = PARTICLE_CONFIGS[factory.type];
-        const count = config?.count || 80;
+        const baseCount = config?.count || 80;
+        const count = Math.round(baseCount * intensity);
         const fragment = document.createDocumentFragment();
 
         for (let i = 0; i < count; i++) {
@@ -93,11 +104,53 @@ export class ParticleSystem {
                 return { type: 'rain', create: () => this._createRainDrop() };
             case 'confetti':
                 return { type: 'confetti', create: () => this._createConfettiParticle() };
-            case 'ghosts':
-                return { type: 'ghosts', create: () => this._createGhostParticle() };
             default:
                 return null;
         }
+    }
+
+    _fillGhosts(container, intensity) {
+        const baseSouls = PARTICLE_CONFIGS.ghosts?.count || 42;
+        const soulCount = Math.min(Math.round(baseSouls * intensity), 84);
+        const fragment = document.createDocumentFragment();
+
+        // Туман — 8 размытых паров позади душ
+        const mist = document.createElement('div');
+        mist.className = 'vn-particle-ghost-mist';
+        for (let n = 0; n < 8; n++) {
+            const vapor = document.createElement('div');
+            vapor.className = 'vn-particle-ghost-vapor';
+            vapor.style.setProperty('--n', n);
+            vapor.appendChild(document.createElement('i'));
+            vapor.appendChild(document.createElement('i'));
+            mist.appendChild(vapor);
+        }
+        fragment.appendChild(mist);
+
+        // Обёртка для правильной работы :nth-child на душах
+        const soulsEl = document.createElement('div');
+        soulsEl.className = 'vn-particle-ghost-souls';
+
+        for (let n = 0; n < soulCount; n++) {
+            const soul = document.createElement('div');
+            soul.className = 'vn-particle-ghost-soul';
+            soul.style.setProperty('--n', n);
+
+            // 13 хвостовых сегментов: CSS :nth-of-type задаёт --t для каждого
+            for (let t = 0; t < 13; t++) {
+                soul.appendChild(document.createElement('i'));
+            }
+
+            // Голова (--t остаётся 0 из CSS)
+            const head = document.createElement('b');
+            head.className = 'vn-particle-ghost-head';
+            soul.appendChild(head);
+
+            soulsEl.appendChild(soul);
+        }
+
+        fragment.appendChild(soulsEl);
+        container.appendChild(fragment);
     }
 
     _createRainDrop() {
@@ -106,49 +159,6 @@ export class ParticleSystem {
         const w = 1 + Math.random();
         const h = 8 + Math.random() * 12;
         p.style.cssText = `width:${w}px;height:${h}px;left:${R(100)}%;top:-5%;animation-delay:${R(5)}s;animation-duration:${0.5 + R(0.8)}s;--drift:${RD(10)}px;opacity:0`;
-        return p;
-    }
-
-    _createGhostParticle() {
-        const p = document.createElement('span');
-        const roll = Math.random();
-
-        if (roll < 0.28) {
-            // Призрачная форма: крупный светящийся орб
-            const w = 50 + Math.random() * 45;
-            const h = w * (1.1 + Math.random() * 0.5);
-            const dur = 28 + Math.random() * 18;
-            const delay = Math.random() < 0.5 ? -(Math.random() * dur * 0.75) : R(10);
-            p.className = 'vn-particle vn-particle-ghost-form';
-            p.style.cssText = `width:${w}px;height:${h}px;` +
-                `left:${-5 + R(110)}%;top:${10 + R(75)}%;` +
-                `animation-delay:${delay}s;animation-duration:${dur}s;` +
-                `--drift:${RD(280)}px;--drift-y:${RD(150)}px;opacity:0`;
-        } else if (roll < 0.55) {
-            // Энергетический стример: широкий горизонтальный поток
-            const w = 100 + Math.random() * 130;
-            const h = 8 + Math.random() * 14;
-            const dur = 20 + Math.random() * 22;
-            const delay = Math.random() < 0.5 ? -(Math.random() * dur * 0.75) : R(8);
-            // Однонаправленный дрейф — эффект "реки"
-            const drift = (Math.random() < 0.5 ? 1 : -1) * (120 + Math.random() * 200);
-            p.className = 'vn-particle vn-particle-ghost-stream';
-            p.style.cssText = `width:${w}px;height:${h}px;` +
-                `left:${-10 + R(120)}%;top:${18 + R(66)}%;` +
-                `animation-delay:${delay}s;animation-duration:${dur}s;` +
-                `--drift:${drift}px;--drift-y:${RD(80)}px;opacity:0`;
-        } else {
-            // Блуждающий огонёк: маленький яркий шар
-            const s = 6 + Math.random() * 16;
-            const dur = 14 + Math.random() * 20;
-            const delay = Math.random() < 0.45 ? -(Math.random() * dur * 0.75) : R(7);
-            p.className = 'vn-particle vn-particle-ghost-wisp';
-            p.style.cssText = `width:${s}px;height:${s * (0.9 + Math.random() * 0.4)}px;` +
-                `left:${R(105)}%;top:${5 + R(88)}%;` +
-                `animation-delay:${delay}s;animation-duration:${dur}s;` +
-                `--drift:${RD(240)}px;--drift-y:${RD(200)}px;opacity:0`;
-        }
-
         return p;
     }
 

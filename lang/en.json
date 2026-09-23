@@ -48,7 +48,42 @@
       "d_chat": "embedded scene chat"
     },
     "bg": {
-      "particlesForeground": "Particles on top"
+      "particlesForeground": "Particles on top",
+      "particleIntensity": "Particle intensity"
+    },
+    "dialog": {
+      "btnClose": "Close",
+      "macroCreateWithIcon": "Create macro with icon",
+      "macroIconGenerating": "Generating icon...",
+      "macroCreated": "Macro \"{name}\" created",
+      "macroCreateFailed": "Failed to create macro with icon"
+    },
+    "folders": {
+      "modeScenes": "By scene",
+      "modeFolders": "Folders",
+      "breadcrumbRoot": "All presets",
+      "emptyFolder": "This folder is empty",
+      "btnNewFolder": "New folder",
+      "createFolderTitle": "Create folder",
+      "renameFolderTitle": "Rename folder",
+      "deleteFolderTitle": "Delete folder",
+      "deleteFolderConfirm": "Delete folder \"{name}\"? Its contents will be moved up one level.",
+      "folderNamePlaceholder": "Folder name",
+      "btnCreate": "Create",
+      "renameFolder": "Rename",
+      "deleteFolder": "Delete",
+      "toggleFavorite": "Toggle favorite",
+      "importChoiceTitle": "Folder structure",
+      "importChoiceMsg": "The import contains {count} folders. What should happen to the structure?",
+      "btnImportRecreateFolders": "Recreate structure",
+      "btnImportDropToRoot": "Drop all to root"
+    },
+    "scenePresets": {
+      "title": "Scene dialogs: {scene}",
+      "empty": "No presets linked to this scene",
+      "noScene": "No scene on canvas",
+      "unnamed": "Unnamed",
+      "notFound": "Preset not found"
     }
   }
 }

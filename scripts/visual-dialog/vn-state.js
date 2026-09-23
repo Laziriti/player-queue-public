@@ -26,6 +26,7 @@ class VNSceneState {
         this.portraitScale = 1.0;
         this.atmosphereEffect = 'particles';
         this.particlesForeground = false;
+        this.particleIntensity = 1;
         this.speakers = Object.fromEntries(VNSceneState.POSITIONS.map(p => [p, null]));
         this.flipped = {};
         this.visibility = {};
@@ -49,6 +50,7 @@ class VNSceneState {
             portraitScale: this.portraitScale,
             atmosphereEffect: this.atmosphereEffect,
             particlesForeground: this.particlesForeground,
+            particleIntensity: this.particleIntensity,
             speakers: { ...this.speakers },
             flipped: { ...this.flipped },
             visibility: { ...this.visibility },
@@ -71,6 +73,7 @@ class VNSceneState {
         this.portraitScale = Math.min(Math.max(p.portraitScale ?? 1.0, MIN), MAX);
         this.atmosphereEffect = p.atmosphereEffect ?? 'particles';
         this.particlesForeground = p.particlesForeground ?? false;
+        this.particleIntensity = Math.min(Math.max(Math.round(p.particleIntensity ?? 1), 1), 20);
         this.flipped = { ...(p.flipped ?? {}) };
         if (p.visibility) {
             this.visibility = { ...p.visibility };
@@ -165,7 +168,7 @@ class VNPresets {
             (b.createdAt || b.savedAt || 0) - (a.createdAt || a.savedAt || 0));
     }
 
-    static async save(name, sceneState, attachScene = true) {
+    static async save(name, sceneState, attachScene = true, opts = {}) {
         const presets = await this.getAll();
         const id = foundry.utils.randomID();
         const now = Date.now();
@@ -182,6 +185,7 @@ class VNPresets {
             updatedAt: now,
             sceneId: attachScene ? (canvas?.scene?.id ?? null) : null,
             sceneName: attachScene ? (canvas?.scene?.name ?? null) : null,
+            folderId: opts.folderId ?? null,
             ...(thumbnailData ? { thumbnailData } : {}),
         };
         await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
@@ -271,6 +275,73 @@ class VNPresets {
         return result.path;
     }
 
+    static async _makeIcon(src, size = 128) {
+        const iconName = this._srcThumbName(src);
+        const dir = `worlds/${game.world.id}/player-queue-macro-icons`;
+        const FPImpl = foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+
+        try {
+            const browsed = await FPImpl.browse('data', dir);
+            const iconPath = `${dir}/${iconName}`;
+            if ((browsed.files || []).includes(iconPath)) return iconPath;
+        } catch { /* dir doesn't exist yet */ }
+
+        const ext = src.split('.').pop().split('?')[0].toLowerCase();
+        const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(ext);
+        const w = size, h = size;
+
+        const cvs = isVideo
+            ? await new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.crossOrigin = 'anonymous'; video.muted = true;
+                video.playsInline = true; video.preload = 'metadata';
+                const capture = () => {
+                    try {
+                        if (!video.videoWidth || !video.videoHeight) return reject(new Error('no video dimensions'));
+                        const c = document.createElement('canvas');
+                        c.width = w; c.height = h;
+                        const ctx = c.getContext('2d');
+                        const scale = Math.max(w / video.videoWidth, h / video.videoHeight);
+                        const sw = video.videoWidth * scale, sh = video.videoHeight * scale;
+                        ctx.drawImage(video, (w - sw) / 2, (h - sh) / 2, sw, sh);
+                        video.src = ''; resolve(c);
+                    } catch (e) { reject(e); }
+                };
+                video.addEventListener('seeked', capture, { once: true });
+                video.addEventListener('loadedmetadata', () => {
+                    video.currentTime = Math.min(0.5, (video.duration || 1) * 0.25);
+                }, { once: true });
+                video.addEventListener('error', reject, { once: true });
+                video.src = src;
+            })
+            : await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const c = document.createElement('canvas');
+                        c.width = w; c.height = h;
+                        const ctx = c.getContext('2d');
+                        const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+                        const sw = img.naturalWidth * scale, sh = img.naturalHeight * scale;
+                        ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh);
+                        resolve(c);
+                    } catch (e) { reject(e); }
+                };
+                img.onerror = reject;
+                img.src = src;
+            });
+
+        const blob = await new Promise((resolve, reject) =>
+            cvs.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', 0.82)
+        );
+        const file = new File([blob], iconName, { type: 'image/webp' });
+        try { await FPImpl.createDirectory('data', dir, {}); } catch {}
+        const result = await FPImpl.upload('data', dir, file, {}, { notify: false });
+        if (!result?.path) throw new Error('icon upload returned no path');
+        return result.path;
+    }
+
     static async load(id) {
         return (await this.getAll())[id] ?? null;
     }
@@ -298,13 +369,22 @@ class VNPresets {
     static async update(id, sceneState) {
         const presets = await this.getAll();
         if (!presets[id]) return null;
-        const { id: pid, name, createdAt, sceneId, sceneName, thumbnailData: oldThumb } = presets[id];
+        const { id: pid, name, createdAt, sceneId, sceneName, thumbnailData: oldThumb, folderId } = presets[id];
         let thumbnailData = oldThumb ?? null;
         if (sceneState.background && sceneState.background !== 'none') {
             try { thumbnailData = await this._makeThumbnail(sceneState.background); } catch {}
         }
-        presets[id] = { ...sceneState.toPayload(), id: pid, name, version: game.modules.get(MODULE_ID)?.version ?? '0.0.0', createdAt, updatedAt: Date.now(), sceneId, sceneName, ...(thumbnailData ? { thumbnailData } : {}) };
+        presets[id] = { ...sceneState.toPayload(), id: pid, name, version: game.modules.get(MODULE_ID)?.version ?? '0.0.0', createdAt, updatedAt: Date.now(), sceneId, sceneName, folderId: folderId ?? null, ...(thumbnailData ? { thumbnailData } : {}) };
         await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
+        return this._sortedFrom(presets);
+    }
+
+    static async setFolder(id, folderId) {
+        const presets = await this.getAll();
+        if (!presets[id]) return null;
+        presets[id] = { ...presets[id], folderId: folderId || null, updatedAt: Date.now() };
+        await game.settings.set(MODULE_ID, this.SETTING_KEY, presets);
+        this._cache = presets;
         return this._sortedFrom(presets);
     }
 
@@ -370,4 +450,136 @@ class VNPresets {
     }
 }
 
-export { VNSceneState, VNPresets };
+class VNFolders {
+    static SETTING_KEY = 'vnFolders';
+    static _cache = null;
+
+    static register() {
+        for (const [key, cfg] of [
+            [this.SETTING_KEY,     { name: 'VN Scene Folders',    scope: 'world',  config: false, type: Object, default: {} }],
+            ['vnFolderFavorites',  { name: 'VN Folder Favorites', scope: 'client', config: false, type: Object, default: [] }],
+            ['vnPresetsGroupMode', { name: 'VN Presets Group Mode', scope: 'client', config: false, type: String, default: 'scenes' }],
+            ['vnPresetsViewMode',  { name: 'VN Presets View Mode',  scope: 'client', config: false, type: String, default: 'list'   }],
+        ]) {
+            try { game.settings.register(MODULE_ID, key, cfg); } catch {}
+        }
+    }
+
+    static invalidateCache() { this._cache = null; }
+
+    static getAll() {
+        if (this._cache !== null) return this._cache;
+        try { this._cache = game.settings.get(MODULE_ID, this.SETTING_KEY) || {}; } catch { this._cache = {}; }
+        return this._cache;
+    }
+
+    static get(id) { return this.getAll()[id] ?? null; }
+
+    static getChildren(parentId) {
+        const pid = parentId || null;
+        return Object.values(this.getAll()).filter(f => (f.parentId || null) === pid);
+    }
+
+    static getPath(folderId) {
+        if (!folderId) return [];
+        const folders = this.getAll();
+        const path = [];
+        let current = folders[folderId];
+        while (current) {
+            path.unshift(current);
+            current = current.parentId ? folders[current.parentId] : null;
+        }
+        return path;
+    }
+
+    static async create(name, parentId = null) {
+        const folders = this.getAll();
+        const id = foundry.utils.randomID();
+        const now = Date.now();
+        folders[id] = { id, name, parentId: parentId || null, createdAt: now, updatedAt: now };
+        await game.settings.set(MODULE_ID, this.SETTING_KEY, folders);
+        this._cache = folders;
+        return folders[id];
+    }
+
+    static async rename(id, name) {
+        const folders = this.getAll();
+        if (!folders[id]) return;
+        folders[id] = { ...folders[id], name, updatedAt: Date.now() };
+        await game.settings.set(MODULE_ID, this.SETTING_KEY, folders);
+        this._cache = folders;
+    }
+
+    static async delete(id) {
+        const folders = this.getAll();
+        if (!folders[id]) return;
+        const parentId = folders[id].parentId || null;
+
+        // Move subfolders to parent
+        for (const f of Object.values(folders)) {
+            if ((f.parentId || null) === id) {
+                folders[f.id] = { ...f, parentId, updatedAt: Date.now() };
+            }
+        }
+        delete folders[id];
+        await game.settings.set(MODULE_ID, this.SETTING_KEY, folders);
+        this._cache = folders;
+
+        // Move presets to parent
+        const presets = await VNPresets.getAll();
+        let changed = false;
+        for (const p of Object.values(presets)) {
+            if ((p.folderId || null) === id) {
+                presets[p.id] = { ...p, folderId: parentId, updatedAt: Date.now() };
+                changed = true;
+            }
+        }
+        if (changed) {
+            await game.settings.set(MODULE_ID, VNPresets.SETTING_KEY, presets);
+            VNPresets.invalidateCache();
+        }
+
+        // Remove from favorites
+        const favs = this.getFavorites();
+        const idx = favs.indexOf(id);
+        if (idx >= 0) {
+            favs.splice(idx, 1);
+            try { await game.settings.set(MODULE_ID, 'vnFolderFavorites', favs); } catch {}
+        }
+    }
+
+    static async move(id, newParentId) {
+        const folders = this.getAll();
+        if (!folders[id]) return;
+        // Prevent circular references
+        if (newParentId && this._isDescendant(newParentId, id)) return;
+        folders[id] = { ...folders[id], parentId: newParentId || null, updatedAt: Date.now() };
+        await game.settings.set(MODULE_ID, this.SETTING_KEY, folders);
+        this._cache = folders;
+    }
+
+    static _isDescendant(targetId, ancestorId) {
+        const folders = this.getAll();
+        let current = folders[targetId];
+        while (current) {
+            if ((current.parentId || null) === ancestorId) return true;
+            current = current.parentId ? folders[current.parentId] : null;
+        }
+        return false;
+    }
+
+    static getFavorites() {
+        try { return [...(game.settings.get(MODULE_ID, 'vnFolderFavorites') || [])]; } catch { return []; }
+    }
+
+    static async toggleFavorite(id) {
+        const favs = this.getFavorites();
+        const idx = favs.indexOf(id);
+        if (idx >= 0) favs.splice(idx, 1);
+        else favs.push(id);
+        try { await game.settings.set(MODULE_ID, 'vnFolderFavorites', favs); } catch {}
+        return idx < 0;
+    }
+}
+
+export { VNSceneState, VNPresets, VNFolders };

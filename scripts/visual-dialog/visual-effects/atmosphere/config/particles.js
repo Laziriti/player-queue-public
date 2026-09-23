@@ -196,6 +196,6 @@ export const PARTICLE_CONFIGS = {
     // Конфетти — фабрика в particle-system.js, здесь только count
     confetti: { count: 55 },
 
-    // Призраки — фабрика в particle-system.js, здесь только count
-    ghosts: { count: 50 },
+    // Призраки — _fillGhosts в particle-system.js, здесь только число душ
+    ghosts: { count: 42 },
 };

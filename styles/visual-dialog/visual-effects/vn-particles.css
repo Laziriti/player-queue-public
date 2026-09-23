@@ -716,103 +716,186 @@
 
 
 /* ══════════════════════════════════════════════════════════
-   GHOST FORMS (Призрачные формы — крупные орбы)
+   GHOST SOULS (Потоки-призраки v5 — offset-path)
+
+   Каждая «душа»: 13 хвостовых сегментов (<i>) + голова (<b>).
+   Все они идут по одной SVG-кривой с задержкой 0.073s/сегмент.
+   offset-rotate: auto — каждый сегмент поворачивается вдоль
+   касательной, поэтому весь хвост изгибается вместе с путём.
+
+   Пути заданы на .vn-particles и наследуются вниз по дереву.
    ══════════════════════════════════════════════════════════ */
 
-.vn-particle-ghost-form {
+.vn-particles {
+    --ghost-path-a: path("M -450 790 C 170 790 890 725 1410 550 C 1840 405 2140 175 2420 30");
+    --ghost-path-b: path("M -450 745 C 160 770 890 705 1420 520 C 1850 370 2150 160 2420 10");
+    --ghost-path-c: path("M -450 815 C 190 815 900 755 1430 565 C 1840 418 2150 190 2420 65");
+    --ghost-path-d: path("M -450 770 C 180 795 910 685 1430 515 C 1840 380 2130 140 2420 -10");
+}
+
+/* Обёртка для soul-элементов — нужна чтобы :nth-child считал только души */
+.vn-particle-ghost-souls {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.vn-particle-ghost-soul {
+    --path:       var(--ghost-path-a);
+    --duration:   calc(8.1s  + var(--n) * 0.047s);
+    --phase:      calc(-17s  - var(--n) * 1.379s);
+    --size:       1;
+    --brightness: 0.84;
+    --lane:       calc((var(--n) - 20.5) * 28px);
+
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--brightness);
+    transform: translateY(var(--lane));
+}
+
+/* Распределение по 4 путям */
+.vn-particle-ghost-soul:nth-child(4n + 2) { --path: var(--ghost-path-b); }
+.vn-particle-ghost-soul:nth-child(4n + 3) { --path: var(--ghost-path-c); }
+.vn-particle-ghost-soul:nth-child(4n + 4) { --path: var(--ghost-path-d); }
+
+/* Три глубины: дальние медленнее и темнее */
+.vn-particle-ghost-soul:nth-child(3n) {
+    --size:       0.72;
+    --brightness: 0.45;
+    --duration:   calc(10.8s + var(--n) * 0.036s);
+}
+.vn-particle-ghost-soul:nth-child(5n) {
+    --size:       1.24;
+    --brightness: 0.92;
+    --duration:   calc(7.2s  + var(--n) * 0.028s);
+}
+.vn-particle-ghost-soul:nth-child(7n) {
+    --size:       1.58;
+    --brightness: 1;
+    --duration:   calc(6.5s  + var(--n) * 0.024s);
+}
+
+/* Общие свойства всех сегментов и головы */
+.vn-particle-ghost-soul > i,
+.vn-particle-ghost-soul > b {
+    --t: 0;
+
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: block;
+
+    offset-path:   var(--path);
+    offset-rotate: auto;
+    offset-anchor: 83% 50%;
+
+    transform:        scale(var(--size));
+    transform-origin: 83% 50%;
+
+    animation: vnGhostTravel var(--duration) linear infinite;
+    animation-delay: calc(var(--phase) + var(--t) * 0.073s);
+}
+
+/* Хвостовые сегменты — сужаются и темнеют к хвосту */
+.vn-particle-ghost-soul > i {
+    width:         125px;
+    height:        calc(36px - var(--t) * 2.15px);
     border-radius: 50%;
     background: radial-gradient(
-        ellipse at 45% 40%,
-        rgba(225, 242, 255, 0.90) 0%,
-        rgba(178, 212, 255, 0.58) 28%,
-        rgba(122, 168, 242, 0.22) 58%,
-        transparent 100%
+        ellipse at 67% 50%,
+        rgb(238 241 245 / calc(0.67 - var(--t) * 0.035)) 0%,
+        rgb(194 202 212 / calc(0.45 - var(--t) * 0.025)) 33%,
+        rgb(151 164 179 / calc(0.23 - var(--t) * 0.014)) 53%,
+        transparent 74%
     );
-    filter: blur(12px);
-    animation-name: vnGhostFormDrift !important;
 }
 
-@keyframes vnGhostFormDrift {
-    0%   { transform: translate(0, 0) scale(0.8);
-           opacity: 0; }
-    12%  { transform: translate(calc(var(--drift)*0.08), calc(var(--drift-y)*0.08)) scale(1.0);
-           opacity: 0.65; }
-    30%  { transform: translate(calc(var(--drift)*0.28), calc(var(--drift-y)*0.28)) scale(1.08);
-           opacity: 0.60; }
-    55%  { transform: translate(calc(var(--drift)*0.55), calc(var(--drift-y)*0.55)) scale(0.92);
-           opacity: 0.44; }
-    78%  { transform: translate(calc(var(--drift)*0.78), calc(var(--drift-y)*0.78)) scale(1.02);
-           opacity: 0.28; }
-    100% { transform: translate(var(--drift), var(--drift-y)) scale(0.70);
-           opacity: 0; }
+/* --t: первый <i> = самый дальний хвост (t=13), последний = ближайший (t=1) */
+.vn-particle-ghost-soul > i:nth-of-type(1)  { --t: 13; }
+.vn-particle-ghost-soul > i:nth-of-type(2)  { --t: 12; }
+.vn-particle-ghost-soul > i:nth-of-type(3)  { --t: 11; }
+.vn-particle-ghost-soul > i:nth-of-type(4)  { --t: 10; }
+.vn-particle-ghost-soul > i:nth-of-type(5)  { --t:  9; }
+.vn-particle-ghost-soul > i:nth-of-type(6)  { --t:  8; }
+.vn-particle-ghost-soul > i:nth-of-type(7)  { --t:  7; }
+.vn-particle-ghost-soul > i:nth-of-type(8)  { --t:  6; }
+.vn-particle-ghost-soul > i:nth-of-type(9)  { --t:  5; }
+.vn-particle-ghost-soul > i:nth-of-type(10) { --t:  4; }
+.vn-particle-ghost-soul > i:nth-of-type(11) { --t:  3; }
+.vn-particle-ghost-soul > i:nth-of-type(12) { --t:  2; }
+.vn-particle-ghost-soul > i:nth-of-type(13) { --t:  1; }
+
+/* Голова — более яркая, со свечением */
+.vn-particle-ghost-head {
+    width:         39px;
+    height:        28px;
+    border-radius: 68% 44% 44% 68%;
+    background:
+        radial-gradient(
+            ellipse at 73% 50%,
+            #fff 0%, #f0f3f5 28%, #ccd3dc9c 55%, transparent 77%
+        ),
+        linear-gradient(90deg, transparent, #bbc5d06b 37%, #e5eaf0 76%, #f8fafb);
+    box-shadow:
+        0 0  7px #f4f7fac4,
+        0 0 19px #e0e8f080,
+        0 0 41px #bccbd942;
 }
 
+/* Туман — широкие размытые потоки позади душ */
+.vn-particle-ghost-mist {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.34;
+    filter: blur(24px);
+}
 
-/* ══════════════════════════════════════════════════════════
-   GHOST STREAMS (Энергетические потоки — горизонтальные)
-   Широкие горизонтальные стримеры, дрейфуют как реки энергии.
-   ══════════════════════════════════════════════════════════ */
+.vn-particle-ghost-vapor {
+    --path:     var(--ghost-path-b);
+    --duration: 12s;
+    --phase:    calc(-21s - var(--n) * 1.93s);
 
-.vn-particle-ghost-stream {
+    position: absolute;
+    inset: 0;
+    transform: translateY(calc((var(--n) - 3.5) * 150px));
+}
+
+.vn-particle-ghost-vapor:nth-child(even) {
+    --path:     var(--ghost-path-c);
+    --duration: 14s;
+}
+
+.vn-particle-ghost-vapor > i {
+    position: absolute;
+    left:          0;
+    top:           0;
+    display:       block;
+    width:         570px;
+    height:        105px;
     border-radius: 50%;
-    background: linear-gradient(
-        to right,
-        transparent 0%,
-        rgba(172, 210, 255, 0.38) 12%,
-        rgba(210, 235, 255, 0.72) 38%,
-        rgba(228, 244, 255, 0.82) 52%,
-        rgba(210, 235, 255, 0.72) 66%,
-        rgba(172, 210, 255, 0.38) 88%,
-        transparent 100%
-    );
-    filter: blur(8px);
-    animation-name: vnGhostStreamFlow !important;
-}
-
-@keyframes vnGhostStreamFlow {
-    0%   { transform: translate(0, 0) scaleY(1.0);
-           opacity: 0; }
-    12%  { transform: translate(calc(var(--drift)*0.10), calc(var(--drift-y)*0.10)) scaleY(1.25);
-           opacity: 0.58; }
-    40%  { transform: translate(calc(var(--drift)*0.38), calc(var(--drift-y)*0.38)) scaleY(0.82);
-           opacity: 0.50; }
-    65%  { transform: translate(calc(var(--drift)*0.65), calc(var(--drift-y)*0.65)) scaleY(1.35);
-           opacity: 0.44; }
-    85%  { transform: translate(calc(var(--drift)*0.85), calc(var(--drift-y)*0.85)) scaleY(0.88);
-           opacity: 0.26; }
-    100% { transform: translate(var(--drift), var(--drift-y)) scaleY(0.80);
-           opacity: 0; }
-}
-
-
-/* ══════════════════════════════════════════════════════════
-   GHOST WISPS (Блуждающие огоньки — мелкие)
-   ══════════════════════════════════════════════════════════ */
-
-.vn-particle-ghost-wisp {
-    border-radius: 50%;
+    offset-path:   var(--path);
+    offset-anchor: 80% 50%;
+    offset-rotate: auto;
     background: radial-gradient(
-        circle,
-        rgba(238, 250, 255, 0.96) 0%,
-        rgba(192, 224, 255, 0.68) 30%,
-        rgba(150, 190, 250, 0.26) 62%,
-        transparent 100%
+        ellipse at 65% 50%,
+        #d0d9e261,
+        #a8b7c534 35%,
+        transparent 73%
     );
-    filter: blur(4px);
-    animation-name: vnGhostWispDrift !important;
+    animation: vnGhostTravel var(--duration) linear infinite;
+    animation-delay: var(--phase);
 }
 
-@keyframes vnGhostWispDrift {
-    0%   { transform: translate(0, 0) scale(0.6);
-           opacity: 0; }
-    10%  { transform: translate(calc(var(--drift)*0.08), calc(var(--drift-y)*0.08)) scale(1.0);
-           opacity: 0.80; }
-    30%  { transform: translate(calc(var(--drift)*0.28), calc(var(--drift-y)*0.28)) scale(1.15);
-           opacity: 0.65; }
-    55%  { transform: translate(calc(var(--drift)*0.55), calc(var(--drift-y)*0.55)) scale(0.85);
-           opacity: 0.75; }
-    80%  { transform: translate(calc(var(--drift)*0.80), calc(var(--drift-y)*0.80)) scale(1.05);
-           opacity: 0.38; }
-    100% { transform: translate(var(--drift), var(--drift-y)) scale(0.5);
-           opacity: 0; }
+.vn-particle-ghost-vapor > i:nth-child(2) {
+    animation-delay: calc(var(--phase) - 6s);
+}
+
+@keyframes vnGhostTravel {
+    0%   { offset-distance: 0%;   opacity: 0; }
+    10%  { opacity: 1; }
+    87%  { opacity: 1; }
+    100% { offset-distance: 100%; opacity: 0; }
 }

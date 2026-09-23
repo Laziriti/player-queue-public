@@ -2,7 +2,7 @@
 // vn-dialog-builder.js — UI диалога настроек сцены
 // ============================================================
 
-import { VNSceneState, VNPresets, MODULE_ID } from './vn-state.js';
+import { VNSceneState, VNPresets, VNFolders, MODULE_ID } from './vn-state.js';
 import { VNAdventureIO } from './vn-adventure-io.js';
 import { stripDupSuffix, parseActorId, toActorTokenId, parsePlaylistUuid, FALLBACK_AVATAR } from './vn-id-utils.js';
 import { NAMEPLATE_CONFIGS, applyNameplateImage } from '../settings.js';
@@ -32,6 +32,10 @@ export class VNDialogBuilder {
         this._pendingFlipped = null;
         this._pendingScales = null;
         this._selectedPresetId = null;
+        this._presetsGroupMode = 'scenes';
+        this._currentFolderId = null;
+        this._ioModuleFolders = [];
+        this._tokenSearchQuery = '';
     }
 
     get dialog() { return this._dialog; }
@@ -50,10 +54,14 @@ export class VNDialogBuilder {
         this._pendingFlipped = null;
         this._pendingScales = null;
         this._selectedPresetId = null;
+        this._currentFolderId = null;
+        this._tokenSearchQuery = '';
         this._dialogAbortCtrl?.abort();
         this._dialogAbortCtrl = new AbortController();
         this._dropZones = new WeakSet();
         this._dragEls = new WeakSet();
+        try { this._presetsGroupMode = game.settings.get(MODULE_ID, 'vnPresetsGroupMode') || 'scenes'; } catch {}
+        try { this._presetViewMode = game.settings.get(MODULE_ID, 'vnPresetsViewMode') || 'list'; } catch {}
 
         const scene = this._scene;
         const tokens = canvas.tokens.placeables.filter(t => t.actor);
@@ -156,6 +164,7 @@ export class VNDialogBuilder {
         const overlay = root.querySelector('#background-overlay')?.checked ?? true;
         const effect = root.querySelector('#atmosphere-effect')?.value || 'particles';
         const particlesForeground = root.querySelector('#particles-foreground')?.checked ?? false;
+        const particleIntensity = parseInt(root.querySelector('#particle-intensity')?.value) || 1;
         const musicUuid = root.querySelector('#vn-music-uuid')?.value || null;
         const soundCues = this._gatherSoundCues(root);
 
@@ -177,14 +186,14 @@ export class VNDialogBuilder {
         if (isEdit) this._scene.updateSceneLayout({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
-            flipped: pendingFlipped ?? null, atmosphereEffect: effect, particlesForeground,
+            flipped: pendingFlipped ?? null, atmosphereEffect: effect, particlesForeground, particleIntensity,
             visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales ?? null, gmOnly, presetActors,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
-            flipped: pendingFlipped || {}, atmosphereEffect: effect, particlesForeground,
+            flipped: pendingFlipped || {}, atmosphereEffect: effect, particlesForeground, particleIntensity,
             visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales || {}, gmOnly, presetActors,
         });
@@ -205,6 +214,7 @@ export class VNDialogBuilder {
         this._setupHideButtons(root);
         this._setupMusicDrop(root);
         this._setupCueDrop(root);
+        this._attachCharacterControlListeners(root);
 
         if (isEdit && this._scene.state.isActive) {
             requestAnimationFrame(() => {
@@ -212,6 +222,40 @@ export class VNDialogBuilder {
                 this._setDefaults(root);
             });
         }
+    }
+
+    static _TOKEN_SIZE_KEY = 'player-queue:tokenCardSize';
+
+    _attachCharacterControlListeners(root) {
+        const signal = this._dialogAbortCtrl?.signal;
+
+        // Restore persisted card size and apply immediately
+        const savedSize = parseInt(localStorage.getItem(VNDialogBuilder._TOKEN_SIZE_KEY) || '48');
+        this._applyTokenCardSize(root, savedSize);
+        const slider = root.querySelector('.vn-token-size-slider');
+        if (slider) slider.value = savedSize;
+
+        root.querySelector('.vn-token-search')?.addEventListener('input', (e) => {
+            this._tokenSearchQuery = e.target.value.trim().toLowerCase();
+            this._applyTokenSearch(root);
+        }, { signal });
+
+        slider?.addEventListener('input', (e) => {
+            const size = parseInt(e.target.value);
+            this._applyTokenCardSize(root, size);
+            localStorage.setItem(VNDialogBuilder._TOKEN_SIZE_KEY, size);
+        }, { signal });
+    }
+
+    _applyTokenCardSize(root, size) {
+        root.querySelector('.vn-scene-dialog')?.style.setProperty('--vn-tok-size', size + 'px');
+    }
+
+    _applyTokenSearch(root) {
+        const q = this._tokenSearchQuery;
+        root.querySelectorAll('#available-tokens .vn-token-option, #scene-participants .vn-token-option').forEach(item => {
+            item.style.display = !q || (item.dataset.name || '').includes(q) ? '' : 'none';
+        });
     }
 
     _setupHideButtons(root) {
@@ -480,6 +524,8 @@ export class VNDialogBuilder {
         if (es) es.value = state.atmosphereEffect || 'particles';
         const pfg = root.querySelector('#particles-foreground');
         if (pfg) pfg.checked = state.particlesForeground ?? false;
+        const pi = root.querySelector('#particle-intensity');
+        if (pi) { pi.value = state.particleIntensity ?? 1; const piVal = pi.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val'); if (piVal) piVal.textContent = pi.value; }
 
         const defaultsUsed = new Set();
         for (const [tokenId, vis] of Object.entries(state.visibility ?? {})) {
@@ -567,6 +613,8 @@ export class VNDialogBuilder {
         if (effectSelect) effectSelect.value = preset.atmosphereEffect || 'particles';
         const pfgCheck = root.querySelector('#particles-foreground');
         if (pfgCheck) pfgCheck.checked = preset.particlesForeground ?? false;
+        const piCheck = root.querySelector('#particle-intensity');
+        if (piCheck) { piCheck.value = preset.particleIntensity ?? 1; const piVal = piCheck.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val'); if (piVal) piVal.textContent = piCheck.value; }
 
         root.querySelectorAll('.vn-token-option').forEach(el => {
             el.dataset.visibility = 'visible';
@@ -604,11 +652,12 @@ export class VNDialogBuilder {
         const currentSceneName = canvas?.scene?.name ?? null;
         const currentSceneId = canvas?.scene?.id ?? null;
         const hasCurrent = !!currentSceneId;
-        const itemsHtml = this._buildPresetItemsHtml(sorted)
-            || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noSavedPresets')}</div>`;
+        const isFolder = this._presetsGroupMode === 'folders';
+        const itemsHtml = isFolder
+            ? this._buildFolderViewHtml(sorted)
+            : (this._buildPresetItemsHtml(sorted) || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noSavedPresets')}</div>`);
 
         return `<div class="vn-presets-content">
-            <div class="vn-presets-description"><i class="fas fa-info-circle"></i> ${game.i18n.localize('vn.dialog.presetsDescription')}</div>
             <div class="vn-presets-split">
                 <div class="vn-presets-list-pane">
                     <div class="vn-preset-save-row">
@@ -621,6 +670,10 @@ export class VNDialogBuilder {
                         <button type="button" class="vn-btn vn-btn-sm vn-btn-accent vn-preset-save-btn"><i class="fas fa-save"></i> ${game.i18n.localize('vn.dialog.btnSavePreset')}</button>
                     </div>
                     <div class="vn-preset-controls">
+                        <div class="vn-presets-mode-toggle">
+                            <button type="button" class="vn-btn vn-btn-xs vn-presets-groupmode-btn${!isFolder ? ' active' : ''}" data-groupmode="scenes" title="${game.i18n.localize('vn.folders.modeScenes')}"><i class="fas fa-map-pin"></i></button>
+                            <button type="button" class="vn-btn vn-btn-xs vn-presets-groupmode-btn${isFolder ? ' active' : ''}" data-groupmode="folders" title="${game.i18n.localize('vn.folders.modeFolders')}"><i class="fas fa-folder"></i></button>
+                        </div>
                         <input type="text" class="vn-preset-search" placeholder="${game.i18n.localize('vn.dialog.searchPresetsPlaceholder')}">
                         <div class="vn-preset-view-toggle">
                             <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this._presetViewMode === 'list' ? 'active' : ''}" data-view="list" title="${game.i18n.localize('vn.dialog.viewList')}"><i class="fas fa-list"></i></button>
@@ -647,7 +700,7 @@ export class VNDialogBuilder {
                         <i class="fas fa-list"></i> ${game.i18n.localize('vn.dialog.savedPresetsHeader')} <span class="vn-badge">${sorted.length}</span>
                         <button type="button" class="vn-btn vn-btn-xs vn-preset-regen-all" title="${game.i18n.localize('vn.dialog.regenAllTitle')}"><i class="fas fa-camera"></i> ${game.i18n.localize('vn.dialog.btnRegenAll')}</button>
                     </div>
-                    <div class="vn-preset-list${this._presetViewMode === 'cards' ? ' vn-preset-list--cards' : ''}">${itemsHtml}</div>
+                    <div class="vn-preset-list${this._presetViewMode === 'cards' ? ' vn-preset-list--cards' : ''}${isFolder ? ' vn-preset-list--folder-mode' : ''}">${itemsHtml}</div>
                 </div>
                 <div class="vn-preset-detail-panel">
                     <div class="vn-panel-empty-hint"><i class="fas fa-hand-point-left"></i><span>${game.i18n.localize('vn.dialog.panelSelectHint')}</span></div>
@@ -664,6 +717,108 @@ export class VNDialogBuilder {
             case 'za':     return copy.sort((a, b) => (b.name || '').localeCompare(a.name || '', 'ru'));
             default:       return copy.sort((a, b) => (b.createdAt || b.savedAt || 0) - (a.createdAt || a.savedAt || 0));
         }
+    }
+
+    _buildFolderViewHtml(allPresets) {
+        const favorites = VNFolders.getFavorites();
+        const currentId = this._currentFolderId || null;
+        const isCards = this._presetViewMode === 'cards';
+
+        // Breadcrumb
+        const path = VNFolders.getPath(currentId);
+        const breadcrumbSegs = [
+            `<span class="vn-folder-breadcrumb-seg${!currentId ? ' --active' : ''}" data-folder-id="">${game.i18n.localize('vn.folders.breadcrumbRoot')}</span>`
+        ];
+        for (const seg of path) {
+            const isLast = seg.id === currentId;
+            breadcrumbSegs.push(`<span class="vn-folder-breadcrumb-sep">/</span>`);
+            breadcrumbSegs.push(`<span class="vn-folder-breadcrumb-seg${isLast ? ' --active' : ''}" data-folder-id="${seg.id}">${seg.name}</span>`);
+        }
+
+        // Favorites quick-access strip
+        const favFolders = favorites.map(id => VNFolders.get(id)).filter(Boolean);
+        const favStrip = favFolders.length
+            ? `<div class="vn-folder-favorites-strip">${
+                favFolders.map(f => `<button type="button" class="vn-btn vn-btn-xs vn-folder-fav-shortcut${f.id === currentId ? ' --active' : ''}" data-folder-id="${f.id}"><i class="fas fa-star"></i> ${f.name}</button>`).join('')
+              }</div>`
+            : '';
+
+        const toolbar = `<div class="vn-folder-toolbar">
+            <button type="button" class="vn-btn vn-btn-xs vn-folder-new-btn"><i class="fas fa-folder-plus"></i> ${game.i18n.localize('vn.folders.btnNewFolder')}</button>
+        </div>`;
+
+        // When search is active — show flat list of all matching presets across all folders
+        if (this._presetSearchQuery) {
+            const q = this._presetSearchQuery.toLowerCase();
+            const matched = allPresets.filter(p =>
+                (p.name || '').toLowerCase().includes(q) || (p.tags || []).some(t => t.toLowerCase().includes(q))
+            );
+            const presetsHtml = matched.length
+                ? (isCards
+                    ? `<div class="vn-preset-cards">${matched.map(p => this._buildPresetCardHtml(p, true)).join('')}</div>`
+                    : matched.map(p => this._buildPresetListItemHtml(p, false, true)).join(''))
+                : `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.nothingFound')}</div>`;
+            return `<div class="vn-folder-breadcrumb">${breadcrumbSegs.join('')}</div>
+                ${favStrip}
+                ${toolbar}
+                ${presetsHtml}`;
+        }
+
+        // Child folders of current folder (favorites first, then alphabetical)
+        const children = VNFolders.getChildren(currentId);
+        children.sort((a, b) => {
+            const aFav = favorites.includes(a.id), bFav = favorites.includes(b.id);
+            if (aFav !== bFav) return aFav ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+
+        // Count direct children (presets + subfolders) per folder
+        const childCountByFolder = {};
+        for (const p of allPresets) {
+            const fid = p.folderId || null;
+            if (fid) childCountByFolder[fid] = (childCountByFolder[fid] || 0) + 1;
+        }
+        for (const f of Object.values(VNFolders.getAll())) {
+            const pid = f.parentId || null;
+            if (pid) childCountByFolder[pid] = (childCountByFolder[pid] || 0) + 1;
+        }
+
+        const folderItems = children.map(f => {
+            const isFav = favorites.includes(f.id);
+            const cnt = childCountByFolder[f.id] || 0;
+            const badge = cnt > 0 ? `<span class="vn-folder-child-count">${cnt}</span>` : '';
+            return `<div class="vn-folder-item${isFav ? ' --favorite' : ''}${isCards ? ' --card' : ''}" data-folder-id="${f.id}" draggable="true">
+                <i class="fas fa-folder${isFav ? '-open' : ''}"></i>
+                <span class="vn-folder-item-name">${f.name}</span>
+                ${badge}
+                <button type="button" class="vn-btn vn-btn-xs vn-folder-fav-btn${isFav ? ' --active' : ''}" data-folder-id="${f.id}" title="${game.i18n.localize('vn.folders.toggleFavorite')}"><i class="fas fa-star"></i></button>
+                <button type="button" class="vn-btn vn-btn-xs vn-folder-rename-btn" data-folder-id="${f.id}" title="${game.i18n.localize('vn.folders.renameFolder')}"><i class="fas fa-pencil"></i></button>
+                <button type="button" class="vn-btn vn-btn-xs vn-btn-danger vn-folder-delete-btn" data-folder-id="${f.id}" title="${game.i18n.localize('vn.folders.deleteFolder')}"><i class="fas fa-trash"></i></button>
+            </div>`;
+        }).join('');
+
+        const folderItemsHtml = isCards && children.length
+            ? `<div class="vn-folder-items-grid">${folderItems}</div>`
+            : folderItems;
+
+        // Preset items in current folder (cards are draggable for drop-to-folder)
+        const folderPresets = allPresets.filter(p => (p.folderId ?? null) === currentId);
+        const presetsHtml = folderPresets.length
+            ? (isCards
+                ? `<div class="vn-preset-cards">${folderPresets.map(p => this._buildPresetCardHtml(p, true)).join('')}</div>`
+                : folderPresets.map(p => this._buildPresetListItemHtml(p, false, true)).join(''))
+            : '';
+
+        const emptyHint = !children.length && !folderPresets.length
+            ? `<div class="vn-empty-hint">${game.i18n.localize('vn.folders.emptyFolder')}</div>`
+            : '';
+
+        return `<div class="vn-folder-breadcrumb">${breadcrumbSegs.join('')}</div>
+            ${favStrip}
+            ${toolbar}
+            ${folderItemsHtml}
+            ${presetsHtml}
+            ${emptyHint}`;
     }
 
     _buildPresetItemsHtml(sortedPresets) {
@@ -707,7 +862,7 @@ export class VNDialogBuilder {
         }).join('');
     }
 
-    _buildPresetListItemHtml(p, grouped = false) {
+    _buildPresetListItemHtml(p, grouped = false, draggable = false) {
         const sceneTag = (!grouped && p.sceneName)
             ? `<span class="vn-preset-scene-tag"><i class="fas fa-map-pin"></i>${p.sceneName}</span>`
             : '';
@@ -727,7 +882,7 @@ export class VNDialogBuilder {
         const tagsHtml = p.tags?.length
             ? `<div class="vn-preset-tags">${p.tags.map(t => `<span class="vn-tag-chip" data-tag="${t}">${t}</span>`).join('')}</div>`
             : '';
-        return `<div class="vn-preset-item" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}" data-tags="${(p.tags || []).join(',')}">
+        return `<div class="vn-preset-item" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}" data-tags="${(p.tags || []).join(',')}"${draggable ? ' draggable="true"' : ''}>
             <div class="vn-preset-info">
                 <span class="vn-preset-name" title="${p.name}">${p.name}</span>
                 ${metaHtml}${tagsHtml}
@@ -736,7 +891,7 @@ export class VNDialogBuilder {
         </div>`;
     }
 
-    _buildPresetCardHtml(p) {
+    _buildPresetCardHtml(p, draggable = false) {
         const bgSrc = p.thumbnailData || (p.background && p.background !== 'none' ? p.background : null);
         const imgHtml = bgSrc
             ? `<img class="vn-preset-card-img" src="${bgSrc}" loading="lazy" decoding="async" alt="">`
@@ -759,7 +914,7 @@ export class VNDialogBuilder {
             ? `<i class="fas fa-wrench" title="${game.i18n.format('vn.dialog.presetMigrationHint', { count: pendingMigrations })}"></i>`
             : '';
         const verHtml = (p.version || pendingMigrations)
-            ? `<div class="vn-preset-card-ver">${migrationIcon}${p.version ? `v${p.version}` : ''}</div>`
+            ? `<div class="vn-preset-card-ver${pendingMigrations ? ' --migration' : ''}">${migrationIcon}${p.version ? `v${p.version}` : ''}</div>`
             : '';
 
         const MAX_CARD_TAGS = 3;
@@ -769,7 +924,7 @@ export class VNDialogBuilder {
             ? `<div class="vn-preset-tags">${visibleTags.map(t => `<span class="vn-tag-chip" data-tag="${t}">${t}</span>`).join('')}${hiddenCount > 0 ? `<span class="vn-preset-tags-more">+${hiddenCount}</span>` : ''}</div>`
             : '';
 
-        return `<div class="vn-preset-card" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}" data-tags="${(p.tags || []).join(',')}">
+        return `<div class="vn-preset-card" data-preset="${p.id}" data-preset-name="${p.name}" data-scene-id="${p.sceneId || ''}" data-tags="${(p.tags || []).join(',')}"${draggable ? ' draggable="true"' : ''}>
             <div class="vn-preset-card-poster">
                 ${imgHtml}
                 ${pipsHtml}
@@ -867,6 +1022,7 @@ export class VNDialogBuilder {
             backgroundOverlay: root.querySelector('#background-overlay')?.checked ?? true,
             atmosphereEffect: root.querySelector('#atmosphere-effect')?.value || 'particles',
             particlesForeground: root.querySelector('#particles-foreground')?.checked ?? false,
+            particleIntensity: parseInt(root.querySelector('#particle-intensity')?.value) || 1,
             portraitScale: scene.state.portraitScale,
             portraitScales: remappedScales,
             visibility: visibilityData,
@@ -952,7 +1108,11 @@ export class VNDialogBuilder {
 
         root.querySelector('.vn-preset-search')?.addEventListener('input', (e) => {
             this._presetSearchQuery = e.target.value.trim();
-            this._applyPresetFilters(root);
+            if (this._presetsGroupMode === 'folders') {
+                this._refreshPresetList(root);
+            } else {
+                this._applyPresetFilters(root);
+            }
         }, { signal });
 
         const filterBtn = root.querySelector('.vn-preset-scene-filter');
@@ -1000,11 +1160,23 @@ export class VNDialogBuilder {
 
         this._refreshTagFilterBar(root);
 
+        root.querySelectorAll('.vn-presets-groupmode-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                this._presetsGroupMode = btn.dataset.groupmode;
+                this._currentFolderId = null;
+                root.querySelectorAll('.vn-presets-groupmode-btn').forEach(b => b.classList.toggle('active', b.dataset.groupmode === this._presetsGroupMode));
+                try { await game.settings.set(MODULE_ID, 'vnPresetsGroupMode', this._presetsGroupMode); } catch {}
+                this._refreshPresetList(root);
+            }, { signal });
+        });
+
         root.querySelectorAll('.vn-preset-view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this._presetViewMode = btn.dataset.view;
                 root.querySelectorAll('.vn-preset-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === this._presetViewMode));
+                try { game.settings.set(MODULE_ID, 'vnPresetsViewMode', this._presetViewMode); } catch {}
                 this._refreshPresetList(root);
             }, { signal });
         });
@@ -1048,7 +1220,8 @@ export class VNDialogBuilder {
             if (!name) return;
             const attachScene = root.querySelector('#vn-preset-scene-pin')?.classList.contains('active') ?? true;
             const gatheredState = this._gatherDialogState(root);
-            await VNPresets.save(name, gatheredState, attachScene);
+            const saveOpts = this._presetsGroupMode === 'folders' ? { folderId: this._currentFolderId } : {};
+            await VNPresets.save(name, gatheredState, attachScene, saveOpts);
             if (this._scene.state.isActive) this._scene.state.presetActors = [...gatheredState.presetActors];
             nameInput.value = '';
             this._refreshPresetList(root);
@@ -1075,6 +1248,100 @@ export class VNDialogBuilder {
             e.preventDefault();
             e.stopPropagation();
 
+            // Folder breadcrumb nav
+            const breadcrumbSeg = e.target.closest('.vn-folder-breadcrumb-seg');
+            if (breadcrumbSeg) {
+                this._currentFolderId = breadcrumbSeg.dataset.folderId || null;
+                this._refreshPresetList(root);
+                return;
+            }
+
+            // Folder action buttons (check before folder item nav)
+            const folderNewBtn = e.target.closest('.vn-folder-new-btn');
+            if (folderNewBtn) {
+                const name = await this._promptFolderName(root, game.i18n.localize('vn.folders.createFolderTitle'));
+                if (name) {
+                    await VNFolders.create(name, this._currentFolderId);
+                    this._refreshPresetList(root);
+                }
+                return;
+            }
+
+            const folderFavBtn = e.target.closest('.vn-folder-fav-btn');
+            if (folderFavBtn) {
+                await VNFolders.toggleFavorite(folderFavBtn.dataset.folderId);
+                this._refreshPresetList(root);
+                return;
+            }
+
+            const folderRenameBtn = e.target.closest('.vn-folder-rename-btn');
+            if (folderRenameBtn) {
+                const folderId = folderRenameBtn.dataset.folderId;
+                const folder = VNFolders.get(folderId);
+                if (!folder) return;
+                const itemEl = folderRenameBtn.closest('.vn-folder-item');
+                const nameSpan = itemEl?.querySelector('.vn-folder-item-name');
+                if (!nameSpan || nameSpan.querySelector('input')) return;
+                const currentName = folder.name;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentName;
+                input.className = 'vn-folder-rename-input';
+                nameSpan.textContent = '';
+                nameSpan.appendChild(input);
+                input.focus();
+                input.select();
+                let done = false;
+                const commit = async () => {
+                    if (done) return;
+                    done = true;
+                    const newName = input.value.trim() || currentName;
+                    if (newName !== currentName) await VNFolders.rename(folderId, newName);
+                    this._refreshPresetList(root);
+                };
+                input.addEventListener('blur', commit, { once: true });
+                input.addEventListener('keydown', async (ev) => {
+                    if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+                    if (ev.key === 'Escape') { done = true; nameSpan.textContent = currentName; }
+                });
+                return;
+            }
+
+            const folderDeleteBtn = e.target.closest('.vn-folder-delete-btn');
+            if (folderDeleteBtn) {
+                const folderId = folderDeleteBtn.dataset.folderId;
+                const folder = VNFolders.get(folderId);
+                if (!folder) return;
+                const confirmed = await foundry.applications.api.DialogV2.confirm({
+                    window: { title: game.i18n.localize('vn.folders.deleteFolderTitle') },
+                    classes: ['vn-confirm-dialog'],
+                    content: `<p>${game.i18n.format('vn.folders.deleteFolderConfirm', { name: folder.name })}</p>`,
+                    yes: { label: game.i18n.localize('vn.dialog.btnDelete'), icon: 'fas fa-trash' },
+                    no: { label: game.i18n.localize('vn.dialog.btnCancel') },
+                });
+                if (!confirmed) return;
+                await VNFolders.delete(folderId);
+                if (this._currentFolderId === folderId) this._currentFolderId = folder.parentId || null;
+                this._refreshPresetList(root);
+                return;
+            }
+
+            // Favorites shortcut navigation
+            const favShortcut = e.target.closest('.vn-folder-fav-shortcut');
+            if (favShortcut) {
+                this._currentFolderId = favShortcut.dataset.folderId || null;
+                this._refreshPresetList(root);
+                return;
+            }
+
+            // Folder navigation — click on folder item (not on a button)
+            const folderItem = e.target.closest('.vn-folder-item');
+            if (folderItem && !e.target.closest('button')) {
+                this._currentFolderId = folderItem.dataset.folderId || null;
+                this._refreshPresetList(root);
+                return;
+            }
+
             const tagChip = e.target.closest('.vn-tag-chip[data-tag]');
             if (tagChip && !tagChip.closest('.vn-tag-popover')) {
                 const tag = tagChip.dataset.tag;
@@ -1096,6 +1363,51 @@ export class VNDialogBuilder {
 
             const item = e.target.closest('.vn-preset-item, .vn-preset-card');
             if (item?.dataset.preset) this._selectPreset(root, item.dataset.preset);
+        }, { signal: this._dialogAbortCtrl?.signal });
+
+        // Folder drag-and-drop
+        listEl.addEventListener('dragstart', (e) => {
+            const folderItem = e.target.closest('.vn-folder-item');
+            if (folderItem) {
+                e.dataTransfer.setData('text/plain', 'folder:' + folderItem.dataset.folderId);
+                e.dataTransfer.effectAllowed = 'move';
+                return;
+            }
+            const presetItem = e.target.closest('.vn-preset-item[draggable], .vn-preset-card[draggable]');
+            if (presetItem) {
+                e.dataTransfer.setData('text/plain', 'preset:' + presetItem.dataset.preset);
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        }, { signal: this._dialogAbortCtrl?.signal });
+
+        listEl.addEventListener('dragover', (e) => {
+            const target = e.target.closest('.vn-folder-item, .vn-folder-breadcrumb-seg');
+            if (target) { e.preventDefault(); target.classList.add('--drag-over'); }
+        }, { signal: this._dialogAbortCtrl?.signal });
+
+        listEl.addEventListener('dragleave', (e) => {
+            e.target.closest('.vn-folder-item, .vn-folder-breadcrumb-seg')?.classList.remove('--drag-over');
+        }, { signal: this._dialogAbortCtrl?.signal });
+
+        listEl.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            const targetFolder = e.target.closest('.vn-folder-item');
+            const targetBreadcrumb = e.target.closest('.vn-folder-breadcrumb-seg');
+            const targetId = targetFolder?.dataset.folderId || targetBreadcrumb?.dataset.folderId || null;
+            targetFolder?.classList.remove('--drag-over');
+            targetBreadcrumb?.classList.remove('--drag-over');
+
+            const raw = e.dataTransfer.getData('text/plain');
+            if (!raw) return;
+            if (raw.startsWith('folder:')) {
+                const folderId = raw.slice(7);
+                if (folderId === targetId) return;
+                await VNFolders.move(folderId, targetId);
+            } else if (raw.startsWith('preset:')) {
+                const presetId = raw.slice(7);
+                await VNPresets.setFolder(presetId, targetId);
+            }
+            this._refreshPresetList(root);
         }, { signal: this._dialogAbortCtrl?.signal });
     }
 
@@ -1152,6 +1464,7 @@ export class VNDialogBuilder {
                 const preset = await VNPresets.load(presetId);
                 if (!preset) return;
                 const code = `// ${preset.name}\nawait window.launchVNPreset("${preset.id}");`;
+                const hasBg = preset.background && preset.background !== 'none';
                 const dlg = new foundry.applications.api.DialogV2({
                     window: { title: game.i18n.format('vn.dialog.macroDialogTitle', { name: preset.name }) },
                     classes: ['vn-confirm-dialog'],
@@ -1161,6 +1474,7 @@ export class VNDialogBuilder {
                             <textarea readonly class="vn-macro-code" rows="2" spellcheck="false">${code}</textarea>
                             <button type="button" class="vn-btn vn-btn-accent vn-macro-copy-btn" title="${game.i18n.localize('vn.dialog.macroCopyBtn')}"><i class="fas fa-copy"></i></button>
                         </div>
+                        ${hasBg ? `<button type="button" class="vn-btn vn-btn-accent vn-macro-icon-btn"><i class="fas fa-image"></i> ${game.i18n.localize('vn.dialog.macroCreateWithIcon')}</button>` : ''}
                     </div>`,
                     buttons: [{ action: 'close', label: game.i18n.localize('vn.dialog.btnClose'), default: true }],
                     rejectClose: false,
@@ -1173,6 +1487,22 @@ export class VNDialogBuilder {
                         ui.notifications.info(game.i18n.localize('vn.dialog.macroCopied'));
                     });
                     textarea?.addEventListener('click', () => textarea.select());
+                    const iconBtn = dlg.element?.querySelector('.vn-macro-icon-btn');
+                    iconBtn?.addEventListener('click', async () => {
+                        iconBtn.disabled = true;
+                        iconBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${game.i18n.localize('vn.dialog.macroIconGenerating')}`;
+                        try {
+                            const iconPath = await VNPresets._makeIcon(preset.background);
+                            await Macro.create({ name: preset.name, type: 'script', command: code, img: iconPath });
+                            ui.notifications.info(game.i18n.format('vn.dialog.macroCreated', { name: preset.name }));
+                            dlg.close();
+                        } catch (e) {
+                            console.error('VN: Failed to create macro with icon:', e);
+                            ui.notifications.error(game.i18n.localize('vn.dialog.macroCreateFailed'));
+                            iconBtn.disabled = false;
+                            iconBtn.innerHTML = `<i class="fas fa-image"></i> ${game.i18n.localize('vn.dialog.macroCreateWithIcon')}`;
+                        }
+                    });
                 });
                 break;
             }
@@ -1587,6 +1917,58 @@ export class VNDialogBuilder {
         this._rebuildExportList(root);
     }
 
+    async _promptFolderName(root, title) {
+        return new Promise(resolve => {
+            let value = '', submitted = false;
+            const dlg = new foundry.applications.api.DialogV2({
+                window: { title },
+                classes: ['vn-confirm-dialog'],
+                content: `<div style="padding:6px 0"><input type="text" class="vn-folder-name-input" placeholder="${game.i18n.localize('vn.folders.folderNamePlaceholder')}" style="width:100%;box-sizing:border-box" autofocus></div>`,
+                buttons: [
+                    { action: 'create', label: game.i18n.localize('vn.folders.btnCreate'), icon: 'fas fa-folder-plus', default: true },
+                    { action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel') },
+                ],
+                rejectClose: false,
+                submit: (action) => {
+                    submitted = true;
+                    resolve(action === 'create' ? value : '');
+                },
+            });
+            dlg.addEventListener('close', () => { if (!submitted) resolve(''); }, { once: true });
+            dlg.render({ force: true }).then(() => {
+                const inp = dlg.element?.querySelector('.vn-folder-name-input');
+                if (inp) {
+                    inp.focus();
+                    inp.addEventListener('input', e => { value = e.target.value.trim(); });
+                }
+            });
+        });
+    }
+
+    async _promptFolderImportChoice(importedFolders) {
+        if (!importedFolders.length) return { importFolders: false };
+        const choice = await new Promise(resolve => {
+            const dlg = new foundry.applications.api.DialogV2({
+                window: { title: game.i18n.localize('vn.folders.importChoiceTitle') },
+                classes: ['vn-confirm-dialog'],
+                content: `<p>${game.i18n.format('vn.folders.importChoiceMsg', { count: importedFolders.length })}</p>`,
+                buttons: [
+                    { action: 'recreate', label: game.i18n.localize('vn.folders.btnImportRecreateFolders'), icon: 'fas fa-folder-tree', default: true },
+                    { action: 'drop', label: game.i18n.localize('vn.folders.btnImportDropToRoot'), icon: 'fas fa-list' },
+                    { action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel') },
+                ],
+                rejectClose: false,
+                submit: result => resolve(result),
+            });
+            dlg.addEventListener('close', () => resolve('cancel'), { once: true });
+            dlg.render({ force: true });
+        });
+        if (!choice || choice === 'cancel') return null;
+        return choice === 'recreate'
+            ? { importFolders: true, folders: importedFolders }
+            : { importFolders: false };
+    }
+
     async _refreshPresetList(root, sorted = null) {
         if (!sorted) sorted = await VNPresets.getSorted();
         const listEl = root.querySelector('.vn-preset-list');
@@ -1595,10 +1977,16 @@ export class VNDialogBuilder {
         const badge = root.querySelector('.vn-preset-list-header .vn-badge');
         if (badge) badge.textContent = sorted.length;
 
+        const isFolder = this._presetsGroupMode === 'folders';
         listEl.classList.toggle('vn-preset-list--cards', this._presetViewMode === 'cards');
-        listEl.innerHTML = sorted.length === 0
-            ? `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noSavedPresets')}</div>`
-            : this._buildPresetItemsHtml(sorted);
+        listEl.classList.toggle('vn-preset-list--folder-mode', isFolder);
+        if (isFolder) {
+            listEl.innerHTML = this._buildFolderViewHtml(sorted);
+        } else {
+            listEl.innerHTML = sorted.length === 0
+                ? `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noSavedPresets')}</div>`
+                : this._buildPresetItemsHtml(sorted);
+        }
 
         this._attachPresetListeners(root);
         this._refreshTagFilterBar(root);
@@ -1851,11 +2239,12 @@ export class VNDialogBuilder {
         const currentBg = sceneState?.background || null;
         const currentEffect = sceneState?.atmosphereEffect || 'particles';
         const currentParticlesFg = sceneState?.particlesForeground ?? false;
+        const currentParticleIntensity = sceneState?.particleIntensity ?? 1;
         const currentMusicUuid = sceneState?.musicUuid || null;
         const currentSoundCues = sceneState?.soundCues || [];
 
         const favHTML = scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean).map(a => VNDialogBuilder.generateActorToken(a)).join('');
-        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${t.id}" data-actor-id="${t.actor.id}" data-type="token" data-visibility="visible">
+        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${t.id}" data-actor-id="${t.actor.id}" data-type="token" data-visibility="visible" data-name="${t.name.toLowerCase()}">
             <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
             <div class="vn-token-preview"><img src="${t.actor.img || t.document.texture.src}" alt="${t.name}" loading="lazy"><div class="vn-token-name">${t.name}</div></div></div>`).join('');
 
@@ -1885,6 +2274,13 @@ export class VNDialogBuilder {
             <div class="vn-tab-panel active" data-tab="characters">
                 <div class="vn-dialog-layout">
                     <div class="vn-dialog-main">
+                        <div class="vn-characters-controls">
+                            <input type="text" class="vn-token-search" placeholder="${game.i18n.localize('vn.dialog.tokenSearchPlaceholder')}">
+                            <div class="vn-token-size-control">
+                                <i class="fas fa-expand-arrows-alt"></i>
+                                <input type="range" class="vn-token-size-slider" min="32" max="80" step="4" value="48">
+                            </div>
+                        </div>
                         <details class="vn-collapsible" open>
                             <summary class="vn-collapsible-header"><i class="fas fa-map-marker-alt"></i> ${game.i18n.localize('vn.dialog.tokensOnScene')} <span class="vn-badge">${tokens.length}</span><i class="fas fa-chevron-down vn-chevron"></i></summary>
                             <div class="vn-collapsible-body"><div class="vn-available-tokens" id="available-tokens">${tokensHTML || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noTokensOnScene')}</div>`}</div></div>
@@ -1912,7 +2308,7 @@ export class VNDialogBuilder {
                 </div>
             </div>
             <div class="vn-tab-panel" data-tab="background">
-                ${scene._bgManager.generateSelector(currentBg, currentOverlay, currentEffect, currentParticlesFg)}
+                ${scene._bgManager.generateSelector(currentBg, currentOverlay, currentEffect, currentParticlesFg, currentParticleIntensity)}
             </div>
             <div class="vn-tab-panel" data-tab="music">
                 ${this._generateMusicTab(currentMusicUuid, currentSoundCues)}
@@ -2215,7 +2611,9 @@ export class VNDialogBuilder {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
                 this._ioSelectedModuleId = moduleId;
-                this._ioModulePresets = await VNAdventureIO.fetchPresets(moduleId, mod.presetsFile);
+                const fetchedData = await VNAdventureIO.fetchPresets(moduleId, mod.presetsFile);
+                this._ioModulePresets = fetchedData.presets;
+                this._ioModuleFolders = fetchedData.folders;
                 this._renderModulesList(root);
                 this._renderImportPresets(root);
             });
@@ -2381,6 +2779,7 @@ export class VNDialogBuilder {
             this._ioFoundModules = VNAdventureIO.scanModules();
             this._ioSelectedModuleId = null;
             this._ioModulePresets = [];
+            this._ioModuleFolders = [];
             this._renderModulesList(root);
             const importPresets = root.querySelector('#vn-io-import-presets');
             if (importPresets) importPresets.innerHTML = '';
@@ -2445,16 +2844,20 @@ export class VNDialogBuilder {
 
                 if (!choice || choice === 'cancel') return;
 
+                const importedFolders = Array.isArray(data.folders) ? data.folders : [];
+                const folderOpts = await this._promptFolderImportChoice(importedFolders);
+                if (folderOpts === null) return;
+
                 let added = 0;
                 if (choice === 'replace') {
-                    await VNPresets.replaceAll(presets);
-                    added = presets.length;
+                    await game.settings.set(MODULE_ID, VNPresets.SETTING_KEY, {});
+                    VNPresets.invalidateCache();
+                    added = await VNAdventureIO.mergeImport(presets, true, folderOpts);
                 } else if (choice === 'overwrite') {
-                    added = await VNAdventureIO.mergeImport(fresh);
-                    await VNAdventureIO.mergeImport(dupes, true);
-                    added += dupes.length;
+                    added = await VNAdventureIO.mergeImport(fresh, false, folderOpts);
+                    added += await VNAdventureIO.mergeImport(dupes, true, folderOpts);
                 } else {
-                    added = await VNAdventureIO.mergeImport(fresh);
+                    added = await VNAdventureIO.mergeImport(fresh, false, folderOpts);
                 }
                 ui.notifications.info(game.i18n.format('vn.dialog.importedPresets', {count: added}));
                 this._refreshPresetList(root);
@@ -2473,41 +2876,39 @@ export class VNDialogBuilder {
 
             const { fresh, dupes } = await VNAdventureIO.classifyImport(toImport);
 
-            if (!dupes.length) {
-                const added = await VNAdventureIO.mergeImport(fresh);
-                ui.notifications.info(game.i18n.format('vn.dialog.importedPresets', {count: added}));
-                this._refreshPresetList(root);
-                return;
+            let choice = 'new-only';
+            if (dupes.length) {
+                const bodyLines = [
+                    fresh.length ? game.i18n.format('vn.dialog.freshPresetsAdded', {count: fresh.length}) : null,
+                    game.i18n.format('vn.dialog.dupesExist', {count: dupes.length}),
+                ].filter(Boolean).map(l => `<p style="margin:4px 0">${l}</p>`).join('');
+
+                const buttons = [
+                    ...(fresh.length ? [{ action: 'new-only', label: game.i18n.format('vn.dialog.btnImportFreshCount', {count: fresh.length}), icon: 'fas fa-plus', default: true }] : []),
+                    { action: 'overwrite', label: game.i18n.format('vn.dialog.btnOverwriteAllCount', {count: toImport.length}), icon: 'fas fa-sync', default: !fresh.length },
+                    { action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel'), icon: 'fas fa-times' },
+                ];
+
+                choice = await new Promise(resolve => {
+                    const dlg = new foundry.applications.api.DialogV2({
+                        window: { title: game.i18n.localize('vn.dialog.importPresetsDialogTitle') },
+                        classes: ['vn-confirm-dialog'],
+                        content: `<div style="padding:6px 0">${bodyLines}</div>`,
+                        buttons,
+                        rejectClose: false,
+                        submit: result => resolve(result),
+                    });
+                    dlg.addEventListener('close', () => resolve('cancel'), { once: true });
+                    dlg.render({ force: true });
+                });
+                if (!choice || choice === 'cancel') return;
             }
 
-            const bodyLines = [
-                fresh.length ? game.i18n.format('vn.dialog.freshPresetsAdded', {count: fresh.length}) : null,
-                game.i18n.format('vn.dialog.dupesExist', {count: dupes.length}),
-            ].filter(Boolean).map(l => `<p style="margin:4px 0">${l}</p>`).join('');
-
-            const buttons = [
-                ...(fresh.length ? [{ action: 'new-only', label: game.i18n.format('vn.dialog.btnImportFreshCount', {count: fresh.length}), icon: 'fas fa-plus', default: true }] : []),
-                { action: 'overwrite', label: game.i18n.format('vn.dialog.btnOverwriteAllCount', {count: toImport.length}), icon: 'fas fa-sync', default: !fresh.length },
-                { action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel'), icon: 'fas fa-times' },
-            ];
-
-            const choice = await new Promise(resolve => {
-                const dlg = new foundry.applications.api.DialogV2({
-                    window: { title: game.i18n.localize('vn.dialog.importPresetsDialogTitle') },
-                    classes: ['vn-confirm-dialog'],
-                    content: `<div style="padding:6px 0">${bodyLines}</div>`,
-                    buttons,
-                    rejectClose: false,
-                    submit: result => resolve(result),
-                });
-                dlg.addEventListener('close', () => resolve('cancel'), { once: true });
-                dlg.render({ force: true });
-            });
-
-            if (!choice || choice === 'cancel') return;
+            const folderOpts = await this._promptFolderImportChoice(this._ioModuleFolders);
+            if (folderOpts === null) return;
 
             const presetsToImport = choice === 'new-only' ? fresh : toImport;
-            const added = await VNAdventureIO.mergeImport(presetsToImport, choice === 'overwrite');
+            const added = await VNAdventureIO.mergeImport(presetsToImport, choice === 'overwrite', folderOpts);
             ui.notifications.info(game.i18n.format('vn.dialog.importedPresets', {count: added}));
             this._refreshPresetList(root);
         });
@@ -2560,7 +2961,7 @@ export class VNDialogBuilder {
     static generateActorToken(actor) {
         const id = actor.id || actor._id;
         const img = actor.img || actor.prototypeToken?.texture?.src || FALLBACK_AVATAR;
-        return `<div class="vn-token-option" draggable="true" data-actor-id="${id}" data-token-id="" data-type="actor" data-visibility="visible">
+        return `<div class="vn-token-option" draggable="true" data-actor-id="${id}" data-token-id="" data-type="actor" data-visibility="visible" data-name="${actor.name.toLowerCase()}">
             <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
             <div class="vn-token-preview"><img src="${img}" alt="${actor.name}" loading="lazy"><div class="vn-token-name">${actor.name}</div></div></div>`;
     }

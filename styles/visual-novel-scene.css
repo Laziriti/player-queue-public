@@ -1840,7 +1840,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 
 .vn-token-preview img {
-    width: 48px; height: 48px;
+    width: var(--vn-tok-size, 48px); height: var(--vn-tok-size, 48px);
     object-fit: cover;
     border-radius: var(--vn-radius-sm);
     border: 1px solid rgba(255,255,255,0.08);
@@ -1849,7 +1849,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-token-name {
     font-size: 0.7em;
     text-align: center;
-    max-width: 60px;
+    max-width: calc(var(--vn-tok-size, 48px) + 12px);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1904,6 +1904,47 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-token-option[data-visibility="hidden"] .vn-token-name,
 .vn-token-option[data-visibility="name-hidden"] .vn-token-name {
     color: var(--vn-danger);
+}
+
+/* ── Character controls (search + card size) ── */
+
+.vn-characters-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 8px;
+}
+
+.vn-characters-controls .vn-token-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 26px;
+    padding: 0 8px;
+    background: rgba(0 0 0 / 0.3);
+    border: 1px solid rgba(255 255 255 / 0.12);
+    border-radius: var(--vn-radius-sm, 4px);
+    color: var(--vn-text, #ddd);
+    font-size: 0.82em;
+}
+
+.vn-characters-controls .vn-token-search::placeholder {
+    color: var(--vn-text-muted, #666);
+}
+
+.vn-token-size-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    color: var(--vn-text-muted, #777);
+    font-size: 0.75em;
+}
+
+.vn-token-size-slider {
+    width: 72px;
+    height: 4px;
+    accent-color: var(--vn-accent, #b49050);
+    cursor: pointer;
 }
 
 .vn-available-tokens {
@@ -1972,6 +2013,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     flex-direction: column;
     gap: 4px;
     min-height: 60px;
+    max-height: clamp(150px, 45vh, 500px);
     flex: 1;
     overflow-y: auto;
     padding: 6px;
@@ -1979,7 +2021,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 
 .vn-favorites-section .vn-token-option { width: 100%; }
 .vn-favorites-section .vn-token-preview { flex-direction: row; gap: 6px; }
-.vn-favorites-section .vn-token-preview img { width: 32px; height: 32px; }
+.vn-favorites-section .vn-token-preview img { width: var(--vn-tok-size, 48px); height: var(--vn-tok-size, 48px); }
 .vn-favorites-section .vn-token-name { max-width: 90px; }
 
 .vn-favorites-empty {
@@ -2162,6 +2204,28 @@ body.vn-dragging .vn-token-option { transition: none; }
     width: 72px;
     accent-color: var(--vn-accent);
     cursor: pointer;
+}
+
+.vn-particle-intensity-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.8;
+    transition: opacity var(--vn-transition);
+    cursor: default;
+}
+.vn-particle-intensity-ctrl:hover { opacity: 1; }
+.vn-particle-intensity-ctrl > .fas { font-size: 0.75em; color: var(--vn-text-dim); }
+.vn-particle-intensity-ctrl input[type="range"] {
+    width: 72px;
+    accent-color: var(--vn-accent);
+    cursor: pointer;
+}
+.vn-particle-intensity-val {
+    min-width: 1.5em;
+    text-align: center;
+    font-size: 0.8em;
+    color: var(--vn-text-dim);
 }
 
 .vn-background-gallery {
@@ -3007,6 +3071,8 @@ body.vn-dragging .vn-token-option { transition: none; }
 
 .vn-macro-copy-btn { align-self: stretch; }
 
+.vn-macro-icon-btn { width: 100%; justify-content: center; }
+
 /* ── Scene pin toggle in save row ── */
 
 .vn-preset-scene-pin {
@@ -3199,6 +3265,10 @@ body.vn-dragging .vn-token-option { transition: none; }
     border-radius: 10px;
     line-height: 1.6;
     pointer-events: none;
+}
+
+.vn-preset-card-ver.--migration {
+    color: #d4a020;
 }
 
 .vn-preset-card-overlay {
@@ -3885,5 +3955,213 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-chat-panel #chat-form,
 .vn-chat-panel .chat-form {
     flex: 0 0 auto;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Folder system
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Group mode toggle ── */
+
+.vn-presets-mode-toggle {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+.vn-presets-groupmode-btn.active {
+    background: var(--vn-accent-dim);
+    border-color: var(--vn-accent);
+    color: var(--vn-accent);
+}
+
+/* ── Folder breadcrumb ── */
+
+.vn-folder-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 4px 6px;
+    background: rgba(0 0 0 / 0.2);
+    border-radius: 4px;
+    font-size: 0.8em;
+    color: var(--vn-text-muted, #aaa);
+    margin-bottom: 4px;
+}
+.vn-folder-breadcrumb-seg {
+    cursor: pointer;
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+}
+.vn-folder-breadcrumb-seg:hover {
+    background: var(--vn-accent-dim);
+    color: var(--vn-accent);
+}
+.vn-folder-breadcrumb-seg.--active {
+    color: var(--vn-text, #eee);
+    font-weight: 600;
+    cursor: default;
+}
+.vn-folder-breadcrumb-sep {
+    color: var(--vn-text-muted, #777);
+    user-select: none;
+}
+.vn-folder-breadcrumb-seg.--drag-over {
+    background: var(--vn-accent-dim);
+    outline: 1px dashed var(--vn-accent);
+}
+
+/* ── Folder toolbar ── */
+
+.vn-folder-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 0 4px;
+}
+
+/* ── Folder item ── */
+
+.vn-folder-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(255 255 255 / 0.03);
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+}
+.vn-folder-item:hover {
+    background: rgba(255 255 255 / 0.07);
+    border-color: rgba(255 255 255 / 0.08);
+}
+.vn-folder-item.--favorite {
+    border-color: rgba(var(--vn-accent-rgb, 180, 140, 80) / 0.3);
+}
+.vn-folder-item.--drag-over {
+    background: var(--vn-accent-dim);
+    border-color: var(--vn-accent);
+    outline: 1px dashed var(--vn-accent);
+}
+.vn-folder-item > .fas {
+    color: var(--vn-accent, #b49050);
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+}
+.vn-folder-item-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85em;
+}
+.vn-folder-child-count {
+    font-size: 0.75em;
+    padding: 1px 5px;
+    border-radius: 8px;
+    background: rgba(255 255 255 / 0.1);
+    color: var(--vn-text-muted, #aaa);
+    flex-shrink: 0;
+}
+.vn-folder-item button {
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+}
+.vn-folder-item:hover button {
+    opacity: 1;
+}
+.vn-folder-fav-btn {
+    color: var(--vn-text-muted, #888) !important;
+}
+.vn-folder-fav-btn.--active {
+    color: #d4a020 !important;
+    opacity: 1 !important;
+}
+
+/* ── Folder items: card layout ── */
+
+.vn-folder-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.vn-folder-item.--card {
+    position: relative;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 8px 10px;
+    min-height: 80px;
+    text-align: center;
+    border-radius: 6px;
+}
+
+.vn-folder-item.--card > .fas {
+    font-size: 1.8em;
+    width: auto;
+}
+
+.vn-folder-item.--card .vn-folder-item-name {
+    font-size: 0.8em;
+    text-align: center;
+    white-space: normal;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+}
+
+.vn-folder-item.--card .vn-folder-fav-btn { position: absolute; top: 3px; left: 3px; }
+.vn-folder-item.--card .vn-folder-rename-btn { position: absolute; top: 3px; right: 3px; }
+.vn-folder-item.--card .vn-folder-delete-btn { position: absolute; bottom: 3px; right: 3px; }
+
+/* ── Favorites quick-access strip ── */
+
+.vn-folder-favorites-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 2px 0 8px;
+    border-bottom: 1px solid rgba(255 255 255 / 0.06);
+    margin-bottom: 4px;
+}
+
+.vn-folder-fav-shortcut {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78em;
+    color: var(--vn-text-muted, #aaa);
+    transition: color 0.15s;
+}
+
+.vn-folder-fav-shortcut .fas { color: #d4a020; font-size: 0.85em; }
+.vn-folder-fav-shortcut.--active,
+.vn-folder-fav-shortcut:hover { color: var(--vn-text, #ddd); }
+
+/* ── Folder rename input ── */
+
+.vn-folder-rename-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--vn-accent);
+    color: inherit;
+    font: inherit;
+    font-size: 0.85em;
+    width: 100%;
+    outline: none;
+    padding: 0;
 }
 

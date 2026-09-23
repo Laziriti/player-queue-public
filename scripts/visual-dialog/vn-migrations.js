@@ -15,6 +15,20 @@ export const MIGRATIONS = [
             delete result.hidden;
             return result;
         }
+    },
+    {
+        version: '14.9.0',
+        migrate(preset) {
+            if ('folderId' in preset) return preset;
+            return { ...preset, folderId: null };
+        }
+    },
+    {
+        version: '14.9.1',
+        migrate(preset) {
+            if ('particleIntensity' in preset) return preset;
+            return { ...preset, particleIntensity: 1 };
+        }
     }
 ];
 
