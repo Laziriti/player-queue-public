@@ -2,8 +2,7 @@
 // vn-background-manager.js — управление фонами, галерея, переходы
 // ============================================================
 
-import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
-import { VNTransitions } from './visual-effects/vn-transitions.js';
+import { VNTransitions } from '../visual-effects/vn-transitions.js';
 
 export class VNBackgroundManager {
     static IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
@@ -163,13 +162,8 @@ export class VNBackgroundManager {
     // HTML Generation
     // ══════════════════════════════════════════════════════════
 
-    generateSelector(currentBg = null, currentOverlay = true, currentEffect = 'particles', currentParticlesFg = false, currentParticleIntensity = 1) {
+    generateSelector(currentBg = null, currentOverlay = true) {
         const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
-        const effectOptions = VNAtmosphere.EFFECT_GROUPS
-            .map(g => `<optgroup label="${game.i18n.localize(g.label)}">${
-                g.effects.map(e => `<option value="${e}" ${e === currentEffect ? 'selected' : ''}>${game.i18n.localize(VNAtmosphere.EFFECT_LABELS[e])}</option>`).join('')
-            }</optgroup>`)
-            .join('');
         const customFolder = VNBackgroundManager.getCustomFolder();
         const folderLabel = customFolder
             ? customFolder.split('/').pop() || customFolder
@@ -182,18 +176,6 @@ export class VNBackgroundManager {
                 <div class="vn-bg-toolbar">
                     <label class="vn-overlay-toggle">
                         <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${game.i18n.localize('vn.bg.overlay')}</span>
-                    </label>
-                    <label class="vn-overlay-toggle">
-                        <input type="checkbox" id="particles-foreground" ${currentParticlesFg ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${game.i18n.localize('vn.bg.particlesForeground')}</span>
-                    </label>
-                    <label class="vn-overlay-toggle">
-                        <i class="fas fa-magic"></i>
-                        <select id="atmosphere-effect" class="vn-atmosphere-select">${effectOptions}</select>
-                    </label>
-                    <label class="vn-overlay-toggle vn-particle-intensity-ctrl" title="${game.i18n.localize('vn.bg.particleIntensity')}">
-                        <i class="fas fa-snowflake"></i>
-                        <input type="range" id="particle-intensity" min="1" max="20" step="1" value="${currentParticleIntensity}">
-                        <span class="vn-particle-intensity-val">${currentParticleIntensity}</span>
                     </label>
                     ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${sceneBg}"><i class="fas fa-map"></i> ${game.i18n.localize('vn.bg.currentScene')}</button>` : ''}
                     <div class="vn-custom-path">
@@ -360,12 +342,6 @@ export class VNBackgroundManager {
                     const val = sizeSlider.value;
                     root.querySelector('.vn-background-gallery')?.style.setProperty('--vn-bg-thumb-w', val + 'px');
                     localStorage.setItem('player-queue.bg-thumb-size', val);
-                    return;
-                }
-                const intensitySlider = e.target.closest('#particle-intensity');
-                if (intensitySlider) {
-                    const valEl = intensitySlider.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val');
-                    if (valEl) valEl.textContent = intensitySlider.value;
                 }
             });
         }
@@ -394,10 +370,7 @@ export class VNBackgroundManager {
         if (!section) return;
         const currentBg = root.querySelector('input[name="background"]:checked')?.value ?? null;
         const currentOverlay = root.querySelector('#background-overlay')?.checked ?? true;
-        const currentEffect = root.querySelector('#atmosphere-effect')?.value ?? 'particles';
-        const currentParticlesFg = root.querySelector('#particles-foreground')?.checked ?? false;
-        const currentParticleIntensity = parseInt(root.querySelector('#particle-intensity')?.value) || 1;
-        const newHtml = this.generateSelector(currentBg, currentOverlay, currentEffect, currentParticlesFg, currentParticleIntensity);
+        const newHtml = this.generateSelector(currentBg, currentOverlay);
         section.outerHTML = newHtml;
         this.attachListeners(root, (name) => this.refreshGallery(root, name));
     }

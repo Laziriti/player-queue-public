@@ -4,6 +4,7 @@
 
 import { parseActorId } from './vn-id-utils.js';
 import { applyMigrations } from './vn-migrations.js';
+import { PRESETS } from './visual-effects/atmosphere/config/effects.js';
 
 export const MODULE_ID = 'player-queue';
 
@@ -24,7 +25,8 @@ class VNSceneState {
         this.background = null;
         this.backgroundOverlay = true;
         this.portraitScale = 1.0;
-        this.atmosphereEffect = 'particles';
+        this.particleEffect = 'particles';
+        this.visualEffect = 'none';
         this.particlesForeground = false;
         this.particleIntensity = 1;
         this.speakers = Object.fromEntries(VNSceneState.POSITIONS.map(p => [p, null]));
@@ -48,7 +50,8 @@ class VNSceneState {
             background: this.background,
             backgroundOverlay: this.backgroundOverlay,
             portraitScale: this.portraitScale,
-            atmosphereEffect: this.atmosphereEffect,
+            particleEffect: this.particleEffect,
+            visualEffect: this.visualEffect,
             particlesForeground: this.particlesForeground,
             particleIntensity: this.particleIntensity,
             speakers: { ...this.speakers },
@@ -71,7 +74,15 @@ class VNSceneState {
         this.backgroundOverlay = p.backgroundOverlay ?? true;
         const { MIN, MAX } = VNSceneState.SCALE_LIMITS;
         this.portraitScale = Math.min(Math.max(p.portraitScale ?? 1.0, MIN), MAX);
-        this.atmosphereEffect = p.atmosphereEffect ?? 'particles';
+        if (p.particleEffect != null || p.visualEffect != null) {
+            this.particleEffect = p.particleEffect ?? 'particles';
+            this.visualEffect = p.visualEffect ?? 'none';
+        } else {
+            // Обратная совместимость: старые данные хранили одну комбинацию atmosphereEffect
+            const legacyPreset = PRESETS[p.atmosphereEffect] ?? PRESETS.particles;
+            this.particleEffect = legacyPreset.particles;
+            this.visualEffect = legacyPreset.visual;
+        }
         this.particlesForeground = p.particlesForeground ?? false;
         this.particleIntensity = Math.min(Math.max(Math.round(p.particleIntensity ?? 1), 1), 20);
         this.flipped = { ...(p.flipped ?? {}) };

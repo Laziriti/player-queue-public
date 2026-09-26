@@ -66,7 +66,7 @@ export class ParticleSystem {
     // ─── Private ─────────────────────────────────────────────
 
     _fillFromConfig(container, config, intensity = 1) {
-        const { className, count, sizeMin, sizeRange, style } = config;
+        const { className, count, sizeMin, sizeRange, style, images } = config;
         const actualCount = Math.round(count * intensity);
         const fragment = document.createDocumentFragment();
 
@@ -74,11 +74,24 @@ export class ParticleSystem {
             const p = document.createElement('span');
             p.className = className;
             const size = sizeMin + Math.random() * sizeRange;
-            p.style.cssText = style(size);
+            let css = style(size);
+            if (images?.length) css += `;${this._imageOverrideCss(images)}`;
+            p.style.cssText = css;
             fragment.appendChild(p);
         }
 
         container.appendChild(fragment);
+    }
+
+    /**
+     * Заменяет CSS-нарисованную форму частицы (градиент/border-radius/
+     * clip-path) на растровую картинку. Если images содержит несколько
+     * путей, для каждой частицы случайно выбирается одна из них.
+     */
+    _imageOverrideCss(images) {
+        const img = images[Math.floor(Math.random() * images.length)];
+        return `background:url('${img}') center/contain no-repeat;`
+            + `border:none;border-radius:0;box-shadow:none;clip-path:none;filter:none`;
     }
 
     _fillWithFactory(container, factory, intensity = 1) {
@@ -110,8 +123,10 @@ export class ParticleSystem {
     }
 
     _fillGhosts(container, intensity) {
-        const baseSouls = PARTICLE_CONFIGS.ghosts?.count || 42;
+        const ghostConfig = PARTICLE_CONFIGS.ghosts;
+        const baseSouls = ghostConfig?.count || 42;
         const soulCount = Math.min(Math.round(baseSouls * intensity), 84);
+        const images = ghostConfig?.images;
         const fragment = document.createDocumentFragment();
 
         // Туман — 8 размытых паров позади душ
@@ -144,6 +159,13 @@ export class ParticleSystem {
             // Голова (--t остаётся 0 из CSS)
             const head = document.createElement('b');
             head.className = 'vn-particle-ghost-head';
+            if (images?.length) {
+                // Картинка призрака нарисована "головой вверх", а offset-rotate:auto
+                // выравнивает бокс по касательной пути (почти горизонтальной) —
+                // разворачиваем на 90° заранее, чтобы голова смотрела по направлению полёта.
+                head.style.cssText = `width:48px;height:78px;transform-origin:50% 50%;`
+                    + `transform:rotate(90deg) scale(var(--size));${this._imageOverrideCss(images)}`;
+            }
             soul.appendChild(head);
 
             soulsEl.appendChild(soul);
@@ -165,6 +187,7 @@ export class ParticleSystem {
     _createConfettiParticle() {
         const p = document.createElement('span');
         const isStreamer = Math.random() < 0.25;
+        const images = PARTICLE_CONFIGS.confetti?.images;
 
         if (isStreamer) {
             const w = 1.5 + Math.random() * 2;
@@ -174,12 +197,13 @@ export class ParticleSystem {
                 `animation-delay:${R(20)}s;animation-duration:${5 + R(7)}s;` +
                 `--drift:${RD(140)}px;--rotation:${RD(300)}deg;opacity:0`;
         } else {
-            const s = 3 + Math.random() * 5;
-            const w = s * (0.8 + Math.random() * 0.7);
+            const s = 8 + Math.random() * 6;
             p.className = 'vn-particle vn-particle-confetti';
-            p.style.cssText = `width:${w}px;height:${s}px;left:${R(100)}%;top:-5%;` +
+            let css = `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;` +
                 `animation-delay:${R(20)}s;animation-duration:${5 + R(9)}s;` +
                 `--drift:${RD(100)}px;--rotation:${R(720) - 360}deg;opacity:0`;
+            if (images?.length) css += `;${this._imageOverrideCss(images)}`;
+            p.style.cssText = css;
         }
 
         return p;

@@ -6,15 +6,44 @@ import { PlayerQueue } from './queue/player-queue.js';
 import { SoundTestApp } from './sound-test.js';
 
 // Per-nameplate display parameters. Add an entry here for each new nameplate image.
-// ratio: width/height aspect ratio of the image frame
-// paddingX: horizontal padding to keep text within the frame's "safe zone"
-// minWidth: minimum rendered width of the nameplate element
+// ratio:     width / height aspect ratio of the frame image
+// textWidth: fixed width of the text element in px (nameplate is always this width)
+// paddingX:  how far the frame image extends beyond the text element on each side (px)
+//            — use this to accommodate decorative elements around the text zone
+// offsetY:   vertical shift of frame image from text center in px (positive = image shifts down)
+// fontSize:  text font size (any CSS value)
 const NAMEPLATE_CONFIGS = {
     'modules/player-queue/assets/dialog name labels/name_label_drakkenheim.webp': {
-        label: 'Drakkenheim',
-        ratio: 4.94,      // width / height of the frame image
-        height: '3.2em',  // nameplate height (scales with font); width = height × ratio
-        paddingX: '2.2em', // horizontal padding — em of the nameplate's own font-size
+        label:     'Drakkenheim',
+        ratio:     4.94,
+        textWidth: 200,
+        paddingX:  70,
+        offsetY:   -3,
+        fontSize:  '0.9em',
+    },
+    'modules/player-queue/assets/dialog name labels/name_label_dark_fantasy.webp': {
+        label:     'Dark Fantasy',
+        ratio:     4.94,
+        textWidth: 200,
+        paddingX:  70,
+        offsetY:   -3,
+        fontSize:  '0.9em',
+    },
+    'modules/player-queue/assets/dialog name labels/name_label_knight.webp': {
+        label:     'Knight',
+        ratio:     4.94,
+        textWidth: 200,
+        paddingX:  70,
+        offsetY:   -3,
+        fontSize:  '0.9em',
+    },
+    'modules/player-queue/assets/dialog name labels/name_label_strahd.webp': {
+        label:     'Curse of Strahd',
+        ratio:     4.94,
+        textWidth: 200,
+        paddingX:  70,
+        offsetY:   -3,
+        fontSize:  '0.9em',
     },
 };
 
@@ -256,28 +285,28 @@ function escapeCSSUrl(url) {
 }
 
 function applyNameplateImage(path) {
+    const PROPS = ['--vn-nameplate-image', '--vn-nameplate-ratio', '--np-text-width', '--np-padding-x', '--np-offset-y', '--np-font-size'];
+    const clear = () => PROPS.forEach(p => document.documentElement.style.removeProperty(p));
+
     document.body.classList.remove('vn-nameplate-hidden');
     if (path === '__hidden__') {
-        document.documentElement.style.removeProperty('--vn-nameplate-image');
-        document.documentElement.style.removeProperty('--vn-nameplate-ratio');
-        document.documentElement.style.removeProperty('--vn-nameplate-height');
-        document.documentElement.style.removeProperty('--vn-nameplate-padding-x');
+        clear();
         document.body.classList.remove('vn-nameplate-has-image');
         document.body.classList.add('vn-nameplate-hidden');
     } else if (path) {
         // CSS url() in a stylesheet resolves relative to the .css file — prepend / to make absolute
         const url = /^https?:\/\/|^\//.test(path) ? path : '/' + path;
-        const cfg = NAMEPLATE_CONFIGS[path] || {};
+        const normPath = p => decodeURIComponent(p).replace(/^\//, '').replace(/\\/g, '/');
+        const cfg = NAMEPLATE_CONFIGS[path] || NAMEPLATE_CONFIGS[normPath(path)] || {};
         document.documentElement.style.setProperty('--vn-nameplate-image', `url("${escapeCSSUrl(url)}")`);
         document.documentElement.style.setProperty('--vn-nameplate-ratio', cfg.ratio ?? 4.94);
-        document.documentElement.style.setProperty('--vn-nameplate-height', cfg.height ?? '2.8em');
-        document.documentElement.style.setProperty('--vn-nameplate-padding-x', cfg.paddingX ?? '1.8em');
+        document.documentElement.style.setProperty('--np-text-width', `${cfg.textWidth ?? 200}px`);
+        document.documentElement.style.setProperty('--np-padding-x', `${cfg.paddingX ?? 0}px`);
+        document.documentElement.style.setProperty('--np-offset-y', `${cfg.offsetY ?? 0}px`);
+        document.documentElement.style.setProperty('--np-font-size', cfg.fontSize ?? '0.9em');
         document.body.classList.add('vn-nameplate-has-image');
     } else {
-        document.documentElement.style.removeProperty('--vn-nameplate-image');
-        document.documentElement.style.removeProperty('--vn-nameplate-ratio');
-        document.documentElement.style.removeProperty('--vn-nameplate-height');
-        document.documentElement.style.removeProperty('--vn-nameplate-padding-x');
+        clear();
         document.body.classList.remove('vn-nameplate-has-image');
     }
 }

@@ -18,7 +18,8 @@ export class VNSocketHandler {
         setCharacterScale:    { gmOnly: true,  required: ['tokenId', 'scale'] },
         setExclusiveSpeaker:  { gmOnly: true,  required: ['tokenId'] },
         setBackgroundOverlay: { gmOnly: true,  required: ['enabled'] },
-        setAtmosphereEffect:  { gmOnly: true,  required: ['effect'] },
+        setParticleEffect:    { gmOnly: true,  required: ['particle'] },
+        setVisualEffect:      { gmOnly: true,  required: ['visual'] },
         setParticlesForeground: { gmOnly: true, required: ['enabled'] },
         setVisibility:        { gmOnly: true,  required: ['tokenId', 'visibility'] },
         updateQueue:          { gmOnly: false },
@@ -103,7 +104,9 @@ export class VNSocketHandler {
                     presetActors: p.presetActors ?? null,
                     background: p.background,
                     backgroundOverlay: p.backgroundOverlay,
-                    atmosphereEffect: p.atmosphereEffect ?? null,
+                    particleEffect: p.particleEffect ?? null,
+                    visualEffect: p.visualEffect ?? null,
+                    particleIntensity: p.particleIntensity ?? null,
                     particlesForeground: p.particlesForeground ?? null,
                     flipped: p.flipped ?? null,
                     visibility: p.visibility ?? null,
@@ -121,7 +124,8 @@ export class VNSocketHandler {
             case 'setCharacterScale':    s.setCharacterScale(p.tokenId, Number(p.scale), false); break;
             case 'setExclusiveSpeaker':  s.setExclusiveSpeaker(p.tokenId, false); break;
             case 'setBackgroundOverlay': s.setBackgroundOverlay(!!p.enabled, false); break;
-            case 'setAtmosphereEffect':  s.setAtmosphereEffect(p.effect, false); break;
+            case 'setParticleEffect':    s.setParticleEffect(p.particle, false); break;
+            case 'setVisualEffect':      s.setVisualEffect(p.visual, false); break;
             case 'setParticlesForeground': s.setParticlesForeground(!!p.enabled, false); break;
             case 'setVisibility':        s.applyVisibility(p.tokenId, p.visibility, false); break;
             default: console.warn(`[VN] No handler for action: ${action}`);

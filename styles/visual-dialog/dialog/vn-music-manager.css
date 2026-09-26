@@ -1,0 +1,175 @@
+/* ══════════════════════════════════════════════════════════
+   Music Tab (VNMusicManager)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-music-section {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(136, 192, 208, 0.15);
+    border-radius: var(--vn-radius);
+    background: rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.vn-music-label {
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--vn-accent);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.vn-music-drop-zone {
+    border: 2px dashed rgba(136, 192, 208, 0.3);
+    border-radius: var(--vn-radius-sm);
+    padding: 14px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--vn-text-dim);
+    font-size: 0.78em;
+    font-style: italic;
+    cursor: default;
+    transition: border-color var(--vn-transition), background var(--vn-transition);
+}
+
+.vn-music-drop-zone.drag-over,
+.vn-music-drop-zone:hover {
+    border-color: var(--vn-accent);
+    background: var(--vn-accent-dim);
+    color: var(--vn-accent);
+}
+
+.vn-music-selected {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(136, 192, 208, 0.08);
+    border: 1px solid rgba(136, 192, 208, 0.25);
+    border-radius: var(--vn-radius-sm);
+    font-size: 0.82em;
+    color: var(--vn-text);
+}
+
+.vn-music-selected > i {
+    color: var(--vn-accent);
+    flex-shrink: 0;
+}
+
+.vn-music-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vn-music-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text-dim);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all var(--vn-transition);
+    line-height: 1;
+}
+
+.vn-music-clear:hover {
+    color: var(--vn-danger);
+    border-color: rgba(191, 97, 106, 0.3);
+    background: var(--vn-danger-dim);
+}
+
+.vn-music-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px;
+}
+
+.vn-cues-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid rgba(136, 192, 208, 0.15);
+    border-radius: var(--vn-radius);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.vn-cues-hint {
+    margin: 0;
+    font-size: 0.75em;
+    color: var(--vn-text-dim);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.vn-cue-drop-zone {
+    border: 2px dashed rgba(136, 192, 208, 0.25);
+    border-radius: var(--vn-radius-sm);
+    padding: 12px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--vn-text-dim);
+    font-size: 0.78em;
+    font-style: italic;
+    cursor: default;
+    transition: border-color var(--vn-transition), background var(--vn-transition);
+}
+.vn-cue-drop-zone.drag-over,
+.vn-cue-drop-zone:hover {
+    border-color: var(--vn-accent);
+    background: var(--vn-accent-dim);
+    color: var(--vn-accent);
+}
+
+.vn-cue-list { display: flex; flex-direction: column; gap: 4px; }
+
+.vn-cue-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    transition: border-color var(--vn-transition);
+}
+.vn-cue-item:hover { border-color: var(--vn-border-hover); }
+
+.vn-cue-icon {
+    color: var(--vn-accent);
+    font-size: 0.8em;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.vn-cue-label-input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 0.82em;
+    padding: 3px 6px;
+    outline: none;
+    transition: border-color var(--vn-transition), background var(--vn-transition);
+}
+.vn-cue-label-input:hover { border-color: var(--vn-border); }
+.vn-cue-label-input:focus { border-color: var(--vn-accent); background: rgba(0,0,0,0.2); }
+.vn-cue-label-input::placeholder { color: var(--vn-text-dim); opacity: 0.5; }

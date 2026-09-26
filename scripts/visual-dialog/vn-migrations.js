@@ -2,6 +2,8 @@
 // vn-migrations.js — versioned preset migrations
 // ============================================================
 
+import { PRESETS } from './visual-effects/atmosphere/config/effects.js';
+
 export const MIGRATIONS = [
     {
         version: '14.2.2',
@@ -28,6 +30,16 @@ export const MIGRATIONS = [
         migrate(preset) {
             if ('particleIntensity' in preset) return preset;
             return { ...preset, particleIntensity: 1 };
+        }
+    },
+    {
+        version: '14.10.0',
+        migrate(preset) {
+            if ('particleEffect' in preset || 'visualEffect' in preset) return preset;
+            const legacyPreset = PRESETS[preset.atmosphereEffect] ?? PRESETS.particles;
+            const result = { ...preset, particleEffect: legacyPreset.particles, visualEffect: legacyPreset.visual };
+            delete result.atmosphereEffect;
+            return result;
         }
     }
 ];

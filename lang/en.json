@@ -36,6 +36,8 @@
       "d_click": "set active speaker",
       "k_ctrlClick": "Ctrl+LMB",
       "d_ctrlClick": "exclusive speaker",
+      "k_shiftClick": "Shift+LMB",
+      "d_shiftClick": "open character sheet",
       "k_midClick": "MMB",
       "d_midClick": "flip portrait",
       "k_rightClick": "RMB",

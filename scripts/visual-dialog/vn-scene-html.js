@@ -127,6 +127,7 @@ class VNSceneHTML {
         const helpHints = isGM
             ? mkHint(game.i18n.localize('vn.help.k_click'),      game.i18n.localize('vn.help.d_click'))
             + mkHint(game.i18n.localize('vn.help.k_ctrlClick'),  game.i18n.localize('vn.help.d_ctrlClick'))
+            + mkHint(game.i18n.localize('vn.help.k_shiftClick'), game.i18n.localize('vn.help.d_shiftClick'))
             + mkHint(game.i18n.localize('vn.help.k_midClick'),   game.i18n.localize('vn.help.d_midClick'))
             + mkHint(game.i18n.localize('vn.help.k_rightClick'), game.i18n.localize('vn.help.d_rightClick'))
             + mkHint(game.i18n.localize('vn.help.k_altWheel'),   game.i18n.localize('vn.help.d_altWheel'))
@@ -141,13 +142,22 @@ class VNSceneHTML {
             </div>
         </div></div>`;
 
-        const atmoEffect = state.atmosphereEffect || 'particles';
+        const particleEffect = state.particleEffect || 'particles';
+        const visualEffect = state.visualEffect || 'none';
 
-        const pickerItems = VNAtmosphere.EFFECT_GROUPS.map(group =>
+        const particlePickerItems = VNAtmosphere.PARTICLE_GROUPS.map(group =>
             `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
-            + group.effects.map(e => {
-                const label = game.i18n.localize(VNAtmosphere.EFFECT_LABELS[e]);
-                return `<button type="button" class="vn-atmo-item${e === atmoEffect ? ' active' : ''}" data-effect="${e}" title="${label}"><i class="fas ${VNAtmosphere.EFFECT_ICONS[e]}"></i><span>${label}</span></button>`;
+            + group.types.map(t => {
+                const label = game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[t]);
+                return `<button type="button" class="vn-atmo-item${t === particleEffect ? ' active' : ''}" data-particle="${t}" title="${label}"><i class="fas ${VNAtmosphere.PARTICLE_ICONS[t]}"></i><span>${label}</span></button>`;
+            }).join('')
+        ).join('');
+
+        const visualPickerItems = VNAtmosphere.VISUAL_GROUPS.map(group =>
+            `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
+            + group.types.map(t => {
+                const label = game.i18n.localize(VNAtmosphere.VISUAL_LABELS[t]);
+                return `<button type="button" class="vn-atmo-item${t === visualEffect ? ' active' : ''}" data-visual="${t}" title="${label}"><i class="fas ${VNAtmosphere.VISUAL_ICONS[t]}"></i><span>${label}</span></button>`;
             }).join('')
         ).join('');
 
@@ -157,10 +167,17 @@ class VNSceneHTML {
             ? `<div class="vn-toolbar">
                 ${btn('vn-settings-button', 'fa-cog', game.i18n.localize('vn.toolbar.settings'))}
                 <div class="vn-atmo-wrap">
-                    ${btn('vn-atmosphere-cycle-btn', VNAtmosphere.EFFECT_ICONS[atmoEffect], game.i18n.format('vn.atmosphere.buttonTitle', { effect: game.i18n.localize(VNAtmosphere.EFFECT_LABELS[atmoEffect]) }))}
+                    ${btn('vn-particle-cycle-btn', VNAtmosphere.PARTICLE_ICONS[particleEffect], game.i18n.format('vn.atmosphere.particleButtonTitle', { effect: game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[particleEffect]) }))}
                     <div class="vn-atmosphere-picker" hidden>
-                        <div class="vn-atmosphere-picker-header"><i class="fas fa-wand-sparkles"></i> ${game.i18n.localize('vn.atmosphere.header')}</div>
-                        <div class="vn-atmosphere-picker-grid">${pickerItems}</div>
+                        <div class="vn-atmosphere-picker-header"><i class="fas fa-star"></i> ${game.i18n.localize('vn.atmosphere.particlesHeader')}</div>
+                        <div class="vn-atmosphere-picker-grid">${particlePickerItems}</div>
+                    </div>
+                </div>
+                <div class="vn-atmo-wrap">
+                    ${btn('vn-visual-cycle-btn', VNAtmosphere.VISUAL_ICONS[visualEffect], game.i18n.format('vn.atmosphere.visualButtonTitle', { effect: game.i18n.localize(VNAtmosphere.VISUAL_LABELS[visualEffect]) }))}
+                    <div class="vn-atmosphere-picker" hidden>
+                        <div class="vn-atmosphere-picker-header"><i class="fas fa-wand-sparkles"></i> ${game.i18n.localize('vn.atmosphere.visualHeader')}</div>
+                        <div class="vn-atmosphere-picker-grid">${visualPickerItems}</div>
                     </div>
                 </div>
                 ${btn(`vn-particles-fg-btn${state.particlesForeground ? ' active' : ''}`, 'fa-layer-group', game.i18n.localize('vn.toolbar.particlesForeground'))}

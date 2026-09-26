@@ -2,7 +2,7 @@
   "id": "player-queue",
   "title": "Player Queue",
   "description": "<p>Модуль для управления очередью игроков. А также механизм создания и управления сценами для диалогов.</p>",
-  "version": "14.9.1",
+  "version": "14.10.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -19,6 +19,11 @@
   "styles": [
 "styles/styles.css",
 "styles/visual-novel-scene.css",
+    "styles/visual-dialog/dialog/vn-background-manager.css",
+    "styles/visual-dialog/dialog/vn-effects-manager.css",
+    "styles/visual-dialog/dialog/vn-music-manager.css",
+    "styles/visual-dialog/dialog/vn-presets-manager.css",
+    "styles/visual-dialog/dialog/vn-adventure-io-manager.css",
     "styles/visual-dialog/visual-effects/index.css"
   ],
   "languages": [

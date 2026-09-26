@@ -12,11 +12,16 @@ import { R, RD } from '../utils.js';
  *   sizeMin: number,          — минимальный размер (px)
  *   sizeRange: number,        — диапазон размера (px)
  *   style: (size) => string   — генератор inline-стилей
+ *   images?: string[],        — опционально: 1+ путей к картинкам.
+ *                                Если задано, ParticleSystem рандомно
+ *                                берёт одну на каждую частицу и рисует
+ *                                её вместо CSS-градиента/border-radius.
  * }
  *
  * Для эффектов со специальной генерацией (rain) style = null,
  * они обрабатываются отдельными фабриками в ParticleSystem.
  */
+const PARTICLES_PATH = 'modules/player-queue/assets/effects/particles';
 export const PARTICLE_CONFIGS = {
     particles: {
         className: 'vn-particle',
@@ -93,17 +98,19 @@ export const PARTICLE_CONFIGS = {
     ash: {
         className: 'vn-particle vn-particle-ash',
         count: 35,
-        sizeMin: 1,
-        sizeRange: 3,
+        sizeMin: 6,
+        sizeRange: 10,
         style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(20)}s;animation-duration:${6 + R(10)}s;--drift:${RD(80)}px;opacity:0`,
+        images: [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/ash/ash_${n}.webp`),
     },
 
     sakura: {
         className: 'vn-particle vn-particle-sakura',
         count: 20,
-        sizeMin: 6,
-        sizeRange: 8,
+        sizeMin: 10,
+        sizeRange: 12,
         style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(18)}s;animation-duration:${8 + R(12)}s;--drift:${RD(120)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        images: [1, 2].map(n => `${PARTICLES_PATH}/sakura_petals/sakura_petal_${n}.webp`),
     },
 
     sparks: {
@@ -124,9 +131,10 @@ export const PARTICLE_CONFIGS = {
     apocalypse_debris: {
         className: 'vn-particle vn-particle-debris',
         count: 50,
-        sizeMin: 2,
-        sizeRange: 8,
+        sizeMin: 6,
+        sizeRange: 10,
         style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(12)}s;animation-duration:${3 + R(6)}s;--drift:${RD(200)}px;--drift-y:${RD(150)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        images: [1, 2, 3].map(n => `${PARTICLES_PATH}/debris_apocalypse/debris_apocalypse_${n}.webp`),
     },
 
     ether_wisps: {
@@ -140,9 +148,10 @@ export const PARTICLE_CONFIGS = {
     blood_motes: {
         className: 'vn-particle vn-particle-blood',
         count: 30,
-        sizeMin: 2,
-        sizeRange: 5,
+        sizeMin: 5,
+        sizeRange: 6,
         style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(15)}s;animation-duration:${6 + R(10)}s;--drift:${RD(60)}px;opacity:0`,
+        images: [1, 2].map(n => `${PARTICLES_PATH}/blood_motes/blood_mote_${n}.webp`),
     },
 
     shadow_wisps: {
@@ -156,17 +165,19 @@ export const PARTICLE_CONFIGS = {
     glass_dust: {
         className: 'vn-particle vn-particle-glass-dust',
         count: 25,
-        sizeMin: 1,
-        sizeRange: 3,
+        sizeMin: 4,
+        sizeRange: 6,
         style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(14)}s;animation-duration:${5 + R(9)}s;--drift:${RD(80)}px;--drift-y:${RD(60)}px;opacity:0`,
+        images: [1, 2].map(n => `${PARTICLES_PATH}/glass_dust/glass_dust_${n}.webp`),
     },
 
     void_shards: {
         className: 'vn-particle vn-particle-void-shard',
         count: 30,
-        sizeMin: 2,
-        sizeRange: 6,
+        sizeMin: 14,
+        sizeRange: 18,
         style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(16)}s;animation-duration:${6 + R(10)}s;--drift:${RD(120)}px;--drift-y:${RD(100)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        images: [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/void_shards/void_shard_${n}.webp`),
     },
 
     cosmic_dust: {
@@ -193,9 +204,17 @@ export const PARTICLE_CONFIGS = {
         style: (s) => `width:${s * 3}px;height:${s}px;left:-5%;top:${15 + R(70)}%;animation-delay:${R(5)}s;animation-duration:${1.2 + R(2.5)}s;--drift-y:${RD(25)}px;opacity:0`,
     },
 
-    // Конфетти — фабрика в particle-system.js, здесь только count
-    confetti: { count: 55 },
+    // Конфетти — фабрика в particle-system.js, здесь count и картинки кусочков
+    // (серпантин остаётся CSS-полоской — картинок под него пока нет)
+    confetti: {
+        count: 55,
+        images: Array.from({ length: 15 }, (_, i) => `${PARTICLES_PATH}/confetti/confetti_${i + 1}.webp`),
+    },
 
-    // Призраки — _fillGhosts в particle-system.js, здесь только число душ
-    ghosts: { count: 42 },
+    // Призраки — _fillGhosts в particle-system.js, здесь число душ
+    // и картинки для головы (хвост остаётся CSS-градиентом)
+    ghosts: {
+        count: 42,
+        images: [1, 2].map(n => `${PARTICLES_PATH}/ghosts/ghost_${n}.webp`),
+    },
 };
