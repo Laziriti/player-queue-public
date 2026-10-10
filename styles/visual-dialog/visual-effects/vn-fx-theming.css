@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════
    VN-FX-THEMING — UI-тематизация под атмосферу
-   (nameplate, speaking indicator, accent glow, scene title)
+   (speaking indicator, accent glow, scene title)
    ══════════════════════════════════════════════════════════ */
 
 
@@ -29,127 +29,9 @@
 
 
 /* ══════════════════════════════════════════════════════════
-   NAMEPLATE — цвета по эффекту
-   ══════════════════════════════════════════════════════════ */
-
-.vn-vfx-divine .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(255, 215, 100, 0.9), rgba(220, 180, 60, 0.9));
-    box-shadow: 0 4px 16px rgba(255, 215, 100, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.vn-vfx-eldritch .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(0, 180, 100, 0.9), rgba(0, 120, 70, 0.9));
-    box-shadow: 0 4px 16px rgba(0, 180, 100, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-dark .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(150, 20, 30, 0.9), rgba(100, 10, 20, 0.9));
-    box-shadow: 0 4px 16px rgba(150, 20, 30, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.vn-vfx-corruption .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(120, 0, 180, 0.9), rgba(80, 0, 120, 0.9));
-    box-shadow: 0 4px 16px rgba(120, 0, 180, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.vn-vfx-moonlight .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(140, 160, 220, 0.9), rgba(100, 120, 180, 0.9));
-    box-shadow: 0 4px 16px rgba(140, 160, 220, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-cold .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(100, 160, 220, 0.9), rgba(60, 120, 200, 0.9));
-    box-shadow: 0 4px 16px rgba(100, 160, 220, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-fire .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(220, 100, 20, 0.9), rgba(180, 60, 0, 0.9));
-    box-shadow: 0 4px 16px rgba(220, 100, 20, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-underwater .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(60, 140, 200, 0.9), rgba(40, 100, 160, 0.9));
-    box-shadow: 0 4px 16px rgba(60, 140, 200, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-dream .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(160, 120, 220, 0.9), rgba(120, 80, 180, 0.9));
-    box-shadow: 0 4px 16px rgba(160, 120, 220, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-sacred .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(255, 240, 200, 0.95), rgba(220, 200, 150, 0.95));
-    color: #333;
-    box-shadow: 0 4px 16px rgba(255, 240, 200, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-}
-
-.vn-vfx-warm .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(200, 130, 50, 0.9), rgba(160, 100, 30, 0.9));
-    box-shadow: 0 4px 16px rgba(200, 130, 50, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-storm .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(80, 100, 160, 0.9), rgba(50, 70, 130, 0.9));
-    box-shadow: 0 4px 16px rgba(80, 100, 160, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.vn-vfx-apocalypse .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(255, 80, 0, 0.9), rgba(200, 40, 0, 0.9));
-    box-shadow: 0 4px 16px rgba(255, 80, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.vn-vfx-ethereal .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(150, 200, 255, 0.9), rgba(200, 150, 255, 0.9));
-    box-shadow: 0 4px 16px rgba(150, 200, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    animation: vnNameplateGlow 3s ease-in-out infinite alternate,
-    vnEtherealNameplateShift 10s ease-in-out infinite;
-}
-
-@keyframes vnEtherealNameplateShift {
-    0%, 100% { filter: hue-rotate(0deg); }
-    50%      { filter: hue-rotate(30deg); }
-}
-
-.vn-vfx-blood_moon .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(180, 20, 20, 0.9), rgba(120, 0, 0, 0.9));
-    box-shadow: 0 4px 16px rgba(200, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    animation: vnNameplateGlow 3s ease-in-out infinite alternate,
-    vnBloodNameplatePulse 2s ease-in-out infinite;
-}
-
-@keyframes vnBloodNameplatePulse {
-    0%, 100% { opacity: 1; }
-    15%      { opacity: 0.85; }
-    30%      { opacity: 1; }
-    40%      { opacity: 0.9; }
-    60%      { opacity: 1; }
-}
-
-.vn-vfx-void_breach .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(140, 60, 255, 0.9), rgba(80, 0, 200, 0.9));
-    box-shadow: 0 4px 16px rgba(140, 60, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.vn-vfx-cosmic_horror .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(80, 0, 150, 0.9), rgba(40, 0, 80, 0.9));
-    box-shadow: 0 4px 16px rgba(100, 0, 180, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.vn-vfx-abyss .vn-character.active .vn-nameplate-text {
-    background: linear-gradient(135deg, rgba(0, 80, 120, 0.9), rgba(0, 40, 70, 0.9));
-    box-shadow: 0 4px 16px rgba(0, 120, 160, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    animation: vnNameplateGlow 3s ease-in-out infinite alternate,
-    vnAbyssNameplateDim 8s ease-in-out infinite;
-}
-
-@keyframes vnAbyssNameplateDim {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.7; }
-}
-
-
-/* ══════════════════════════════════════════════════════════
-   NAMEPLATE GLOW — анимация свечения
+   NAMEPLATE GLOW — анимация свечения (не зависит от эффекта)
+   Плашка имени намеренно не тематизируется визуальными эффектами:
+   ни цвета, ни мерцание/глитч/пульсация.
    ══════════════════════════════════════════════════════════ */
 
 .vn-character.active .vn-nameplate-text {
@@ -159,37 +41,7 @@
 @keyframes vnNameplateGlow {
     0%   { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
     100% { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4),
-    0 0 20px var(--vn-accent-glow, rgba(255, 255, 255, 0.1)); }
-}
-
-/* Eldritch — мерцание */
-.vn-vfx-eldritch .vn-character.active .vn-nameplate-text {
-    animation: vnNameplateGlow 3s ease-in-out infinite alternate,
-    vnNameplateFlicker 8s step-end infinite;
-}
-
-@keyframes vnNameplateFlicker {
-    0%, 100% { opacity: 1; }
-    41%      { opacity: 1; }
-    42%      { opacity: 0.7; }
-    43%      { opacity: 1; }
-    78%      { opacity: 1; }
-    79%      { opacity: 0.8; }
-    80%      { opacity: 1; }
-}
-
-/* Corruption — глитч */
-.vn-vfx-corruption .vn-character.active .vn-nameplate-text {
-    animation: vnNameplateGlow 3s ease-in-out infinite alternate,
-    vnNameplateGlitch 10s step-end infinite;
-}
-
-@keyframes vnNameplateGlitch {
-    0%, 100% { translate: 0; }
-    23%      { translate: 2px 0; rotate: 1deg; }
-    24%      { translate: 0; rotate: 0deg; }
-    61%      { translate: -1px 0; rotate: -0.5deg; }
-    62%      { translate: 0; rotate: 0deg; }
+    0 0 20px rgba(255, 255, 255, 0.1); }
 }
 
 

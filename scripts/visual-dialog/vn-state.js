@@ -8,6 +8,15 @@ import { PRESETS } from './visual-effects/atmosphere/config/effects.js';
 
 export const MODULE_ID = 'player-queue';
 
+export const PARTICLE_LAYERS = ['back', 'front', 'mix'];
+export const PARTICLE_LAYER_ICONS = { back: 'fa-layer-group', front: 'fa-layer-group', mix: 'fa-shuffle' };
+
+// Старые данные хранили булев particlesForeground вместо particlesLayer
+export function resolveParticlesLayer(p) {
+    if (PARTICLE_LAYERS.includes(p?.particlesLayer)) return p.particlesLayer;
+    return p?.particlesForeground ? 'front' : 'back';
+}
+
 class VNSceneState {
     static POSITIONS = ['left', 'center', 'right'];
     static SCALE_LIMITS = { MIN: 0.5, MAX: 2.0 };
@@ -27,7 +36,7 @@ class VNSceneState {
         this.portraitScale = 1.0;
         this.particleEffect = 'particles';
         this.visualEffect = 'none';
-        this.particlesForeground = false;
+        this.particlesLayer = 'back';
         this.particleIntensity = 1;
         this.speakers = Object.fromEntries(VNSceneState.POSITIONS.map(p => [p, null]));
         this.flipped = {};
@@ -52,7 +61,7 @@ class VNSceneState {
             portraitScale: this.portraitScale,
             particleEffect: this.particleEffect,
             visualEffect: this.visualEffect,
-            particlesForeground: this.particlesForeground,
+            particlesLayer: this.particlesLayer,
             particleIntensity: this.particleIntensity,
             speakers: { ...this.speakers },
             flipped: { ...this.flipped },
@@ -75,15 +84,15 @@ class VNSceneState {
         const { MIN, MAX } = VNSceneState.SCALE_LIMITS;
         this.portraitScale = Math.min(Math.max(p.portraitScale ?? 1.0, MIN), MAX);
         if (p.particleEffect != null || p.visualEffect != null) {
-            this.particleEffect = p.particleEffect ?? 'particles';
+            this.particleEffect = p.particleEffect ?? 'none';
             this.visualEffect = p.visualEffect ?? 'none';
         } else {
             // Обратная совместимость: старые данные хранили одну комбинацию atmosphereEffect
-            const legacyPreset = PRESETS[p.atmosphereEffect] ?? PRESETS.particles;
+            const legacyPreset = PRESETS[p.atmosphereEffect] ?? PRESETS.none;
             this.particleEffect = legacyPreset.particles;
             this.visualEffect = legacyPreset.visual;
         }
-        this.particlesForeground = p.particlesForeground ?? false;
+        this.particlesLayer = resolveParticlesLayer(p);
         this.particleIntensity = Math.min(Math.max(Math.round(p.particleIntensity ?? 1), 1), 20);
         this.flipped = { ...(p.flipped ?? {}) };
         if (p.visibility) {

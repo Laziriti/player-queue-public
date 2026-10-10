@@ -49,20 +49,16 @@ const NAMEPLATE_CONFIGS = {
 
 function registerSettings() {
     const S = (key, opts) => game.settings.register(PlayerQueue.ID, key, opts);
-    const onFloatingChange = () => {
-        // Пересоздаём floating queue с новыми настройками
-        const el = document.getElementById('floating-queue');
-        if (el) {
-            if (PlayerQueue.instance?._dragController) {
-                PlayerQueue.instance._dragController.abort();
-                PlayerQueue.instance._dragController = null;
-            }
-            el.remove();
-        }
-        PlayerQueue.instance?.updateFloatingQueue();
-    };
+    // Пересоздаём floating queue с новыми настройками
+    const onFloatingChange = () => PlayerQueue.instance?.widget.rebuild();
 
-    S('queueData', { scope: 'world', config: false, type: Array, default: [] });
+    S('queueState', {
+        scope: 'world',
+        config: false,
+        type: Object,
+        default: { rev: 0, nextOrder: 1, entries: [] },
+        onChange: (value) => PlayerQueue.instance?.onStateSetting(value)
+    });
 
     S('queuePosition', {
         name: 'settings.queuePosition.name',
@@ -105,6 +101,33 @@ function registerSettings() {
         scope: 'client', config: true, type: Number, default: 8,
         range: { min: 3, max: 15, step: 1 },
         onChange: onFloatingChange
+    });
+
+    S('queueCompact', {
+        name: 'settings.queueCompact.name',
+        hint: 'settings.queueCompact.hint',
+        scope: 'client', config: true, type: Boolean, default: false,
+        onChange: onFloatingChange
+    });
+
+    S('queueDuringScene', {
+        name: 'settings.queueDuringScene.name',
+        hint: 'settings.queueDuringScene.hint',
+        scope: 'client', config: true, type: String, default: 'top',
+        choices: {
+            top:  game.i18n.localize('settings.queueDuringScene.top'),
+            keep: game.i18n.localize('settings.queueDuringScene.keep')
+        },
+        onChange: () => {
+            PlayerQueue.instance?.widget.rebuild();
+            window.visualNovelScene?.updateQueueDisplay();
+        }
+    });
+
+    S('announceInChat', {
+        name: 'settings.announceInChat.name',
+        hint: 'settings.announceInChat.hint',
+        scope: 'world', config: true, type: Boolean, default: true
     });
 
     S('enableSounds', {
@@ -235,6 +258,13 @@ function registerSettings() {
 
     S('backgroundFolder', {
         scope: 'world', config: false, type: String, default: ''
+    });
+
+    S('liteMode', {
+        name: 'settings.liteMode.name',
+        hint: 'settings.liteMode.hint',
+        scope: 'client', config: true, type: Boolean, default: false,
+        onChange: () => window.visualNovelScene?.applyLiteMode()
     });
 
     S('parallaxEnabled', {

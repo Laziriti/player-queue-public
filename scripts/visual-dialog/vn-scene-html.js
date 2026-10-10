@@ -3,7 +3,7 @@
 // ============================================================
 
 import { QueueBridge } from './vn-queue-bridge.js';
-import { VNSceneState } from './vn-state.js';
+import { VNSceneState, PARTICLE_LAYER_ICONS } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { FALLBACK_AVATAR } from './vn-id-utils.js';
 
@@ -82,7 +82,13 @@ class VNSceneHTML {
             <div class="vn-speaking-indicator"><span></span><span></span><span></span></div>
             <img class="vn-character-img" src="${imgSrc}" alt="${token.name}" loading="lazy" style="--flip-x: ${flipX}">
             <div class="vn-character-nameplate"><span class="vn-nameplate-text">${displayName}</span></div>
-            <div class="vn-character-glow"></div></div>`;
+            <div class="vn-character-glow"></div>${this.queueMark(pd?.priority)}</div>`;
+    }
+
+    /** Exclamation badge (request0..2.webp) over the portrait of a character whose player is in the queue. */
+    queueMark(priority) {
+        if (priority == null) return '';
+        return `<img class="vn-queue-mark" data-priority="${priority}" src="${QueueBridge.getPriorityIcon(priority)}" alt="" draggable="false">`;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -90,15 +96,44 @@ class VNSceneHTML {
     // ──────────────────────────────────────────────────────────
 
     queueDisplay(queueData) {
-        if (!game.user.isGM || !queueData?.length) return '';
+        const isGM = game.user.isGM;
+        // Players always get the panel (with the hand button) so they can raise a hand when the queue is empty
+        if (!QueueBridge.queueInScene || (!queueData?.length && isGM)) return '';
+        const hand = isGM ? '' : this.handControl(queueData);
         return `<div class="vn-queue-container">
             <div class="vn-queue-title"><i class="fas fa-users"></i> ${game.i18n.localize('vn.queue.title')}</div>
             <div class="vn-queue-items">${queueData.map((player, i) => {
             const pd = QueueBridge.getPriorityData(player.priority);
-            return `<div class="vn-queue-item gm-clickable" title="${player.name} — ${game.i18n.localize(pd.name)}&#10;${game.i18n.localize('vn.queue.itemHint')}" data-user-id="${player.id}" style="border-color: ${pd.color};">
-                    <img src="${player.avatar}" alt="${player.name}" onerror="this.src=FALLBACK_AVATAR" loading="lazy">
+            const hint = isGM ? `&#10;${game.i18n.localize('vn.queue.itemHint')}` : '';
+            return `<div class="vn-queue-item${isGM ? ' gm-clickable' : ''}" title="${player.name} — ${game.i18n.localize(pd.name)}${hint}" data-user-id="${player.id}" style="border-color: ${pd.color};">
+                    <img class="vn-queue-portrait" src="${player.avatar}" alt="${player.name}" onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}'" loading="lazy" draggable="false">
+                    <img class="vn-queue-flag" src="${QueueBridge.getPriorityIcon(player.priority)}" alt="" draggable="false">
                     <span class="vn-queue-number">${i + 1}</span></div>`;
-        }).join('')}</div></div>`;
+        }).join('')}</div>${hand}</div>`;
+    }
+
+    /** Player's hand button; when open (`scene._handPickerOpen`) it unfolds the three priorities (+ "lower hand" if raised). */
+    handControl(queueData) {
+        const loc = (key) => game.i18n.localize(key);
+        const mine = queueData.find(p => p.id === game.user.id);
+        const open = !!this._scene._handPickerOpen;
+        const label = loc(mine ? 'vn.queue.raisedHand' : 'vn.queue.raiseHand');
+
+        const titleKeys = ['Low', 'Medium', 'High'];
+        const picker = open ? `<div class="vn-queue-picker" role="group" aria-label="${loc('playerQueue.dialog.yourPriority')}">
+            ${titleKeys.map((suffix, priority) => {
+                const active = mine?.priority === priority;
+                const title = loc(`playerQueue.dialog.${mine ? 'changeTitle' : 'joinTitle'}${suffix}`);
+                return `<button type="button" class="vn-queue-pick${active ? ' active' : ''}" data-priority="${priority}"
+                    style="--c: ${QueueBridge.getPriorityData(priority).color};" title="${title}" aria-label="${title}" aria-pressed="${active}">
+                    <img src="${QueueBridge.getPriorityIcon(priority)}" alt="" draggable="false"></button>`;
+            }).join('')}
+            ${mine ? `<button type="button" class="vn-queue-lower" title="${loc('vn.queue.lowerHand')}" aria-label="${loc('vn.queue.lowerHand')}"><i class="fas fa-xmark"></i></button>` : ''}
+        </div>` : '';
+
+        return `<div class="vn-queue-hand-wrap${open ? ' open' : ''}">
+            <button type="button" class="vn-queue-hand${mine ? ' raised' : ''}" title="${label}" aria-label="${label}"
+                aria-haspopup="true" aria-expanded="${open}"><i class="fas fa-hand"></i></button>${picker}</div>`;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -143,13 +178,26 @@ class VNSceneHTML {
         </div></div>`;
 
         const particleEffect = state.particleEffect || 'particles';
+        const [particleType, particleVariant = 'all'] = particleEffect.split(':');
         const visualEffect = state.visualEffect || 'none';
 
         const particlePickerItems = VNAtmosphere.PARTICLE_GROUPS.map(group =>
             `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
             + group.types.map(t => {
                 const label = game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[t]);
-                return `<button type="button" class="vn-atmo-item${t === particleEffect ? ' active' : ''}" data-particle="${t}" title="${label}"><i class="fas ${VNAtmosphere.PARTICLE_ICONS[t]}"></i><span>${label}</span></button>`;
+                const active = t === particleType;
+                const variants = VNAtmosphere.PARTICLE_VARIANTS[t];
+                const activeVariant = active ? particleVariant : 'all';
+                const tag = variants && activeVariant !== 'all'
+                    ? `<small class="vn-atmo-item-variant-tag">${game.i18n.localize((variants.find(v => v.id === activeVariant) || variants[0]).label)}</small>`
+                    : '';
+                const caret = variants ? '<i class="fas fa-chevron-down vn-atmo-item-caret"></i>' : '';
+                const btn = `<button type="button" class="vn-atmo-item${active ? ' active' : ''}${variants ? ' vn-atmo-item-expandable' : ''}" data-particle="${t}" title="${label}"><i class="fas ${VNAtmosphere.PARTICLE_ICONS[t]}"></i><span>${label}</span>${tag}${caret}</button>`;
+                if (!variants) return btn;
+                const list = variants.map(v =>
+                    `<button type="button" class="vn-variant-option${v.id === activeVariant ? ' active' : ''}" data-variant="${v.id}"><i class="fas fa-check"></i><span>${game.i18n.localize(v.label)}</span></button>`
+                ).join('');
+                return `<div class="vn-atmo-item-group" data-variant-base="${t}">${btn}<div class="vn-variant-list" hidden>${list}</div></div>`;
             }).join('')
         ).join('');
 
@@ -167,7 +215,7 @@ class VNSceneHTML {
             ? `<div class="vn-toolbar">
                 ${btn('vn-settings-button', 'fa-cog', game.i18n.localize('vn.toolbar.settings'))}
                 <div class="vn-atmo-wrap">
-                    ${btn('vn-particle-cycle-btn', VNAtmosphere.PARTICLE_ICONS[particleEffect], game.i18n.format('vn.atmosphere.particleButtonTitle', { effect: game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[particleEffect]) }))}
+                    ${btn('vn-particle-cycle-btn', VNAtmosphere.PARTICLE_ICONS[particleType], game.i18n.format('vn.atmosphere.particleButtonTitle', { effect: game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[particleType]) }))}
                     <div class="vn-atmosphere-picker" hidden>
                         <div class="vn-atmosphere-picker-header"><i class="fas fa-star"></i> ${game.i18n.localize('vn.atmosphere.particlesHeader')}</div>
                         <div class="vn-atmosphere-picker-grid">${particlePickerItems}</div>
@@ -180,7 +228,7 @@ class VNSceneHTML {
                         <div class="vn-atmosphere-picker-grid">${visualPickerItems}</div>
                     </div>
                 </div>
-                ${btn(`vn-particles-fg-btn${state.particlesForeground ? ' active' : ''}`, 'fa-layer-group', game.i18n.localize('vn.toolbar.particlesForeground'))}
+                ${btn(`vn-particles-fg-btn${state.particlesLayer !== 'back' ? ' active' : ''}`, PARTICLE_LAYER_ICONS[state.particlesLayer], game.i18n.localize(`vn.toolbar.particlesLayer.${state.particlesLayer}`))}
                 ${this._scene._generateSoundsWrapHTML()}
                 ${btn('vn-minimize-all-button', 'fa-window-minimize', game.i18n.localize('vn.toolbar.minimizeAll'))}
                 ${btn('vn-minimize-self-button', 'fa-eye-slash', game.i18n.localize('vn.toolbar.minimizeSelf'))}
@@ -199,10 +247,10 @@ class VNSceneHTML {
             <button type="button" class="vn-toolbar-btn vn-maximize-self-button" title="${game.i18n.localize('vn.toolbar.maximizeSelf')}"><i class="fas fa-eye"></i></button>
         </div>` : '';
 
-        return `<div id="vn-scene-overlay">
+        return `<div id="vn-scene-overlay"${this._scene.liteMode ? ' class="vn-lite"' : ''}>
             <div class="vn-bg-layer"></div><div class="vn-background-overlay"></div>
             <div class="vn-fx-tint"></div><div class="vn-fx-rays"></div><div class="vn-fx-edges"></div><div class="vn-fx-scan"></div><div class="vn-fx-flash"></div>
-            <div class="vn-vignette"></div><div class="vn-ambient-light"></div><div class="vn-particles"></div><div class="vn-ground-fog"></div>
+            <div class="vn-vignette"></div><div class="vn-ambient-light"></div><div class="vn-particles"></div><div class="vn-particles vn-particles-upper"></div><div class="vn-ground-fog"></div>
             <div class="vn-fx-bloom"></div>
             ${controls}
             <div class="vn-queue-display">${this.queueDisplay(qd)}</div>

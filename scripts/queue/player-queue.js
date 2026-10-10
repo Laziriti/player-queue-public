@@ -1,55 +1,44 @@
 // ============================================================
-// player-queue.js — PlayerQueue class
+// player-queue.js — PlayerQueue: coordinator and public API of the queue
+//
+//   queue-model.js    QueueModel    state (rev / nextOrder / frozen entries) and pure transformations
+//   queue-network.js  QueueNetwork  GM-authority requests, host-side handling, persistence
+//   queue-sound.js    QueueSound    priority sounds
+//   queue-dialog.js   QueueDialog   queue window (ApplicationV2)
+//   queue-widget.js   QueueWidget   floating draggable queue
 // ============================================================
+
+import {
+    MODULE_ID, FALLBACK_AVATAR, PRIORITIES, VALID_PRIORITIES, getPriorityData, priorityIconUrl, setting
+} from './queue-constants.js';
+import { QueueModel } from './queue-model.js';
+import { QueueNetwork } from './queue-network.js';
+import { QueueSound } from './queue-sound.js';
+import { QueueDialog } from './queue-dialog.js';
+import { QueueWidget } from './queue-widget.js';
 
 let playerQueueInstance = null;
 
-const DEBUG = false;
-function log(...args) {
-    if (DEBUG) console.log('[PlayerQueue]', ...args);
-}
-
 class PlayerQueue {
-    static ID = 'player-queue';
-    static socket = null;
+    static ID = MODULE_ID;
+    static PRIORITIES = PRIORITIES;
+    static VALID_PRIORITIES = VALID_PRIORITIES;
+    static FALLBACK_AVATAR = FALLBACK_AVATAR;
+    static getPriorityData = getPriorityData;
+    static priorityIconUrl = priorityIconUrl;
+    static setting = setting;
 
-    static PRIORITIES = {
-        LOW:    { value: 0, label: '!',   name: 'playerQueue.priority.low',    color: '#28a745', sound: 'request0.wav' },
-        MEDIUM: { value: 1, label: '!!',  name: 'playerQueue.priority.medium', color: '#ffc107', sound: 'request1.wav' },
-        HIGH:   { value: 2, label: '!!!', name: 'playerQueue.priority.high',   color: '#dc3545', sound: 'request2.wav' }
-    };
-
-    static VALID_PRIORITIES = new Set([0, 1, 2]);
-
-    static FALLBACK_AVATAR = PlayerQueue.FALLBACK_AVATAR;
-
-    static _PRIORITY_MAP = new Map(
-        Object.values(PlayerQueue.PRIORITIES).map(p => [p.value, p])
-    );
-
-    static _escHtml(str) {
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
-
-    static PRIORITY_SOUND_SETTINGS = {
-        0: 'enableLowPrioritySound',
-        1: 'enableMediumPrioritySound',
-        2: 'enableHighPrioritySound'
-    };
+    /** socketlib module socket (assigned in main.js on `socketlib.ready`). */
+    static get socket() { return QueueNetwork.socket; }
+    static set socket(value) { QueueNetwork.socket = value; }
 
     constructor() {
-        this.queue = [];
-        this.isOpen = false;
         this.isLoaded = false;
-        this._queueDialog = null;
-        this._saveDebounceTimer = null;
-        this._savePromise = null;
-        this._audioCache = new Map();
-        this._dragController = null;
+        this.model = new QueueModel();
+        this.network = new QueueNetwork(this);
+        this.sound = new QueueSound();
+        this.dialog = null;
+        this.widget = new QueueWidget(this);
     }
 
     static initialize() {
@@ -63,786 +52,213 @@ class PlayerQueue {
         return playerQueueInstance;
     }
 
-    // ── Helpers ──
+    // ── State access ──
 
-    static getPriorityData(value) {
-        return PlayerQueue._PRIORITY_MAP.get(value) ?? PlayerQueue.PRIORITIES.LOW;
-    }
+    /** Sorted, frozen snapshot. Replaced on every change — safe to keep or pass to hooks, impossible to mutate. */
+    get queue() { return this.model.entries; }
 
-    static setting(key) {
-        return game.settings.get(PlayerQueue.ID, key);
-    }
+    get rev() { return this.model.rev; }
 
-    static validatePlayerData(data) {
-        if (!data || typeof data !== 'object') return null;
-
-        const user = game.users.get(data.id);
-        if (!user) return null;
-
-        const priority = Number(data.priority);
-        if (!PlayerQueue.VALID_PRIORITIES.has(priority)) return null;
-
-        return {
-            id: String(data.id),
-            name: user.name,
-            avatar: user.avatar || PlayerQueue.FALLBACK_AVATAR,
-            priority,
-            timestamp: Number(data.timestamp) || Date.now()
-        };
-    }
-
-    // ── Theme ──
-
-    updateTheme(isDark) {
-        document.body.classList.toggle('player-queue-dark-theme', isDark);
-        if (this.isOpen) this.updateDisplay();
-    }
-
-    // ── Sound ──
-
-    _getAudio(soundFile) {
-        if (!this._audioCache.has(soundFile)) {
-            const audio = new Audio(`modules/player-queue/assets/${soundFile}`);
-            audio.preload = 'auto';
-            this._audioCache.set(soundFile, audio);
-        }
-        return this._audioCache.get(soundFile);
-    }
-
-    playPrioritySound(priority, isOwnAction = false) {
-        try {
-            if (!PlayerQueue.setting('enableSounds')) return;
-            if (PlayerQueue.setting('soundOnlyForSelf') && !isOwnAction) return;
-
-            const settingKey = PlayerQueue.PRIORITY_SOUND_SETTINGS[priority];
-            if (settingKey && !PlayerQueue.setting(settingKey)) return;
-
-            const volume = PlayerQueue.setting('soundVolume') / 100;
-            if (volume <= 0) return;
-
-            const pd = PlayerQueue.getPriorityData(priority);
-            const audio = this._getAudio(pd.sound);
-            audio.currentTime = 0;
-            audio.volume = volume;
-            audio.play().catch(() => {});
-        } catch (error) {
-            console.error('Error playing priority sound:', error);
-        }
-    }
-
-    // ── Queue Data ──
-
-    sortQueue() {
-        this.queue.sort((a, b) => b.priority - a.priority || a.timestamp - b.timestamp);
-    }
+    get isOpen() { return !!this.dialog?.rendered; }
 
     isInQueue(userId) {
-        return this.queue.some(p => p.id === userId);
+        return this.model.has(userId);
     }
+
+    // ── Loading and applying state ──
 
     async loadQueue() {
         if (this.isLoaded) return;
 
         try {
-            const savedQueue = PlayerQueue.setting('queueData');
-
-            if (Array.isArray(savedQueue) && savedQueue.length > 0) {
-                const onlineIds = new Set(
-                    game.users.contents.filter(u => u.active).map(u => u.id)
-                );
-
-                this.queue = savedQueue
-                    .filter(p => onlineIds.has(p.id))
-                    .map(p => {
-                        const user = game.users.get(p.id);
-                        return {
-                            ...p,
-                            priority: p.priority ?? 0,
-                            name: user?.name ?? p.name,
-                            avatar: user?.avatar || PlayerQueue.FALLBACK_AVATAR
-                        };
-                    });
-
-                this.sortQueue();
-
-                if (this.queue.length !== savedQueue.length) {
-                    this.saveQueue();
-                }
-            } else {
-                this.queue = [];
-            }
+            this.model.adopt(QueueModel.normalize(setting('queueState')));
         } catch (error) {
             console.error('Error loading queue:', error);
-            this.queue = [];
         }
 
         this.isLoaded = true;
         this.updateDisplay();
     }
 
-    saveQueue() {
-        if (!game.user.isGM) return;
+    /** Applies a new state on any client; sounds for other people's actions come from the diff with the old queue. */
+    applyState(state) {
+        const prevEntries = this.model.entries;
+        const prev = this.model.priorities();
+        this.model.adopt(state);
 
-        if (this._saveDebounceTimer) {
-            clearTimeout(this._saveDebounceTimer);
+        for (const e of this.model.entries) {
+            if (e.id === game.user.id) continue;
+            if (prev.get(e.id) !== e.priority) this.sound.playRemote(e.id, e.priority);
         }
 
-        this._saveDebounceTimer = setTimeout(async () => {
-            try {
-                if (this._savePromise) await this._savePromise;
+        this.updateDisplay();
+        this.#fireEventHooks(prevEntries);
+    }
 
-                this._savePromise = game.settings.set(
-                    PlayerQueue.ID, 'queueData', structuredClone(this.queue)
-                );
-                await this._savePromise;
-                this._savePromise = null;
-            } catch (error) {
-                console.error('Error saving queue:', error);
-                this._savePromise = null;
+    /**
+     * Fine-grained hooks, derived from the diff between two committed states, so they fire exactly once on every
+     * client. `last` (written by the host) says why an entry disappeared: left / removed / cleared / announced.
+     */
+    #fireEventHooks(prevEntries) {
+        const { entries: next, last } = this.model;
+        const queue = this.queue;
+        const nextById = new Map(next.map(e => [e.id, e]));
+        const prevById = new Map(prevEntries.map(e => [e.id, e]));
+
+        for (const entry of next) {
+            const before = prevById.get(entry.id);
+            if (!before) Hooks.callAll('playerQueueJoined', { entry, queue });
+            else if (before.priority !== entry.priority) {
+                Hooks.callAll('playerQueuePriorityChanged', { entry, previousPriority: before.priority, queue });
             }
-        }, 100);
-    }
+        }
 
-    // ── Position Persistence ──
-
-    loadQueuePosition() {
-        try {
-            const saved = localStorage.getItem(`${PlayerQueue.ID}-position`);
-            return saved ? JSON.parse(saved) : null;
-        } catch {
-            return null;
+        for (const entry of prevEntries) {
+            if (nextById.has(entry.id)) continue;
+            const by = last?.by ?? '';
+            if (last?.type === 'announce') {
+                Hooks.callAll('playerQueueAnnounced', { entry, by, queue });
+                continue;
+            }
+            const reason = last?.type === 'leave' ? 'left' : last?.type === 'clear' ? 'cleared' : 'removed';
+            Hooks.callAll('playerQueueLeft', { entry, reason, by, queue });
         }
     }
 
-    saveQueuePosition(x, y) {
-        try {
-            localStorage.setItem(`${PlayerQueue.ID}-position`, JSON.stringify({ x, y }));
-        } catch {}
+    /** onChange of the world setting `queueState` — the only channel through which state reaches other clients. */
+    onStateSetting(raw) {
+        if (!this.isLoaded) return;
+
+        const state = QueueModel.normalize(raw);
+        if (state.rev === this.model.rev) return;
+        if (state.rev < this.model.rev && this.network.isHost) return;
+
+        this.applyState(state);
     }
 
-    // ── Queue Dialog (DialogV2) ──
+    // ── Theme and sound ──
+
+    updateTheme(isDark) {
+        document.body.classList.toggle('player-queue-dark-theme', isDark);
+        this.dialog?.applyThemeOverride();
+    }
+
+    playPrioritySound(priority, isOwnAction = false) {
+        this.sound.play(priority, isOwnAction);
+    }
+
+    // ── Queue window ──
 
     async toggleQueue() {
-        if (this.isOpen && this._queueDialog) {
-            this._queueDialog.close();
+        if (this.isOpen) {
+            await this.dialog.close();
             return;
         }
         await this.openQueue();
     }
 
     async openQueue() {
-        // Закрываем предыдущий если есть
-        if (this._queueDialog) {
-            try { this._queueDialog.close(); } catch {}
-        }
-
-        const dialog = new foundry.applications.api.DialogV2({
-            window: {
-                title: game.i18n.localize('playerQueue.dialog.title'),
-                icon: "fas fa-users",
-                resizable: true,
-                classes: ['pq-queue-window']
-            },
-            position: { width: 450, height: 520 },
-            content: this._generateDialogContent(),
-            buttons: this._generateDialogButtons(),
-            // Не закрываем при нажатии кнопок приоритета
-            modal: false
-        });
-
-        // Обработчики после рендера
-        dialog.addEventListener('render', () => {
-            this._attachDialogListeners(dialog.element);
-        });
-
-        dialog.addEventListener('close', () => {
-            this.isOpen = false;
-            this._queueDialog = null;
-        });
-
-        this._queueDialog = dialog;
-        this.isOpen = true;
-        dialog.render({ force: true });
+        this.dialog ??= new QueueDialog(this);
+        await this.dialog.render({ force: true });
     }
 
-    _generateDialogContent() {
-        const currentPlayer = this.queue.find(p => p.id === game.user.id);
-        const isGM = game.user.isGM;
+    // ── Actions (every mutation is a request to the host GM) ──
 
-        const queueItems = this.queue.length > 0
-            ? this.queue.map(player => {
-                const pd = PlayerQueue.getPriorityData(player.priority);
-                const esc = PlayerQueue._escHtml;
-                return `
-                    <div class="queue-player ${isGM ? 'gm-clickable' : ''}"
-                         title="${esc(player.name)} - ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')}"
-                         data-user-id="${player.id}"
-                         style="border-color: ${pd.color}; border-width: 3px;">
-                        <img src="${esc(player.avatar)}" alt="${esc(player.name)}"
-                             onerror="this.src=PlayerQueue.FALLBACK_AVATAR">
-                    </div>`;
-            }).join('')
-            : `<div class="queue-empty">${game.i18n.localize('playerQueue.dialog.empty')}</div>`;
+    async joinQueueWithPriority(priority) {
+        if (!VALID_PRIORITIES.has(priority)) return;
 
-        const controls = currentPlayer
-            ? this._generateInQueueControls(currentPlayer)
-            : this._generateJoinControls();
-
-        const { HIGH, MEDIUM, LOW } = PlayerQueue.PRIORITIES;
-
-        return `
-            <div class="queue-dialog">
-                <div class="queue-container">${queueItems}</div>
-                <div class="queue-controls">
-                    ${controls}
-                    ${isGM ? `<button type="button" class="clear-btn" data-action="clear-queue">${game.i18n.localize('playerQueue.dialog.clearQueue')}</button>` : ''}
-                </div>
-                <div class="queue-info">
-                    <small>${game.i18n.format('playerQueue.dialog.playerCount', { count: this.queue.length })}</small>
-                    ${isGM ? `<br><small>${game.i18n.localize('playerQueue.dialog.gmHint')}</small>` : ''}
-                    <div class="priority-legend">
-                        <small>${game.i18n.localize('playerQueue.dialog.prioritiesLabel')}
-                            <span style="color:${HIGH.color};font-weight:bold;">${HIGH.label} ${game.i18n.localize(HIGH.name)}</span> •
-                            <span style="color:${MEDIUM.color};font-weight:bold;">${MEDIUM.label} ${game.i18n.localize(MEDIUM.name)}</span> •
-                            <span style="color:${LOW.color};font-weight:bold;">${LOW.label} ${game.i18n.localize(LOW.name)}</span>
-                        </small>
-                    </div>
-                </div>
-            </div>`;
-    }
-
-    _generateDialogButtons() {
-        // DialogV2 требует хотя бы одну кнопку, делаем «Закрыть»
-        return [{
-            action: 'close',
-            label: game.i18n.localize('playerQueue.dialog.close'),
-            icon: 'fas fa-times'
-        }];
-    }
-
-    _generateJoinControls() {
-        const JOIN_TITLES = {
-            low:    'playerQueue.dialog.joinTitleLow',
-            medium: 'playerQueue.dialog.joinTitleMedium',
-            high:   'playerQueue.dialog.joinTitleHigh'
-        };
-        return `
-            <div class="priority-buttons">
-                ${[
-                    { cls: 'low',    p: PlayerQueue.PRIORITIES.LOW },
-                    { cls: 'medium', p: PlayerQueue.PRIORITIES.MEDIUM },
-                    { cls: 'high',   p: PlayerQueue.PRIORITIES.HIGH }
-                ].map(({ cls, p }) => `
-                    <button type="button" class="priority-join-btn ${cls}"
-                            data-priority="${p.value}"
-                            title="${game.i18n.localize(JOIN_TITLES[cls])}">
-                        <span class="priority-icon">${p.label}</span>
-                        <span class="priority-text">${game.i18n.localize(p.name)}</span>
-                    </button>`).join('')}
-            </div>`;
-    }
-
-    _generateInQueueControls(player) {
-        const pd = PlayerQueue.getPriorityData(player.priority);
-        return `
-            <div class="current-player-controls">
-                <div class="current-priority-info">
-                    <span class="current-priority-label">${game.i18n.localize('playerQueue.dialog.yourPriority')}</span>
-                    <span class="current-priority-value" style="color: ${pd.color};">
-                        ${pd.label} ${game.i18n.localize(pd.name)}
-                    </span>
-                </div>
-                <div class="priority-change-buttons">
-                    ${[
-                        { cls: 'low',    val: 0, icon: '!',   titleKey: 'playerQueue.dialog.changeTitleLow' },
-                        { cls: 'medium', val: 1, icon: '!!',  titleKey: 'playerQueue.dialog.changeTitleMedium' },
-                        { cls: 'high',   val: 2, icon: '!!!', titleKey: 'playerQueue.dialog.changeTitleHigh' }
-                    ].map(({ cls, val, icon, titleKey }) => `
-                        <button type="button"
-                                class="priority-change-btn ${cls} ${player.priority === val ? 'active' : ''}"
-                                data-priority="${val}"
-                                title="${game.i18n.localize(titleKey)}">${icon}</button>`).join('')}
-                </div>
-                <button type="button" class="leave-btn" data-action="leave-queue">
-                    ${game.i18n.localize('playerQueue.dialog.leaveQueue')}
-                </button>
-            </div>`;
-    }
-
-    // ── Dialog Listeners ──
-
-    _attachDialogListeners(html) {
-        if (!html || html._queueDelegated) return;
-        html._queueDelegated = true;
-
-        html.addEventListener('click', (e) => {
-            const joinBtn = e.target.closest('.priority-join-btn');
-            if (joinBtn) { e.preventDefault(); this.joinQueueWithPriority(parseInt(joinBtn.dataset.priority)); return; }
-
-            const changeBtn = e.target.closest('.priority-change-btn');
-            if (changeBtn) { e.preventDefault(); this.changePriority(parseInt(changeBtn.dataset.priority)); return; }
-
-            const leaveBtn = e.target.closest('[data-action="leave-queue"]');
-            if (leaveBtn) { e.preventDefault(); this.leaveQueue(); return; }
-
-            const clearBtn = e.target.closest('[data-action="clear-queue"]');
-            if (clearBtn) { e.preventDefault(); this.clearQueue(); return; }
-
-            if (game.user.isGM) {
-                const playerEl = e.target.closest('.queue-player.gm-clickable');
-                if (playerEl) { e.stopPropagation(); this.announcePlayerAndRemove(playerEl.dataset.userId); }
-            }
-        });
-
-        if (game.user.isGM) {
-            html.addEventListener('contextmenu', (e) => {
-                const playerEl = e.target.closest('.queue-player.gm-clickable');
-                if (playerEl) { e.preventDefault(); e.stopPropagation(); this.removePlayerFromQueue(playerEl.dataset.userId); }
-            });
-        }
-    }
-
-    // ── Dialog Refresh ──
-
-    refreshDialog() {
-        if (!this._queueDialog?.element) return;
-
-        const html = this._queueDialog.element;
-        const oldContent = html.querySelector('.queue-dialog');
-        if (!oldContent) {
-            // Fallback: полный перерендер
-            this._queueDialog.close();
-            this.openQueue();
+        // Уже в очереди — меняем приоритет в любую сторону (случайный «красный» можно тут же исправить макросом)
+        if (this.model.has(game.user.id)) {
+            await this.changePriority(priority);
             return;
         }
 
-        // Сохраняем скролл
-        const container = oldContent.querySelector('.queue-container');
-        const scrollTop = container?.scrollTop ?? 0;
+        if (this.network.isLocallyThrottled()) return;
 
-        // Создаём новый контент
-        const temp = document.createElement('div');
-        temp.innerHTML = this._generateDialogContent();
-        const newContent = temp.firstElementChild;
-
-        // Заменяем
-        oldContent.replaceWith(newContent);
-
-        // Восстанавливаем скролл
-        const newContainer = newContent.querySelector('.queue-container');
-        if (newContainer) newContainer.scrollTop = scrollTop;
-    }
-
-    // ── Queue Actions ──
-
-    async joinQueueWithPriority(priority) {
-        if (!PlayerQueue.VALID_PRIORITIES.has(priority)) return;
-
-        const playerData = {
-            id: game.user.id,
-            name: game.user.name,
-            avatar: game.user.avatar || PlayerQueue.FALLBACK_AVATAR,
-            priority,
-            timestamp: Date.now()
-        };
-
-        this.playPrioritySound(priority, true);
-        this.emitSocketEvent('join', playerData);
-        await this.addToQueue(playerData);
+        const result = await this.network.request('join', { priority });
+        if (result.ok) this.playPrioritySound(priority, true);
     }
 
     async changePriority(priority) {
-        if (!PlayerQueue.VALID_PRIORITIES.has(priority)) return;
+        if (!VALID_PRIORITIES.has(priority)) return;
 
-        const player = this.queue.find(p => p.id === game.user.id);
+        const player = this.model.get(game.user.id);
         if (!player || player.priority === priority) return;
+        if (this.network.isLocallyThrottled()) return;
 
-        player.priority = priority;
-        player.timestamp = Date.now();
-
-        this.playPrioritySound(priority, true);
-        this.sortQueue();
-        this.saveQueue();
-        this.emitSocketEvent('update', {
-            userId: game.user.id,
-            priority,
-            timestamp: player.timestamp
-        });
-        this.updateDisplay();
+        const result = await this.network.request('change', { priority });
+        if (result.ok) this.playPrioritySound(priority, true);
     }
 
-    leaveQueue() {
+    /** Raise the hand (lowest priority) or lower it if already raised — the one-button flow for the scene panel / hotkey. */
+    async toggleHand() {
+        if (this.isInQueue(game.user.id)) await this.leaveQueue();
+        else await this.joinQueueWithPriority(PRIORITIES.LOW.value);
+    }
+
+    async leaveQueue() {
         if (!this.isInQueue(game.user.id)) return;
-        this.emitSocketEvent('leave', { userId: game.user.id });
-        this.removeFromQueue(game.user.id);
+        await this.network.request('leave');
     }
 
-    clearQueue() {
+    async clearQueue() {
         if (!game.user.isGM) return;
-        this.emitSocketEvent('clear', {});
-        this.queue = [];
-        this.saveQueue();
-        this.updateDisplay();
+        await this.network.request('clear');
     }
 
     async announcePlayerAndRemove(userId) {
         if (!game.user.isGM) return;
-        const player = this.queue.find(p => p.id === userId);
+        const player = this.model.get(userId);
         if (!player) return;
 
-        const pd = PlayerQueue.getPriorityData(player.priority);
+        const result = await this.network.request('announce', { userId });
+        if (result.ok && setting('announceInChat')) await this.#postAnnounceCard(player);
+    }
+
+    async #postAnnounceCard(player) {
+        const pd = getPriorityData(player.priority);
+        const content = await foundry.applications.handlebars.renderTemplate(
+            `modules/${MODULE_ID}/templates/queue-announce.hbs`,
+            {
+                name: player.name,
+                avatar: player.avatar,
+                fallbackAvatar: FALLBACK_AVATAR,
+                color: pd.color,
+                icon: priorityIconUrl(player.priority),
+                priorityName: `${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')}`,
+                text: game.i18n.localize('playerQueue.chat.speakingNow')
+            }
+        );
+
         await ChatMessage.create({
             user: game.user.id,
             speaker: { alias: game.i18n.localize('playerQueue.chat.systemAlias') },
-            content: `🎭 <strong>${PlayerQueue._escHtml(player.name)}</strong> ${game.i18n.localize('playerQueue.chat.speakingNow')} <span style="color: ${pd.color}; font-weight: bold;">(${pd.label} ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')})</span>`,
+            content,
+            flags: { [MODULE_ID]: { announce: { userId: player.id, priority: player.priority } } }
         });
-
-        this.removePlayerFromQueue(userId);
     }
 
-    removePlayerFromQueue(userId) {
+    async removePlayerFromQueue(userId) {
         if (!game.user.isGM) return;
         if (!this.isInQueue(userId)) return;
-
-        this.emitSocketEvent('leave', { userId });
-        this.removeFromQueue(userId);
+        await this.network.request('remove', { userId });
     }
 
-    addToQueue(playerData) {
-        const idx = this.queue.findIndex(p => p.id === playerData.id);
-        if (idx !== -1) {
-            this.queue[idx] = playerData;
-        } else {
-            this.queue.push(playerData);
-        }
-
-        this.sortQueue();
-        this.saveQueue();
-        this.updateDisplay();
-    }
-
-    removeFromQueue(userId) {
-        const idx = this.queue.findIndex(p => p.id === userId);
-        if (idx === -1) return;
-
-        this.queue.splice(idx, 1);
-        this.saveQueue();
-        this.updateDisplay();
-    }
-
-    updatePlayerPriority(userId, priority, timestamp) {
-        const player = this.queue.find(p => p.id === userId);
-        if (!player) return;
-
-        player.priority = priority;
-        player.timestamp = timestamp;
-        this.sortQueue();
-        this.saveQueue();
-        this.updateDisplay();
-    }
-
-    // ── Socket ──
-
-    emitSocketEvent(action, data) {
-        log('emit:', action, data);
-        if (!PlayerQueue.socket) {
-            console.error('[PlayerQueue] Socket not available');
-            return;
-        }
-        PlayerQueue.socket.executeForEveryone('playerQueue', {
-            action, data, sender: game.user.id
-        });
-    }
-
-    handleSocketEvent(socketData) {
-        if (!socketData || typeof socketData !== 'object') return;
-        const { action, data, sender } = socketData;
-
-        if (!game.users.get(sender)) return;
-        if (sender === game.user.id) return;
-
-        log('received:', action, data);
-
-        switch (action) {
-            case 'join': {
-                const validated = PlayerQueue.validatePlayerData(data);
-                if (!validated) return;
-                this.addToQueue(validated);
-                this.playPrioritySound(validated.priority, false);
-                break;
-            }
-
-            case 'leave': {
-                const userId = String(data?.userId);
-                if (!game.users.get(userId)) return;
-                if (sender !== userId && !game.users.get(sender)?.isGM) return;
-                this.removeFromQueue(userId);
-                break;
-            }
-
-            case 'update': {
-                const priority = Number(data?.priority);
-                if (!PlayerQueue.VALID_PRIORITIES.has(priority)) return;
-                const userId = String(data?.userId);
-                if (!game.users.get(userId)) return;
-                this.updatePlayerPriority(
-                    userId, priority, Number(data?.timestamp) || Date.now()
-                );
-                this.playPrioritySound(priority, false);
-                break;
-            }
-
-            case 'clear': {
-                if (!game.users.get(sender)?.isGM) return;
-                this.queue = [];
-                this.saveQueue();
-                this.updateDisplay();
-                break;
-            }
-
-            case 'sync': {
-                if (!game.users.get(sender)?.isGM) return;
-                if (game.user.isGM) return;
-                const validated = (Array.isArray(data) ? data : [])
-                    .map(p => PlayerQueue.validatePlayerData(p))
-                    .filter(Boolean);
-                this.queue = validated;
-                this.sortQueue();
-                this.updateDisplay();
-                break;
-            }
-        }
-    }
-
-    requestSync() {
-        if (game.user.isGM && this.isLoaded) {
-            this.emitSocketEvent('sync', this.queue);
-        }
+    async requestSync() {
+        if (!game.user.isGM) return;
+        await this.network.request('resync');
     }
 
     // ── Display ──
 
     updateDisplay() {
-        if (this.isOpen && this._queueDialog) this.refreshDialog();
-        this.updateFloatingQueue();
+        if (this.isOpen) this.dialog.render();
+        this.widget.update();
         Hooks.callAll('playerQueueUpdated', this.queue);
     }
 
-    // ── Floating Queue ──
-
     updateFloatingQueue() {
-        let el = document.getElementById('floating-queue');
-
-        // GM uses the in-scene queue display when VN scene is active
-        if (game.user?.isGM && window.visualNovelScene?.state?.isActive) {
-            if (el) {
-                if (this._dragController) {
-                    this._dragController.abort();
-                    this._dragController = null;
-                }
-                el.remove();
-            }
-            return;
-        }
-
-        if (this.queue.length === 0) {
-            if (el) {
-                if (this._dragController) {
-                    this._dragController.abort();
-                    this._dragController = null;
-                }
-                el.remove();
-            }
-            return;
-        }
-
-        if (!el) el = this._createFloatingQueue();
-        this._renderFloatingContent(el);
-    }
-
-    _createFloatingQueue() {
-        const el = document.createElement('div');
-        el.id = 'floating-queue';
-        el.className = 'floating-queue';
-
-        const orientation = PlayerQueue.setting('queueOrientation');
-        const size = PlayerQueue.setting('queueSize');
-        const maxItems = PlayerQueue.setting('queueMaxItems');
-
-        el.classList.add(orientation);
-        el.style.setProperty('--queue-size', size + 'px');
-        el.style.setProperty('--queue-max-items', maxItems);
-
-        const savedPos = this.loadQueuePosition();
-        if (savedPos) {
-            el.style.position = 'fixed';
-            el.style.left = Math.min(Math.max(0, savedPos.x), window.innerWidth  - 60) + 'px';
-            el.style.top  = Math.min(Math.max(0, savedPos.y), window.innerHeight - 60) + 'px';
-        } else {
-            this._applyQueuePosition(el, PlayerQueue.setting('queuePosition'));
-        }
-
-        document.body.appendChild(el);
-        this._makeDraggable(el);
-        return el;
-    }
-
-    _applyQueuePosition(el, position) {
-        Object.assign(el.style, { top: '', bottom: '', left: '', right: '' });
-
-        const map = {
-            'top-left':     { top: '20px', left: '20px' },
-            'top-right':    { top: '20px', right: '20px' },
-            'bottom-left':  { bottom: '20px', left: '20px' },
-            'bottom-right': { bottom: '20px', right: '20px' }
-        };
-
-        Object.assign(el.style, map[position] || map['bottom-right']);
-    }
-
-    _makeDraggable(element) {
-        if (this._dragController) {
-            this._dragController.abort();
-        }
-        this._dragController = new AbortController();
-        const { signal } = this._dragController;
-
-        const handle = document.createElement('div');
-        handle.className = 'drag-handle';
-        handle.innerHTML = '⋮⋮';
-        handle.title = game.i18n.localize('playerQueue.floatingQueue.dragHandle');
-        element.appendChild(handle);
-
-        handle.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const rect = element.getBoundingClientRect();
-            const startLeft = rect.left;
-            const startTop = rect.top;
-
-            Object.assign(element.style, {
-                position: 'fixed',
-                top: startTop + 'px',
-                left: startLeft + 'px',
-                right: '', bottom: ''
-            });
-
-            const onMove = (ev) => {
-                const w = element.offsetWidth, h = element.offsetHeight;
-                element.style.left = Math.min(Math.max(0, startLeft + ev.clientX - startX), window.innerWidth  - w) + 'px';
-                element.style.top  = Math.min(Math.max(0, startTop  + ev.clientY - startY), window.innerHeight - h) + 'px';
-            };
-
-            const onUp = () => {
-                const r = element.getBoundingClientRect();
-                this.saveQueuePosition(r.left, r.top);
-                document.removeEventListener('mousemove', onMove);
-                document.removeEventListener('mouseup', onUp);
-            };
-
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-        }, { signal });
-    }
-
-    _renderFloatingContent(floatingQueue) {
-        const maxItems = PlayerQueue.setting('queueMaxItems');
-        const isGM = game.user.isGM;
-
-        let container = floatingQueue.querySelector('.queue-items');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'queue-items';
-            floatingQueue.appendChild(container);
-
-            // Клик на пустое место — открыть диалог
-            container.addEventListener('click', (e) => {
-                if (e.target === container ||
-                    e.target.closest('.queue-player:not(.gm-clickable)')) {
-                    this.toggleQueue();
-                }
-            });
-        }
-
-        container.classList.toggle('scrollable', this.queue.length > maxItems);
-
-        // Дифференциальное обновление
-        const existingElements = new Map();
-        container.querySelectorAll('.queue-player').forEach(el => {
-            existingElements.set(el.dataset.userId, el);
-        });
-
-        const targetIds = new Set(this.queue.map(p => p.id));
-
-        // Удаляем отсутствующих
-        for (const [id, el] of existingElements) {
-            if (!targetIds.has(id)) {
-                el.remove();
-                existingElements.delete(id);
-            }
-        }
-
-        // Обновляем/создаём в правильном порядке
-        let previousElement = null;
-        for (const [index, player] of this.queue.entries()) {
-            const pd = PlayerQueue.getPriorityData(player.priority);
-            let el = existingElements.get(player.id);
-
-            if (el) {
-                // Обновляем существующий
-                el.style.border = `3px solid ${pd.color}`;
-                el.title = `${player.name} (${index + 1}) - ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')}`;
-                const img = el.querySelector('img');
-                if (img) {
-                    const expectedSrc = player.avatar;
-                    if (!img.src.endsWith(expectedSrc)) img.src = expectedSrc;
-                }
-            } else {
-                // Создаём новый
-                el = this._createFloatingPlayerElement(player, index, pd, isGM);
-                container.appendChild(el);
-            }
-
-            // Обеспечиваем порядок
-            if (previousElement) {
-                if (previousElement.nextElementSibling !== el) {
-                    previousElement.after(el);
-                }
-            } else if (container.firstElementChild !== el) {
-                container.prepend(el);
-            }
-
-            previousElement = el;
-        }
-    }
-
-    _createFloatingPlayerElement(player, index, pd, isGM) {
-        const el = document.createElement('div');
-        el.className = `queue-player ${isGM ? 'gm-clickable' : ''}`;
-        el.title = `${player.name} (${index + 1}) - ${game.i18n.localize(pd.name)} ${game.i18n.localize('playerQueue.priority.suffix')}`;
-        el.dataset.userId = player.id;
-        el.style.border = `3px solid ${pd.color}`;
-
-        const img = document.createElement('img');
-        img.src = player.avatar;
-        img.alt = player.name;
-        img.onerror = () => { img.src = PlayerQueue.FALLBACK_AVATAR; };
-        el.appendChild(img);
-
-        if (isGM) {
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.announcePlayerAndRemove(player.id);
-            });
-            el.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.removePlayerFromQueue(player.id);
-            });
-        }
-
-        return el;
+        this.widget.update();
     }
 }
 

@@ -2,7 +2,7 @@
 // visual-novel-scene.js — v4.0 (refactored core)
 // ============================================================
 
-import { VNSceneState, VNPresets, VNFolders } from './vn-state.js';
+import { VNSceneState, VNPresets, VNFolders, PARTICLE_LAYERS, PARTICLE_LAYER_ICONS, resolveParticlesLayer } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { QueueBridge } from './vn-queue-bridge.js';
 import { VNTransitions } from './visual-effects/vn-transitions.js';
@@ -43,6 +43,7 @@ class VisualNovelScene {
         OVERLAY: '#vn-scene-overlay',
         CHARACTER: '.vn-character',
         QUEUE_ITEM: '.vn-queue-item.gm-clickable',
+        QUEUE_HAND: '.vn-queue-hand',
     };
 
     constructor() {
@@ -190,7 +191,7 @@ class VisualNovelScene {
     }
 
     setCameraEnabled(enabled) {
-        this._atmosphere?._camera?.setEnabled(enabled);
+        this._atmosphere?._camera?.setEnabled(enabled && !this.liteMode);
         this._reapplyCameraDof();
     }
 
@@ -200,7 +201,24 @@ class VisualNovelScene {
         const hasSpeaker = Object.values(this.state.speakers).some(Boolean);
         const cameraOn = game.settings.get(VisualNovelScene.ID, 'cameraEnabled');
         const dofOn = game.settings.get(VisualNovelScene.ID, 'cameraDoF');
-        overlay.classList.toggle('vn-camera-dof', hasSpeaker && cameraOn && dofOn);
+        overlay.classList.toggle('vn-camera-dof', hasSpeaker && cameraOn && dofOn && !this.liteMode);
+    }
+
+    /** Client setting `liteMode`: this client draws no particles / visual effects / parallax / camera and drops heavy CSS filters. */
+    get liteMode() {
+        try { return !!game.settings.get(VisualNovelScene.ID, 'liteMode'); }
+        catch { return false; }
+    }
+
+    /** Applies a changed `liteMode` to a scene that is already open on this client. */
+    applyLiteMode() {
+        const overlay = this.$overlay?.[0];
+        if (!overlay) return;
+        overlay.classList.toggle('vn-lite', this.liteMode);
+        this._reinitAtmosphere();
+        this._reapplyCameraDof();
+        // destroy() resets the camera target; point it at the current speaker again
+        this._atmosphere.onSpeakerChange(overlay.querySelector('.vn-character.active'));
     }
 
     // ══════════════════════════════════════════════════════════
@@ -461,7 +479,8 @@ class VisualNovelScene {
 
     setParticleEffect(particle, emit = true) {
         if (emit && !game.user.isGM) return;
-        if (!VNAtmosphere.PARTICLE_TYPES.includes(particle)) return;
+        const [particleType] = particle.split(':');
+        if (!VNAtmosphere.PARTICLE_TYPES.includes(particleType)) return;
         this.state.particleEffect = particle;
         this._reinitAtmosphere();
         if (emit) { this.emitSocketEvent('setParticleEffect', { particle }); this._persistState(); }
@@ -475,40 +494,59 @@ class VisualNovelScene {
         if (emit) { this.emitSocketEvent('setVisualEffect', { visual }); this._persistState(); }
     }
 
-    setParticlesForeground(enabled, emit = true) {
+    setParticlesLayer(layer, emit = true) {
         if (emit && !game.user.isGM) return;
-        this.state.particlesForeground = enabled;
+        if (!PARTICLE_LAYERS.includes(layer)) return;
+        const prev = this.state.particlesLayer;
+        this.state.particlesLayer = layer;
+        // Вход/выход из 'mix' требует перераскладки частиц по контейнерам; back<->front — только CSS-класс
+        if ((prev === 'mix') !== (layer === 'mix')) this._reinitAtmosphere();
+        else this._applyParticlesLayerUI();
+        if (emit) { this.emitSocketEvent('setParticlesLayer', { layer }); this._persistState(); }
+    }
+
+    cycleParticlesLayer() {
+        const i = PARTICLE_LAYERS.indexOf(this.state.particlesLayer);
+        this.setParticlesLayer(PARTICLE_LAYERS[(i + 1) % PARTICLE_LAYERS.length], true);
+    }
+
+    _applyParticlesLayerUI() {
         const overlay = this.$overlay?.[0];
-        if (overlay) {
-            overlay.classList.toggle('vn-particles-fg', enabled);
-            const btn = overlay.querySelector('.vn-particles-fg-btn');
-            if (btn) btn.classList.toggle('active', enabled);
+        if (!overlay) return;
+        const layer = this.state.particlesLayer;
+        overlay.classList.toggle('vn-particles-fg', layer === 'front');
+        const btn = overlay.querySelector('.vn-particles-fg-btn');
+        if (btn) {
+            btn.classList.toggle('active', layer !== 'back');
+            btn.title = game.i18n.localize(`vn.toolbar.particlesLayer.${layer}`);
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = `fas ${PARTICLE_LAYER_ICONS[layer]}`;
         }
-        if (emit) { this.emitSocketEvent('setParticlesForeground', { enabled }); this._persistState(); }
     }
 
     _reinitAtmosphere() {
         const overlayEl = this.$overlay?.[0];
         if (!overlayEl) return;
         this._atmosphere.destroy();
-        this._atmosphere.init(overlayEl, this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity);
+        this._atmosphere.init(overlayEl, this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity, this.state.particlesLayer);
         this._updateAtmosphereButtons();
-        if (this.state.particlesForeground) overlayEl.classList.add('vn-particles-fg');
+        this._applyParticlesLayerUI();
     }
 
     _updateAtmosphereButtons() {
         const overlay = this.$overlay?.[0];
         if (!overlay) return;
-        const particle = this.state.particleEffect || 'particles';
+        const [particleType, particleVariant = 'all'] = (this.state.particleEffect || 'particles').split(':');
         const visual = this.state.visualEffect || 'none';
 
         const particleBtn = overlay.querySelector('.vn-particle-cycle-btn');
         if (particleBtn) {
-            particleBtn.querySelector('i').className = `fas ${VNAtmosphere.PARTICLE_ICONS[particle]}`;
-            particleBtn.title = game.i18n.format('vn.atmosphere.particleButtonTitle', { effect: game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[particle]) });
+            particleBtn.querySelector('i').className = `fas ${VNAtmosphere.PARTICLE_ICONS[particleType]}`;
+            particleBtn.title = game.i18n.format('vn.atmosphere.particleButtonTitle', { effect: game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[particleType]) });
         }
         overlay.querySelectorAll('.vn-atmo-item[data-particle]').forEach(item =>
-            item.classList.toggle('active', item.dataset.particle === particle));
+            item.classList.toggle('active', item.dataset.particle === particleType));
+        this._syncParticleVariantUI(overlay, particleType, particleVariant);
 
         const visualBtn = overlay.querySelector('.vn-visual-cycle-btn');
         if (visualBtn) {
@@ -517,6 +555,55 @@ class VisualNovelScene {
         }
         overlay.querySelectorAll('.vn-atmo-item[data-visual]').forEach(item =>
             item.classList.toggle('active', item.dataset.visual === visual));
+    }
+
+    /**
+     * Синхронизирует раскрывающиеся группы подвариантов частиц (напр.
+     * чёрные/белые перья), выросшие прямо из своего тайла, с текущим
+     * типом+вариантом: сворачивает все, подсвечивает активный вариант
+     * и обновляет бейдж варианта на кнопке тайла.
+     */
+    _syncParticleVariantUI(overlay, particleType, particleVariant = 'all') {
+        overlay.querySelectorAll('.vn-atmo-item-group').forEach(group => {
+            const variant = group.dataset.variantBase === particleType ? particleVariant : 'all';
+            this._closeVariantGroup(group);
+            group.querySelectorAll('.vn-variant-option').forEach(o => o.classList.toggle('active', o.dataset.variant === variant));
+            this._setVariantTag(group, variant);
+        });
+    }
+
+    _setVariantTag(group, variant) {
+        const btn = group.querySelector('.vn-atmo-item');
+        if (!btn) return;
+        let tag = btn.querySelector('.vn-atmo-item-variant-tag');
+        if (variant === 'all') { tag?.remove(); return; }
+        const v = VNAtmosphere.PARTICLE_VARIANTS[group.dataset.variantBase]?.find(v => v.id === variant);
+        if (!v) { tag?.remove(); return; }
+        if (!tag) {
+            tag = document.createElement('small');
+            tag.className = 'vn-atmo-item-variant-tag';
+            const caret = btn.querySelector('.vn-atmo-item-caret');
+            if (caret) caret.insertAdjacentElement('beforebegin', tag);
+            else btn.appendChild(tag);
+        }
+        tag.textContent = game.i18n.localize(v.label);
+    }
+
+    _openVariantGroup(group) {
+        group.classList.add('vn-variant-open');
+        const list = group.querySelector('.vn-variant-list');
+        if (list) list.hidden = false;
+    }
+
+    _closeVariantGroup(group) {
+        group.classList.remove('vn-variant-open');
+        const list = group.querySelector('.vn-variant-list');
+        if (list) list.hidden = true;
+    }
+
+    _toggleVariantGroup(group) {
+        if (group.classList.contains('vn-variant-open')) this._closeVariantGroup(group);
+        else this._openVariantGroup(group);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -619,6 +706,7 @@ class VisualNovelScene {
         if (value) this._applyMinimizedPosition();
         else this._clearMinimizedPosition();
         if (emit && forAll && game.user.isGM) this.emitSocketEvent(value ? 'minimize' : 'maximize', {});
+        QueueBridge.refreshFloating();
     }
 
     _setMinimizedSelf(value) {
@@ -718,7 +806,7 @@ class VisualNovelScene {
             particleEffect: payload.particleEffect ?? null,
             visualEffect: payload.visualEffect ?? null,
             atmosphereEffect: payload.atmosphereEffect ?? null,
-            particlesForeground: payload.particlesForeground ?? false,
+            particlesLayer: resolveParticlesLayer(payload),
             particleIntensity: payload.particleIntensity ?? 1,
             speakers: payload.speakers || {},
             flipped: payload.flipped || {},
@@ -761,6 +849,7 @@ class VisualNovelScene {
         $('body').append(this._html.scene(tokens));
         this._invalidateOverlayCache();
         this._applyAllPortraitTransforms();
+        QueueBridge.refreshFloating();
 
         document.querySelectorAll('#vn-scene-overlay .vn-character .vn-character-img').forEach(img => img.style.opacity = '0');
         this._bgManager.applyBackground(this.$overlay, this.state.background, this.state.backgroundOverlay);
@@ -769,9 +858,9 @@ class VisualNovelScene {
         setTimeout(() => {
             this.activateSceneListeners();
             this._applyAllPortraitTransforms();
-            this._atmosphere.init(this.$overlay[0], this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity);
+            this._atmosphere.init(this.$overlay[0], this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity, this.state.particlesLayer);
             this._updateAtmosphereButtons();
-            if (this.state.particlesForeground) this.$overlay[0]?.classList.add('vn-particles-fg');
+            this._applyParticlesLayerUI();
             this._animateInitialCharacters();
             this._restoreSpeakers(speakersSnapshot);
             if (game.user.isGM) this._updateGmOnlyUI();
@@ -807,11 +896,14 @@ class VisualNovelScene {
         const visualChanged = payload.visualEffect != null && this.state.visualEffect !== payload.visualEffect;
         if (particleChanged) this.state.particleEffect = payload.particleEffect;
         if (visualChanged) this.state.visualEffect = payload.visualEffect;
+        const newLayer = (payload.particlesLayer != null || payload.particlesForeground != null)
+            ? resolveParticlesLayer(payload) : this.state.particlesLayer;
+        const layerChanged = newLayer !== this.state.particlesLayer;
         if (particleChanged || visualChanged || intensityChanged) {
+            this.state.particlesLayer = newLayer;
             this._reinitAtmosphere();
-        }
-        if (payload.particlesForeground != null && this.state.particlesForeground !== payload.particlesForeground) {
-            this.setParticlesForeground(payload.particlesForeground, false);
+        } else if (layerChanged) {
+            this.setParticlesLayer(newLayer, false);
         }
         if ('musicUuid' in payload && emit && game.user.isGM) {
             const prevMusicUuid = this._sceneMusicUuid;
@@ -913,6 +1005,7 @@ class VisualNovelScene {
         if (emit && !game.user.isGM) return;
         if (this._closing) return;
         this._closing = true;
+        this._handPickerOpen = false;
 
         if (emit) this.stopSceneMusic(true);
         this._closeChatPanel();
@@ -935,8 +1028,8 @@ class VisualNovelScene {
         this.state.reset();
         if (emit) this.emitSocketEvent('close', {});
         this._persistState();
-        // Re-show floating queue for GM now that VN scene is closed
-        setTimeout(() => window.PlayerQueue?.instance?.updateFloatingQueue?.(), 200);
+        // Bring the floating queue back now that the VN scene is closed
+        setTimeout(() => QueueBridge.refreshFloating(), 200);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1014,12 +1107,57 @@ class VisualNovelScene {
     // Queue Display
     // ══════════════════════════════════════════════════════════
 
+    /**
+     * GM announced a queued player: if that player's character stands on the scene, they become the active
+     * speaker and the characters of other players lose the highlight. NPCs keep whatever state they have.
+     * Returns true if the scene was changed.
+     */
+    focusQueuedSpeaker(userId) {
+        if (!game.user.isGM || !this.state.isActive) return false;
+
+        const actorOf = (tokenId) => {
+            const base = stripDupSuffix(tokenId);
+            return parseActorId(base) ?? canvas.tokens?.get(base)?.actor?.id ?? null;
+        };
+
+        const targetActorId = game.users.get(userId)?.character?.id;
+        if (!targetActorId) return false;
+
+        let target = null;
+        for (const pos of VNSceneState.POSITIONS) {
+            const tokenId = this.state.getIdsForPosition(pos).find(id => actorOf(id) === targetActorId);
+            if (tokenId) { target = { tokenId, pos }; break; }
+        }
+        if (!target) return false;
+
+        const playerActorIds = new Set(game.users.map(u => u.character?.id).filter(Boolean));
+        for (const pos of VNSceneState.POSITIONS) {
+            const current = this.state.speakers[pos];
+            if (!current || pos === target.pos) continue;
+            if (playerActorIds.has(actorOf(current))) this.setActiveSpeaker(current, true, pos);
+        }
+
+        if (this.state.speakers[target.pos] !== target.tokenId) {
+            this.setActiveSpeaker(target.tokenId, true, target.pos);
+        }
+        return true;
+    }
+
+    // Runs on every client from the `playerQueueUpdated` hook — each client already holds the queue state
     updateQueueDisplay() {
-        if (!this.state.isActive || !game.user.isGM) return;
+        if (!this.state.isActive) return;
         const queueData = QueueBridge.getQueue();
+
+        // The panel is rebuilt on every queue change; keep keyboard focus on the same control
+        const focused = document.activeElement?.closest?.('.vn-queue-display') ? document.activeElement : null;
+        const focusSelector = !focused ? null
+            : focused.matches('.vn-queue-pick') ? `.vn-queue-pick[data-priority="${focused.dataset.priority}"]`
+            : focused.matches('.vn-queue-lower') ? '.vn-queue-lower'
+            : focused.matches('.vn-queue-hand') ? '.vn-queue-hand' : null;
+
         $('.vn-queue-display').html(this._html.queueDisplay(queueData));
+        if (focusSelector) document.querySelector(`.vn-queue-display ${focusSelector}`)?.focus();
         this._updateCharacterBorders();
-        this.emitSocketEvent('updateQueue', {});
     }
 
     _updateCharacterBorders() {
@@ -1033,6 +1171,15 @@ class VisualNovelScene {
             const pd = QueueBridge.resolveActorPriority(actor, index);
             if (pd) { charEl.style.setProperty('--queue-color', pd.color); charEl.classList.add(`queue-priority-${pd.priority}`); }
             else charEl.style.removeProperty('--queue-color');
+
+            // Keep the existing badge when the priority is unchanged so its animation doesn't restart
+            const mark = charEl.querySelector(':scope > .vn-queue-mark');
+            if (!pd) mark?.remove();
+            else if (!mark) charEl.insertAdjacentHTML('beforeend', this._html.queueMark(pd.priority));
+            else if (Number(mark.dataset.priority) !== pd.priority) {
+                mark.dataset.priority = pd.priority;
+                mark.src = QueueBridge.getPriorityIcon(pd.priority);
+            }
         });
     }
 
@@ -1060,10 +1207,12 @@ class VisualNovelScene {
 
         $(document).on(`click${ns}`, '.vn-close-button', () => this.closeScene(true));
         $(document).on(`click${ns}`, '.vn-chat-button', () => this._toggleChat());
+        this._setupHandListeners(ns);
         this._setupMinimizedDragListener(ns);
 
         $(document).on(`keydown${ns}`, (e) => {
             if (e.key === 'Escape') {
+                if (this._handPickerOpen) { this._setHandPicker(false, true); return; }
                 const openPicker = document.querySelector('#vn-scene-overlay .vn-atmosphere-picker:not([hidden])');
                 if (openPicker) { openPicker.hidden = true; return; }
                 if (!this.state.minimized) this.closeScene(true);
@@ -1072,6 +1221,42 @@ class VisualNovelScene {
 
         if (game.user.isGM) this._setupGMListeners(ns);
         this._setupCharacterListeners();
+    }
+
+    // Player's hand button and its priority picker. Registered for everybody (not in _setupGMListeners).
+    _setupHandListeners(ns) {
+        const { QUEUE_HAND } = VisualNovelScene.SEL;
+
+        $(document).on(`click${ns}`, QUEUE_HAND, (e) => {
+            e.stopPropagation();
+            this._setHandPicker(!this._handPickerOpen, !this._handPickerOpen);
+        });
+        $(document).on(`click${ns}`, '.vn-queue-pick', (e) => {
+            e.stopPropagation();
+            QueueBridge.joinWithPriority(Number(e.currentTarget.dataset.priority));
+            this._setHandPicker(false, true);
+        });
+        $(document).on(`click${ns}`, '.vn-queue-lower', (e) => {
+            e.stopPropagation();
+            QueueBridge.leaveQueue();
+            this._setHandPicker(false, true);
+        });
+        // mousedown, not click: characters stop click propagation
+        $(document).on(`mousedown${ns}`, (e) => {
+            if (this._handPickerOpen && !e.target.closest('.vn-queue-hand-wrap')) this._setHandPicker(false);
+        });
+    }
+
+    /** Opens / closes the priority picker. `moveFocus`: on open focus the first choice, on close return focus to the hand. */
+    _setHandPicker(open, moveFocus = false) {
+        if (this._handPickerOpen === open) return;
+        this._handPickerOpen = open;
+        this.updateQueueDisplay();
+        if (!moveFocus) return;
+        const target = open
+            ? document.querySelector('.vn-queue-pick.active') ?? document.querySelector('.vn-queue-pick')
+            : document.querySelector('.vn-queue-hand');
+        target?.focus();
     }
 
     _setupGMListeners(ns) {
@@ -1100,7 +1285,7 @@ class VisualNovelScene {
                 if (!picker) return;
                 this._setupPickerDismiss(wrap, picker, '_visualOutsideListener');
             },
-            '.vn-particles-fg-btn': () => this.setParticlesForeground(!this.state.particlesForeground, true)
+            '.vn-particles-fg-btn': () => this.cycleParticlesLayer()
         };
         for (const [sel, fn] of Object.entries(actions)) $(document).on(`click${ns}`, sel, fn);
 
@@ -1119,14 +1304,36 @@ class VisualNovelScene {
             if (uuid) this.playSoundCue(uuid);
         });
 
-        $(document).on(`click${ns}`, '.vn-atmo-item[data-particle]', (e) => {
+        $(document).on(`click${ns}`, '#vn-scene-overlay .vn-atmo-item[data-particle]', (e) => {
             const particle = e.currentTarget.dataset.particle;
             if (!particle) return;
+            const group = e.currentTarget.closest('.vn-atmo-item-group');
+
+            // Клик по тайлу с вариантами — только открыть/закрыть его список
+            // подвариантов, не применяя ничего; выбор происходит по клику
+            // на конкретный .vn-variant-option внутри.
+            if (group) {
+                e.currentTarget.closest('.vn-atmosphere-picker-grid')?.querySelectorAll('.vn-atmo-item-group.vn-variant-open')
+                    .forEach(g => { if (g !== group) this._closeVariantGroup(g); });
+                this._toggleVariantGroup(group);
+                return;
+            }
+
             this.setParticleEffect(particle);
             e.currentTarget.closest('.vn-atmosphere-picker')?.setAttribute('hidden', '');
         });
 
-        $(document).on(`click${ns}`, '.vn-atmo-item[data-visual]', (e) => {
+        $(document).on(`click${ns}`, '#vn-scene-overlay .vn-variant-option', (e) => {
+            e.stopPropagation();
+            const group = e.currentTarget.closest('.vn-atmo-item-group');
+            const base = group?.dataset.variantBase;
+            const variant = e.currentTarget.dataset.variant;
+            if (!base || !variant) return;
+            this.setParticleEffect(variant === 'all' ? base : `${base}:${variant}`);
+            e.currentTarget.closest('.vn-atmosphere-picker')?.setAttribute('hidden', '');
+        });
+
+        $(document).on(`click${ns}`, '#vn-scene-overlay .vn-atmo-item[data-visual]', (e) => {
             const visual = e.currentTarget.dataset.visual;
             if (!visual) return;
             this.setVisualEffect(visual);

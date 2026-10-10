@@ -22,6 +22,15 @@ import { R, RD } from '../utils.js';
  * они обрабатываются отдельными фабриками в ParticleSystem.
  */
 const PARTICLES_PATH = 'modules/player-queue/assets/effects/particles';
+
+// Раздельные пулы спрайтов для перьев и обрывков страниц — используются
+// и в общем (смешанном) массиве images, и в variants (см. PARTICLE_VARIANTS
+// в config/particle-types.js) для сужения до одной палитры.
+const featherBlackImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/feathers/black_feather_${n}.webp`);
+const featherWhiteImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/feathers/white_feather_${n}.webp`);
+const pageFragmentImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/page_fragments/page_fragment_${n}.webp`);
+const parchmentScrapImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/parchment_scraps/parchment_scrap_${n}.webp`);
+
 export const PARTICLE_CONFIGS = {
     particles: {
         className: 'vn-particle',
@@ -216,5 +225,80 @@ export const PARTICLE_CONFIGS = {
     ghosts: {
         count: 42,
         images: [1, 2].map(n => `${PARTICLES_PATH}/ghosts/ghost_${n}.webp`),
+    },
+
+    feathers: {
+        className: 'vn-particle vn-particle-feather',
+        count: 16,
+        sizeMin: 14,
+        sizeRange: 16,
+        style: (s) => `width:${s}px;height:${s * 1.6}px;left:${R(100)}%;top:-5%;animation-delay:${R(22)}s;animation-duration:${14 + R(16)}s;--drift:${RD(160)}px;--rotation:${R(360) - 180}deg;opacity:0`,
+        images: [...featherBlackImages, ...featherWhiteImages],
+        variants: {
+            black: { images: featherBlackImages },
+            white: { images: featherWhiteImages },
+        },
+    },
+
+    page_scraps: {
+        className: 'vn-particle vn-particle-page-scrap',
+        count: 22,
+        sizeMin: 14,
+        sizeRange: 16,
+        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(20)}s;animation-duration:${10 + R(14)}s;--drift:${RD(180)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        images: [...pageFragmentImages, ...parchmentScrapImages],
+        variants: {
+            pages: { images: pageFragmentImages },
+            parchment: { images: parchmentScrapImages },
+        },
+    },
+
+    // Воздушные шарики — единственный тип с паттерном "float up"
+    // (поднимаются вверх с покачиванием, а не падают вниз)
+    balloons: {
+        className: 'vn-particle vn-particle-balloon',
+        count: 9,
+        sizeMin: 34,
+        sizeRange: 26,
+        style: (s) => `width:${s}px;height:${s * 1.25}px;left:${R(100)}%;bottom:-10%;animation-delay:${R(18)}s;animation-duration:${16 + R(14)}s;--drift:${RD(120)}px;opacity:0`,
+        images: [1, 2, 3, 4, 5, 6].map(n => `${PARTICLES_PATH}/balloons/balloon_${n}.webp`),
+    },
+
+    // Кометы — летят по диагонали вниз-влево. Хвост нарисован в самой
+    // картинке (comet_with_trail_to_right), поворот спрайта считается
+    // через atan2 от того же --drift/--drift-y, что и движение, — угол
+    // гарантированно совпадает с траекторией (не подбирается вручную).
+    comets: {
+        className: 'vn-particle vn-particle-comet',
+        count: 16,
+        sizeMin: 60,
+        sizeRange: 50,
+        style: (s) => {
+            const dx = -(900 + R(600));
+            const dy = 650 + R(400);
+            const rotation = Math.atan2(dy, dx) * 180 / Math.PI;
+            return `width:${s}px;height:${s * 0.45}px;left:${45 + R(55)}%;top:${-8 + R(12)}%;` +
+                `animation-delay:${R(9)}s;animation-duration:${1.2 + R(1)}s;` +
+                `--drift:${dx}px;--drift-y:${dy}px;--rotation:${rotation}deg;opacity:0`;
+        },
+        images: [1, 2].map(n => `${PARTICLES_PATH}/comets/comet_with_trail_to_right_${n}.webp`),
+    },
+
+    // Падающие звёзды — то же самое, но летят вниз-вправо (хвост
+    // star_with_trail_to_left нарисован в другую сторону).
+    shooting_stars: {
+        className: 'vn-particle vn-particle-shooting-star',
+        count: 16,
+        sizeMin: 60,
+        sizeRange: 50,
+        style: (s) => {
+            const dx = 900 + R(600);
+            const dy = 650 + R(400);
+            const rotation = Math.atan2(dy, dx) * 180 / Math.PI - 180;
+            return `width:${s}px;height:${s * 0.45}px;left:${R(55)}%;top:${-8 + R(12)}%;` +
+                `animation-delay:${R(9)}s;animation-duration:${1.2 + R(1)}s;` +
+                `--drift:${dx}px;--drift-y:${dy}px;--rotation:${rotation}deg;opacity:0`;
+        },
+        images: [1, 2, 3].map(n => `${PARTICLES_PATH}/stars/star_with_trail_to_left_${n}.webp`),
     },
 };

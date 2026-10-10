@@ -2,7 +2,7 @@
 // vn-dialog-builder.js — UI диалога настроек сцены
 // ============================================================
 
-import { VNSceneState, VNPresets } from '../vn-state.js';
+import { VNSceneState, VNPresets, resolveParticlesLayer } from '../vn-state.js';
 import { VNAtmosphere } from '../visual-effects/atmosphere/index.js';
 import { stripDupSuffix, parseActorId, toActorTokenId, FALLBACK_AVATAR } from '../vn-id-utils.js';
 
@@ -47,8 +47,7 @@ export class VNDialogBuilder {
         const scene = this._scene;
         const tokens = canvas.tokens.placeables.filter(t => t.actor);
 
-        scene._bgManager.resetPath();
-        await scene._bgManager.load();
+        await scene._bgManager.restoreLastPath();
         await scene.loadFavoriteActors();
 
         const sorted = await VNPresets.getSorted();
@@ -145,7 +144,7 @@ export class VNDialogBuilder {
         const overlay = root.querySelector('#background-overlay')?.checked ?? true;
         const particleEffect = root.querySelector('#particle-effect')?.value || 'particles';
         const visualEffect = root.querySelector('#visual-effect')?.value || 'none';
-        const particlesForeground = root.querySelector('#particles-foreground')?.checked ?? false;
+        const particlesLayer = root.querySelector('#particles-layer')?.value || 'back';
         const particleIntensity = parseInt(root.querySelector('#particle-intensity')?.value) || 1;
         const musicUuid = root.querySelector('#vn-music-uuid')?.value || null;
         const soundCues = this._scene._musicManager.gatherCues(root);
@@ -168,14 +167,14 @@ export class VNDialogBuilder {
         if (isEdit) this._scene.updateSceneLayout({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
-            flipped: pendingFlipped ?? null, particleEffect, visualEffect, particlesForeground, particleIntensity,
+            flipped: pendingFlipped ?? null, particleEffect, visualEffect, particlesLayer, particleIntensity,
             visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales ?? null, gmOnly, presetActors,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
-            flipped: pendingFlipped || {}, particleEffect, visualEffect, particlesForeground, particleIntensity,
+            flipped: pendingFlipped || {}, particleEffect, visualEffect, particlesLayer, particleIntensity,
             visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales || {}, gmOnly, presetActors,
         });
@@ -187,7 +186,7 @@ export class VNDialogBuilder {
 
     _setupInteractions(root, isEdit) {
         this._setupDragAndDrop(root);
-        this._scene._bgManager.attachListeners(root, (name) => this._scene._bgManager.refreshGallery(root, name));
+        this._scene._bgManager.attachListeners(root);
         this._scene._effectsManager.attachListeners(root);
         this._scene._musicManager.attachListeners(root);
         this._setupFavoriteHandlers(root);
@@ -500,15 +499,8 @@ export class VNDialogBuilder {
 
     _selectBackground(root, bg) {
         if (!bg || bg === 'none') return;
-        const radio = root.querySelector(`input[name="background"][value="${bg}"]`);
-        if (radio) {
-            root.querySelectorAll('.vn-bg-option').forEach(o => o.classList.remove('selected'));
-            radio.checked = true;
-            radio.closest('.vn-bg-option')?.classList.add('selected');
-        } else {
-            const label = decodeURIComponent(bg.split('/').pop().split('.')[0]).replace(/[-_]/g, ' ');
-            this._scene._bgManager.addDynamicOption(root, bg, label);
-        }
+        const mgr = this._scene._bgManager;
+        mgr.addDynamicOption(root, bg, mgr.constructor._fileLabel(bg));
     }
 
     _setEffectAxis(root, axis, value) {
@@ -524,8 +516,7 @@ export class VNDialogBuilder {
         if (oc) oc.checked = state.backgroundOverlay;
         this._setEffectAxis(root, 'particle', state.particleEffect || 'particles');
         this._setEffectAxis(root, 'visual', state.visualEffect || 'none');
-        const pfg = root.querySelector('#particles-foreground');
-        if (pfg) pfg.checked = state.particlesForeground ?? false;
+        this._scene._effectsManager.setLayer(root, state.particlesLayer ?? 'back');
         const pi = root.querySelector('#particle-intensity');
         if (pi) { pi.value = state.particleIntensity ?? 1; const piVal = pi.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val'); if (piVal) piVal.textContent = pi.value; }
 
@@ -608,15 +599,14 @@ export class VNDialogBuilder {
         const overlayCheck = root.querySelector('#background-overlay');
         if (overlayCheck) overlayCheck.checked = preset.backgroundOverlay ?? true;
         if (preset.particleEffect != null || preset.visualEffect != null) {
-            this._setEffectAxis(root, 'particle', preset.particleEffect || 'particles');
+            this._setEffectAxis(root, 'particle', preset.particleEffect || 'none');
             this._setEffectAxis(root, 'visual', preset.visualEffect || 'none');
         } else {
-            const legacy = VNAtmosphere.PRESETS[preset.atmosphereEffect] ?? VNAtmosphere.PRESETS.particles;
+            const legacy = VNAtmosphere.PRESETS[preset.atmosphereEffect] ?? VNAtmosphere.PRESETS.none;
             this._setEffectAxis(root, 'particle', legacy.particles);
             this._setEffectAxis(root, 'visual', legacy.visual);
         }
-        const pfgCheck = root.querySelector('#particles-foreground');
-        if (pfgCheck) pfgCheck.checked = preset.particlesForeground ?? false;
+        this._scene._effectsManager.setLayer(root, resolveParticlesLayer(preset));
         const piCheck = root.querySelector('#particle-intensity');
         if (piCheck) { piCheck.value = preset.particleIntensity ?? 1; const piVal = piCheck.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val'); if (piVal) piVal.textContent = piCheck.value; }
 
@@ -709,7 +699,7 @@ export class VNDialogBuilder {
             backgroundOverlay: root.querySelector('#background-overlay')?.checked ?? true,
             particleEffect: root.querySelector('#particle-effect')?.value || 'particles',
             visualEffect: root.querySelector('#visual-effect')?.value || 'none',
-            particlesForeground: root.querySelector('#particles-foreground')?.checked ?? false,
+            particlesLayer: root.querySelector('#particles-layer')?.value || 'back',
             particleIntensity: parseInt(root.querySelector('#particle-intensity')?.value) || 1,
             portraitScale: scene.state.portraitScale,
             portraitScales: remappedScales,
@@ -801,7 +791,7 @@ export class VNDialogBuilder {
         const currentBg = sceneState?.background || null;
         const currentParticle = sceneState?.particleEffect || 'none';
         const currentVisual = sceneState?.visualEffect || 'none';
-        const currentParticlesFg = sceneState?.particlesForeground ?? false;
+        const currentParticlesLayer = sceneState?.particlesLayer ?? 'back';
         const currentParticleIntensity = sceneState?.particleIntensity ?? 1;
         const currentMusicUuid = sceneState?.musicUuid || null;
         const currentSoundCues = sceneState?.soundCues || [];
@@ -875,7 +865,7 @@ export class VNDialogBuilder {
                 ${scene._bgManager.generateSelector(currentBg, currentOverlay)}
             </div>
             <div class="vn-tab-panel" data-tab="effects">
-                ${scene._effectsManager.generateTab(currentParticle, currentVisual, currentParticlesFg, currentParticleIntensity)}
+                ${scene._effectsManager.generateTab(currentParticle, currentVisual, currentParticlesLayer, currentParticleIntensity)}
             </div>
             <div class="vn-tab-panel" data-tab="music">
                 ${scene._musicManager.generateTab(currentMusicUuid, currentSoundCues)}

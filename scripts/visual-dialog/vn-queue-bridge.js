@@ -16,12 +16,27 @@ class QueueBridge {
     }
 
     static _getFromSettings() {
-        try { return game.settings.get('player-queue', 'queueData') || []; }
+        try { return game.settings.get('player-queue', 'queueState')?.entries || []; }
         catch { return []; }
     }
 
     static getPriorityData(priority) {
         return PlayerQueue.getPriorityData(priority);
+    }
+
+    /** Client setting `queueDuringScene`: true = the queue lives in the scene's top panel while a scene is open. */
+    static get queueInScene() {
+        try { return game.settings.get('player-queue', 'queueDuringScene') === 'top'; }
+        catch { return true; }
+    }
+
+    /** Re-evaluates whether the floating widget should be visible (scene opened / closed / minimized). */
+    static refreshFloating() {
+        PlayerQueue.instance?.updateFloatingQueue();
+    }
+
+    static getPriorityIcon(priority) {
+        return PlayerQueue.priorityIconUrl(priority);
     }
 
     static buildActorIndex(queueData) {
@@ -46,6 +61,9 @@ class QueueBridge {
         if (!entry) return null;
         return { ...this.getPriorityData(entry.priority), priority: entry.priority };
     }
+
+    static joinWithPriority(priority) { this.instance?.joinQueueWithPriority?.(priority); }
+    static leaveQueue() { this.instance?.leaveQueue?.(); }
 
     static announceAndRemove(userId) { this.instance?.announcePlayerAndRemove?.(userId); }
     static removeFromQueue(userId) { this.instance?.removePlayerFromQueue?.(userId); }

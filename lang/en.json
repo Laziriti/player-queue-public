@@ -1,12 +1,145 @@
 {
-  "player-queue": {
-    "title": "Player Queue",
-    "join": "Join Queue",
-    "leave": "Leave Queue",
-    "clear": "Clear Queue",
-    "empty": "Queue is empty"
+  "playerQueue": {
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "suffix": "priority"
+    },
+    "dialog": {
+      "title": "Player Queue",
+      "empty": "The queue is empty",
+      "emptyHint": "Nobody has raised a hand yet",
+      "next": "Next",
+      "you": "you",
+      "announce": "Announce and remove from queue",
+      "remove": "Remove without announcing",
+      "joinHeading": "Raise your hand",
+      "joinHint": "Choose how urgently you need to speak",
+      "clearQueue": "Clear queue",
+      "playerCount": "Players in queue: {count}",
+      "joinTitleLow": "Join the queue with low priority",
+      "joinTitleMedium": "Join the queue with medium priority",
+      "joinTitleHigh": "Join the queue with high priority",
+      "yourPriority": "Your priority:",
+      "changeTitleLow": "Change to low priority",
+      "changeTitleMedium": "Change to medium priority",
+      "changeTitleHigh": "Change to high priority",
+      "leaveQueue": "Leave queue"
+    },
+    "chat": {
+      "systemAlias": "System",
+      "speakingNow": "is speaking now!"
+    },
+    "keybindings": {
+      "raiseHand": {
+        "name": "Raise / lower hand",
+        "hint": "Works for players while a dialog scene is open on screen"
+      }
+    },
+    "notify": {
+      "noGM": "The queue is unavailable: the GM is offline.",
+      "requestFailed": "Could not send the queue request. Please try again."
+    },
+    "floatingQueue": {
+      "dragHandle": "Drag the queue (arrow keys move it from the keyboard)",
+      "itemLabel": "{name}, position {position}, priority: {priority}",
+      "next": "next",
+      "compactLabel": "In queue: {count}. Next: {name}"
+    },
+    "control": {
+      "queueLabel": "Player Queue",
+      "vnSceneLabel": "Dialog Scene"
+    }
   },
   "settings": {
+    "queuePosition": {
+      "name": "Default queue position",
+      "hint": "Initial position of the floating queue window (it can be dragged)",
+      "topLeft": "Top left",
+      "topRight": "Top right",
+      "bottomLeft": "Bottom left",
+      "bottomRight": "Bottom right"
+    },
+    "queueOrientation": {
+      "name": "Queue orientation",
+      "hint": "Vertical or horizontal queue",
+      "vertical": "Vertical",
+      "horizontal": "Horizontal"
+    },
+    "queueSize": {
+      "name": "Portrait size",
+      "hint": "Portrait size in pixels"
+    },
+    "queueMaxItems": {
+      "name": "Maximum visible players",
+      "hint": "How many players are shown before the queue starts scrolling"
+    },
+    "queueCompact": {
+      "name": "Compact queue mode",
+      "hint": "Show a single badge instead of portraits: how many people are queued and the first one's priority. Click to open the queue window"
+    },
+    "announceInChat": {
+      "name": "Announce players in chat",
+      "hint": "When the GM calls a player from the queue, post a chat card with their portrait and priority"
+    },
+    "queueDuringScene": {
+      "name": "Queue during a dialog scene",
+      "hint": "What happens to the floating queue while a dialog scene is on screen",
+      "top": "Collapse to the top of the screen (scene panel)",
+      "keep": "Leave as is (floating window)"
+    },
+    "enableSounds": {
+      "name": "🔊 Enable priority sounds",
+      "hint": "Play a sound when the queue priority changes"
+    },
+    "soundVolume": {
+      "name": "🔉 Sound volume",
+      "hint": "Volume of priority sounds (0-100%)"
+    },
+    "soundOnlyForSelf": {
+      "name": "🎵 Sounds for myself only",
+      "hint": "If enabled, you only hear your own sounds"
+    },
+    "enableLowPrioritySound": {
+      "name": "🟢 Low priority sound (!)",
+      "hint": "Play a sound for low priority"
+    },
+    "enableMediumPrioritySound": {
+      "name": "🟡 Medium priority sound (!!)",
+      "hint": "Play a sound for medium priority"
+    },
+    "enableHighPrioritySound": {
+      "name": "🔴 High priority sound (!!!)",
+      "hint": "Play a sound for high priority"
+    },
+    "testSounds": {
+      "name": "🎮 Test sounds",
+      "label": "Open sound test",
+      "hint": "Check how each priority sounds with your current settings"
+    },
+    "darkTheme": {
+      "name": "🌙 Dark theme",
+      "hint": "Force a dark look for the queue window. By default the window follows the Foundry color scheme (light or dark)"
+    },
+    "nameplateImage": {
+      "name": "🎭 Character nameplate",
+      "hint": "Pick an image from the assets/dialog name lables/ folder, or leave empty for the default look.",
+      "defaultView": "— Default look —",
+      "noPlate": "— No nameplate —"
+    },
+    "liteMode": {
+      "name": "🪶 Lite mode for dialog scenes",
+      "hint": "For weak computers: on your screen no particles, visual effects, parallax or camera zoom are drawn, and blur behind panels is removed. Background and portraits stay. Other players and the GM still see the scene normally"
+    },
+    "parallaxEnabled": {
+      "name": "🎥 Background parallax",
+      "hint": "Smooth background shift as the mouse moves in the dialog scene"
+    },
+    "parallaxDepth": {
+      "name": "🎥 Parallax depth",
+      "hint": "How far the background shifts with the mouse (0 - no shift, 100 - maximum)"
+    },
     "cameraEnabled": {
       "name": "Virtual Camera",
       "hint": "Smooth camera zoom toward the active speaker"
@@ -24,9 +157,42 @@
       "right": "Right"
     }
   },
+  "soundTest": {
+    "title": "Priority Sound Test",
+    "currentSettings": "Current settings:",
+    "labelSounds": "Sounds",
+    "labelVolume": "Volume",
+    "hint": "Click a priority to hear its sound with your current settings",
+    "on": "On",
+    "off": "Off"
+  },
   "vn": {
+    "actor": {
+      "unknown": "Unknown"
+    },
+    "scene": {
+      "title": "Dialog Scene"
+    },
     "toolbar": {
-      "particlesForeground": "Particles in front of characters"
+      "settings": "Scene settings",
+      "minimizeAll": "Minimize for everyone",
+      "minimizeSelf": "Minimize for me",
+      "epicRolls": "Epic Rolls",
+      "broadcast": "Show to players",
+      "showChat": "Show chat",
+      "closeScene": "Close scene",
+      "closePlayer": "Close",
+      "maximizeAll": "Maximize for everyone",
+      "maximizeSelf": "Maximize for me",
+      "sizeDecrease": "Smaller",
+      "sizeReset": "Reset",
+      "sizeIncrease": "Larger",
+      "sizeSettings": "Settings",
+      "particlesLayer": {
+        "back": "Particles behind characters (click: in front)",
+        "front": "Particles in front of characters (click: mixed)",
+        "mix": "Particles mixed: some behind, some in front (click: behind)"
+      }
     },
     "help": {
       "btnTitle": "Scene controls help",
@@ -49,16 +215,353 @@
       "k_chat": "Chat",
       "d_chat": "embedded scene chat"
     },
+    "queue": {
+      "title": "Queue",
+      "itemHint": "LMB: announce · RMB: remove",
+      "raiseHand": "Raise hand and choose priority (quick: H)",
+      "raisedHand": "Hand raised: change priority or lower it (quick: H)",
+      "lowerHand": "Lower hand"
+    },
+    "chat": {
+      "header": "Chat",
+      "error": "Could not open the chat. Check the browser console."
+    },
+    "atmosphere": {
+      "header": "Atmosphere",
+      "buttonTitle": "Atmosphere: {effect}",
+      "particlesHeader": "Particles",
+      "visualHeader": "Visual effect",
+      "particleButtonTitle": "Particles: {effect}",
+      "visualButtonTitle": "Visual effect: {effect}",
+      "particleVariants": {
+        "all": "All",
+        "black": "Black",
+        "white": "White",
+        "pages": "Pages",
+        "parchment": "Parchment"
+      },
+      "groups": {
+        "basic": "Basic",
+        "nature": "Nature",
+        "magic": "Magic",
+        "dark": "Dark",
+        "chaos": "Chaos",
+        "special": "Special"
+      },
+      "particles": {
+        "none": "Off",
+        "particles": "Particles",
+        "snow": "Snow",
+        "rain": "Rain",
+        "embers": "Embers",
+        "fireflies": "Fireflies",
+        "sparks": "Sparks",
+        "bubbles": "Bubbles",
+        "ash": "Ash",
+        "sakura": "Sakura",
+        "dream_orbs": "Dream orbs",
+        "sand_grains": "Sand grains",
+        "bokeh": "Bokeh",
+        "divine_motes": "Divine motes",
+        "ether_wisps": "Ether wisps",
+        "eldritch_spores": "Eldritch spores",
+        "blood_motes": "Blood motes",
+        "shadow_wisps": "Shadow wisps",
+        "glass_dust": "Glass dust",
+        "apocalypse_debris": "Apocalypse debris",
+        "void_shards": "Void shards",
+        "cosmic_dust": "Cosmic dust",
+        "abyss_bubbles": "Abyss bubbles",
+        "confetti": "Confetti",
+        "ghosts": "Ghosts",
+        "feathers": "Feathers",
+        "page_scraps": "Page scraps",
+        "balloons": "Balloons",
+        "comets": "Comets",
+        "shooting_stars": "Shooting stars"
+      },
+      "visual": {
+        "none": "Off",
+        "warm": "🔥 Warm glow",
+        "cold": "❄️ Frost",
+        "storm": "⛈️ Storm",
+        "underwater": "🌊 Underwater",
+        "moonlight": "🌙 Moonlight",
+        "sandstorm": "🏜️ Sandstorm",
+        "divine": "✨ Divine",
+        "sacred": "🕊️ Sacred",
+        "dream": "💫 Dream",
+        "ethereal": "🔮 Ethereal plane",
+        "eldritch": "🐙 Eldritch",
+        "dark": "🌑 Dark ritual",
+        "corruption": "💀 Corruption",
+        "abyss": "🌊 Abyss",
+        "shadow_intrigue": "🕵️ Shadows and intrigue",
+        "fire": "🔥 Inferno",
+        "apocalypse": "🌋 Apocalypse",
+        "blood_moon": "🩸 Blood moon",
+        "cosmic_horror": "🌌 Cosmic horror",
+        "void_breach": "🕳️ Void breach",
+        "glass_shatter": "🪟 Shattered glass",
+        "carnival": "🎉 Carnival",
+        "ghosts": "👻 Ghosts"
+      },
+      "effects": {
+        "none": "Off",
+        "particles": "Particles",
+        "snow": "Snow",
+        "rain": "Rain",
+        "embers": "Embers",
+        "fireflies": "Fireflies",
+        "divine": "✨ Divine",
+        "eldritch": "🐙 Eldritch",
+        "dark_ritual": "🌑 Dark ritual",
+        "warm": "🔥 Warm glow",
+        "frozen": "❄️ Frost",
+        "storm": "⛈️ Storm",
+        "dream": "💫 Dream",
+        "underwater": "🌊 Underwater",
+        "inferno": "🔥 Inferno",
+        "sacred": "🕊️ Sacred",
+        "corruption": "💀 Corruption",
+        "moonlit": "🌙 Moonlight",
+        "sakura": "🌸 Sakura",
+        "ash_wasteland": "💨 Ash wasteland",
+        "apocalypse": "🌋 Apocalypse",
+        "ethereal_plane": "🔮 Ethereal plane",
+        "blood_moon": "🩸 Blood moon",
+        "void_breach": "🕳️ Void Breach",
+        "cosmic_horror": "🌌 Cosmic Horror",
+        "abyss": "🌊 Abyss",
+        "shadow_intrigue": "🕵️ Shadows and intrigue",
+        "glass_shatter": "🪟 Shattered glass",
+        "sandstorm": "🏜️ Sandstorm",
+        "carnival": "🎉 Carnival",
+        "ghosts": "👻 Ghosts"
+      }
+    },
+    "sounds": {
+      "header": "Sounds",
+      "buttonTitle": "Scene sounds",
+      "untitled": "Untitled",
+      "empty": "No sounds",
+      "trackNotFound": "Track not found"
+    },
     "bg": {
-      "particlesForeground": "Particles on top",
-      "particleIntensity": "Particle intensity"
+      "header": "Scene background",
+      "overlay": "Dimming",
+      "particlesLayer": "Particle layer",
+      "particlesLayerBack": "Behind",
+      "particlesLayerMix": "Mixed",
+      "particlesLayerFront": "In front",
+      "particleIntensity": "Particle intensity",
+      "currentScene": "Current scene",
+      "locateTitle": "Open the folder containing the current background",
+      "locateNotFound": "The current background file was not found in the backgrounds folder",
+      "searchPlaceholder": "Search backgrounds and folders...",
+      "searchClear": "Clear search",
+      "searching": "Indexing folders...",
+      "searchResults": "Found: {n}",
+      "searchTruncated": "Found: {n}, showing the first {max}. Refine your query",
+      "searchEmpty": "Nothing found",
+      "currentNone": "No background selected",
+      "currentClear": "Clear background",
+      "outsideFolder": "outside the backgrounds folder",
+      "pathPlaceholder": "Path to an image or video...",
+      "pickFolder": "Choose folder",
+      "pickFolderTitle": "Choose a folder with images",
+      "resetFolderTitle": "Restore the default folder",
+      "back": "Back",
+      "default": "Default",
+      "noBackground": "No background",
+      "custom": "Custom"
+    },
+    "io": {
+      "loadError": "Failed to load presets from {moduleId}: {msg}"
     },
     "dialog": {
+      "editTitle": "✏️ Edit scene",
+      "createTitle": "🎭 Create dialog scene",
+      "btnUpdate": "Update",
+      "btnCreate": "Create",
+      "btnRemoveCharacters": "Remove characters",
+      "btnBackgroundOnly": "Background only",
+      "btnCancel": "Cancel",
       "btnClose": "Close",
+      "btnDelete": "Delete",
+      "btnDeleteAll": "Delete all",
+      "btnDeleteGroup": "Delete group",
+      "btnSavePreset": "Save",
+      "btnRegenAll": "Regenerate all",
+      "btnApplyForAll": "Apply to all",
+      "btnOk": "Got it",
+      "btnCopySnippet": "Copy",
+      "btnCopied": "Copied!",
+      "btnLoadModule": "Load",
+      "btnImportSelected": "Import selected",
+      "btnImportFreshOnly": "New only",
+      "btnImportFreshCount": "New only ({count})",
+      "btnOverwriteDupes": "Overwrite duplicates",
+      "btnOverwriteAllCount": "Overwrite all ({count})",
+      "btnReplaceAll": "Replace all",
+      "btnFindAdventureModules": "Find adventure modules",
+      "btnSelectJsonFile": "Choose .json file",
+      "btnDownloadJson": "Download JSON",
+      "btnExportToModule": "To module",
+      "hideCharacter": "Hide character",
+      "showCharacter": "Show character",
+      "vis": {
+        "visible": "Visible",
+        "hidden": "Fully hidden",
+        "nameHidden": "Name hidden"
+      },
+      "dragActorsFromJournal": "Drag actors from the journal",
+      "dragTracksFromPlaylist": "Drag tracks from a playlist",
+      "dragTrackFromPlaylist": "Drag a track from a playlist",
+      "noSavedPresets": "No saved presets",
+      "noPresetsToExport": "No presets to export",
+      "noPresetsInModule": "No presets in this module",
+      "noPresetsInFile": "The file contains no presets",
+      "noPresetsToDownload": "No presets to download",
+      "noPresetsForScene": "No presets for the current scene",
+      "noTokensOnScene": "No tokens on the current scene",
+      "noModulesFound": "No modules with presets found",
+      "noActiveModules": "No active modules",
+      "noActiveScenePin": "No active scene",
+      "noActiveSceneForPin": "No active scene to pin to",
+      "noScene": "No scene",
+      "nothingFound": "Nothing found",
+      "presetsDescription": "Save the current character layout and background as a preset.",
+      "presetNamePlaceholder": "Preset name...",
+      "pinToScene": "Pin to \"{sceneName}\"",
+      "savePinWithoutScene": "Save without a scene",
+      "searchPresetsPlaceholder": "Search presets...",
+      "viewList": "List",
+      "viewCards": "Cards",
+      "viewDetailed": "Detailed",
+      "viewCompact": "Compact",
+      "checkAll": "All",
+      "uncheckAll": "None",
+      "selectGroup": "Select group",
+      "selectModule": "— select a module —",
+      "selectNameplate": "— not specified —",
+      "filterBySceneTitle": "Only presets of scene \"{sceneName}\"",
+      "thisSceneDefault": "current scene",
+      "thisScene": "This scene",
+      "sortingTitle": "Sorting",
+      "sortNewest": "Newest",
+      "sortOldest": "Oldest",
+      "sortAZ": "A→Z",
+      "sortZA": "Z→A",
+      "deleteAllPresetsTitle": "Delete all presets",
+      "deleteAllPresetsConfirm": "Delete all <strong>{count}</strong> presets? This cannot be undone.",
+      "savedPresetsHeader": "Saved presets",
+      "regenAllTitle": "Regenerate all presets (thumbnails, portraits, etc.)",
+      "regenGroupTitle": "Regenerate group \"{label}\"",
+      "deleteGroupTitle": "Delete group \"{label}\"",
+      "deleteGroupDialogTitle": "Delete group",
+      "deleteGroupConfirm": "Delete all <strong>{count}</strong> presets in group \"<strong>{label}</strong>\"? This cannot be undone.",
+      "deleteTagGlobalTitle": "Delete tag",
+      "deleteTagGlobalConfirm": "Remove tag \"<strong>{tag}</strong>\" from all presets? This cannot be undone.",
+      "presetCreatedUpdated": "Created: {created} · Updated: {updated}",
+      "presetMigrationHint": "{count} migrations pending — click \"Regenerate\"",
+      "presetCreated": "Created: {date}",
+      "presetRegenerated": "Regenerated {count} presets",
+      "presetRegeneratedOne": "Preset regenerated",
+      "presetActionLaunch": "Launch scene",
+      "presetActionLoad": "Load into dialog",
+      "presetActionUpdate": "Update from dialog",
+      "presetActionRegen": "Regenerate preset",
+      "presetActionAssign": "Change scene",
+      "presetActionMacro": "Generate macro",
+      "presetActionTags": "Tags",
+      "presetActionRename": "Rename",
+      "presetActionDelete": "Delete",
+      "panelSelectHint": "Select a preset to edit",
+      "panelLabelName": "Name",
+      "panelLabelTags": "Tags",
+      "tagAddPlaceholder": "Add tag…",
+      "tagBarSearch": "Tags…",
+      "macroDialogTitle": "Macro for preset \"{name}\"",
+      "macroDialogHint": "Paste this code into a Foundry macro to launch this scene with one click.",
+      "macroCopyBtn": "Copy",
+      "macroCopied": "Macro code copied to the clipboard",
       "macroCreateWithIcon": "Create macro with icon",
       "macroIconGenerating": "Generating icon...",
       "macroCreated": "Macro \"{name}\" created",
-      "macroCreateFailed": "Failed to create macro with icon"
+      "macroCreateFailed": "Failed to create macro with icon",
+      "updatePresetTitle": "Update preset",
+      "updatePresetConfirm": "Overwrite preset \"<strong>{name}</strong>\" with the current dialog settings?",
+      "deletePresetTitle": "Delete preset",
+      "deletePresetConfirm": "Delete preset \"<strong>{name}</strong>\"?",
+      "assignToSceneLabel": "To \"{sceneName}\"",
+      "unlinkFromScene": "Unlink from scene",
+      "presetSceneLabel": "Preset scene: <strong>{sceneName}</strong>",
+      "currentSceneLabel": "Current scene: <strong>{sceneName}</strong>",
+      "changeSceneDialogTitle": "Change scene: \"{presetName}\"",
+      "soundCuesLabel": "Scene sounds",
+      "soundCuesHint": "Tracks the GM can trigger right from the scene (toolbar button).",
+      "cueLabelPlaceholder": "Name...",
+      "musicLabel": "Scene music",
+      "clearMusic": "Remove music",
+      "portraitSizeTitle": "Portrait size",
+      "scaleLabel": "Scale",
+      "tabCharacters": "Characters",
+      "tabBackground": "Background",
+      "tabEffects": "Effects",
+      "tabMusic": "Music",
+      "tabPresets": "Presets",
+      "tabAdventures": "Import/Export",
+      "gmOnlyToggleTitle": "Only you will see the scene. Click \"Show to players\" on the scene itself to reveal it to everyone.",
+      "gmOnlyLabel": "GM only",
+      "tokenSearchPlaceholder": "Search characters...",
+      "tokensOnScene": "Available on scene",
+      "participantsLabel": "Scene participants",
+      "participantsHint": "Drag actors from \"Available\" — they are saved in the preset and stay available regardless of the current scene.",
+      "positionLeft": "Left",
+      "positionLeftOrder": "← farther | closer →",
+      "positionCenter": "Center",
+      "positionRight": "Right",
+      "positionRightOrder": "← closer | farther →",
+      "favoritesHeader": "Favorites",
+      "favoritesHint": "RMB — remove",
+      "exportPresetsTitle": "Export presets",
+      "moduleLabel": "Module",
+      "nameplateLabel": "Nameplate",
+      "bgFolderLabel": "Backgrounds folder",
+      "bgFolderPlaceholder": "Folder with images (optional)",
+      "pickFolderBtnTitle": "Choose folder",
+      "importFromModuleTitle": "Import from an adventure module",
+      "scanModulesHint": "Looks for active modules with the player-queue flag",
+      "importFromFileTitle": "Import from a JSON file",
+      "loadFromFileHint": "Load previously saved presets from a file",
+      "moduleInactive": "— inactive",
+      "exportSelectedCount": "Export selected ({count})",
+      "exportSelected": "Export selected",
+      "importSelectedCount": "Import selected ({count})",
+      "importSelected": "Import selected",
+      "setNameplateTitle": "Set nameplate \"{label}\"",
+      "setFolderTitle": "Set backgrounds folder \"{folder}\"",
+      "nameplateInstalled": "Nameplate set",
+      "folderInstalled": "Backgrounds folder set: {folder}",
+      "specifyModuleId": "Enter the module ID",
+      "selectAtLeastOnePreset": "Select at least one preset",
+      "exportSuccess": "Exported {count} presets to modules/{moduleId}/vn-presets.json",
+      "exportError": "Export error: {msg}",
+      "downloadingPresets": "Downloading {count} presets…",
+      "fileImportWithDupes": "The file has {total} presets ({fresh} new, {dupes} duplicates).",
+      "fileImportNoDupes": "The file has {total} presets. All are new.",
+      "importedPresets": "Imported {count} presets",
+      "fileReadError": "File read error: {msg}",
+      "freshPresetsAdded": "<b>{count}</b> new presets will be added.",
+      "dupesExist": "<b>{count}</b> already exist in the world.",
+      "importPresetsDialogTitle": "Import presets",
+      "exportDoneTitle": "Export complete",
+      "nameplateNote": "Nameplate: <code>{filename}</code>",
+      "bgFolderNote": "Backgrounds folder: <code>{folder}</code>",
+      "exportFileSaved": "File <code>vn-presets.json</code> saved to <code>modules/{moduleId}/integrations/player-queue/</code>.",
+      "addToModuleJson": "Add this to your module's <code>module.json</code>:",
+      "moduleJsonRestartNote": "After changing <code>module.json</code>, the Foundry server must be restarted."
     },
     "folders": {
       "modeScenes": "By scene",

@@ -8,9 +8,6 @@ import { registerSettings, applyNameplateImage } from './settings.js';
 import { VisualNovelScene } from './visual-dialog/visual-novel-scene.js';
 import { VNPresets } from './visual-dialog/vn-state.js';
 
-const QUEUE_SYNC_DELAY_MS     = 2000;
-const RECONNECT_SYNC_DELAY_MS = 3000;
-
 // ============================================================
 // Scene Control Buttons
 // ============================================================
@@ -67,6 +64,19 @@ function _ensureControlObserver() {
 Hooks.once('init', () => {
     registerSettings();
     PlayerQueue.initialize();
+
+    game.keybindings.register(PlayerQueue.ID, 'raiseHand', {
+        name: 'playerQueue.keybindings.raiseHand.name',
+        hint: 'playerQueue.keybindings.raiseHand.hint',
+        editable: [{ key: 'KeyH' }],
+        onDown: () => {
+            // Only while a dialog scene is open on a player's screen; otherwise leave the key to Foundry
+            const scene = window.visualNovelScene;
+            if (game.user.isGM || !scene?.state.isActive || scene.state.minimized) return false;
+            PlayerQueue.instance?.toggleHand();
+            return true;
+        }
+    });
 });
 
 Hooks.once('socketlib.ready', () => {
@@ -74,8 +84,9 @@ Hooks.once('socketlib.ready', () => {
 
     PlayerQueue.socket = socket;
 
-    socket.register('playerQueue', (data) => {
-        PlayerQueue.instance?.handleSocketEvent(data);
+    socket.register('playerQueueRequest', function (req) {
+        return PlayerQueue.instance?.network.handleRequest(req, this?.socketdata?.userId)
+            ?? { ok: false, reason: 'not-ready' };
     });
 
     socket.register('vnScene', (data) => {
@@ -101,10 +112,6 @@ Hooks.once('ready', async () => {
         game.settings.set(PlayerQueue.ID, 'nameplateImage', nameplateValue).catch(() => {});
     }
     applyNameplateImage(nameplateValue);
-
-    if (game.user.isGM && PlayerQueue.instance?.isLoaded) {
-        setTimeout(() => PlayerQueue.instance.requestSync(), QUEUE_SYNC_DELAY_MS);
-    }
 
     // Visual Novel Scene
     const vns = new VisualNovelScene();
@@ -134,14 +141,9 @@ Hooks.on('playerQueueUpdated', () => {
     window.visualNovelScene?.updateQueueDisplay();
 });
 
-Hooks.on('userConnected', (user, connected) => {
-    if (!PlayerQueue.instance?.isLoaded) return;
-
-    if (!connected && PlayerQueue.instance.isInQueue(user.id)) {
-        PlayerQueue.instance.removeFromQueue(user.id);
-    } else if (connected && game.user.isGM) {
-        setTimeout(() => PlayerQueue.instance.requestSync(), RECONNECT_SYNC_DELAY_MS);
-    }
+// Only the GM who announced reacts: their client drives the scene and broadcasts the speaker change
+Hooks.on('playerQueueAnnounced', ({ entry, by }) => {
+    if (by === game.user.id) window.visualNovelScene?.focusQueuedSpeaker(entry.id);
 });
 
 // ============================================================
@@ -159,21 +161,17 @@ window.syncQueue = async () => {
 
 window.clearQueueData = async () => {
     if (!game.user.isGM) return;
-    await game.settings.set('player-queue', 'queueData', []);
     localStorage.removeItem(`${PlayerQueue.ID}-position`);
-    if (PlayerQueue.instance) {
-        PlayerQueue.instance.queue = [];
-        PlayerQueue.instance.updateDisplay();
-    }
+    await PlayerQueue.instance?.clearQueue();
 };
 
 window.debugQueue = () => {
     console.log('=== QUEUE DEBUG ===');
     console.log('Instance:', PlayerQueue.instance);
     console.log('Queue:', PlayerQueue.instance?.queue);
-    console.log('Loaded:', PlayerQueue.instance?.isLoaded);
-    console.log('GM:', game.user.isGM);
-    try { console.log('Saved data:', game.settings.get('player-queue', 'queueData')); } catch {}
+    console.log('Rev:', PlayerQueue.instance?.rev, 'Loaded:', PlayerQueue.instance?.isLoaded);
+    console.log('GM:', game.user.isGM, 'Host:', !!game.users.activeGM?.isSelf);
+    try { console.log('Saved state:', game.settings.get('player-queue', 'queueState')); } catch {}
 };
 
 window.openVisualNovelScene = () => window.visualNovelScene?.openSceneDialog();

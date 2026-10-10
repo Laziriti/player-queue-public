@@ -1,69 +1,69 @@
 // ============================================================
-// sound-test.js — SoundTestApp class
+// sound-test.js — SoundTestApp: priority sound preview (settings menu)
+// Uses only Foundry theme variables (see styles.css), so it follows the core color scheme like the queue window.
 // ============================================================
 
 import { PlayerQueue } from './queue/player-queue.js';
+import { MODULE_ID, applyForcedTheme, priorityIconUrl } from './queue/queue-constants.js';
 
-class SoundTestApp extends foundry.applications.api.ApplicationV2 {
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+class SoundTestApp extends HandlebarsApplicationMixin(ApplicationV2) {
     static DEFAULT_OPTIONS = {
         id: 'player-queue-sound-test',
+        classes: ['pq-sound-test'],
         window: {
             title: 'soundTest.title',
             icon: 'fas fa-volume-up',
             resizable: false
         },
-        position: { width: 400, height: 'auto' }
+        position: { width: 440, height: 'auto' },
+        actions: {
+            play: SoundTestApp.#onPlay
+        }
     };
 
-    // ApplicationV2 требует get PARTS для шаблонов,
-    // но мы используем ручной рендер через _renderHTML
-    async _renderHTML() {
-        const settings = {
-            enableSounds: PlayerQueue.setting('enableSounds'),
-            soundVolume: PlayerQueue.setting('soundVolume'),
-            enableLow: PlayerQueue.setting('enableLowPrioritySound'),
-            enableMedium: PlayerQueue.setting('enableMediumPrioritySound'),
-            enableHigh: PlayerQueue.setting('enableHighPrioritySound')
+    static PARTS = {
+        main: { template: `modules/${MODULE_ID}/templates/sound-test.hbs` }
+    };
+
+    async _prepareContext(options) {
+        const setting = (key) => PlayerQueue.setting(key);
+        const enabled = {
+            0: setting('enableLowPrioritySound'),
+            1: setting('enableMediumPrioritySound'),
+            2: setting('enableHighPrioritySound')
         };
+        const soundsOn = setting('enableSounds');
+        const loc = (key) => game.i18n.localize(key);
+        const onOff = (value) => ({ on: !!value, text: loc(value ? 'soundTest.on' : 'soundTest.off') });
 
-        const container = document.createElement('div');
-        container.classList.add('sound-test-dialog');
-        container.innerHTML = `
-            <div class="sound-test-buttons">
-                ${Object.entries(PlayerQueue.PRIORITIES).map(([key, p]) => `
-                    <button type="button" class="priority-test-btn ${key.toLowerCase()}"
-                            data-priority="${p.value}">
-                        <span class="priority-icon">${p.label}</span>
-                        <span class="priority-name">${game.i18n.localize(p.name)}</span>
-                        <span class="sound-file">${p.sound}</span>
-                    </button>
-                `).join('')}
-            </div>
-            <div class="current-settings">
-                <h4>${game.i18n.localize('soundTest.currentSettings')}</h4>
-                <ul>
-                    <li>${game.i18n.localize('soundTest.labelSounds')}: ${settings.enableSounds ? '✅' : '❌'}</li>
-                    <li>${game.i18n.localize('soundTest.labelVolume')}: ${settings.soundVolume}%</li>
-                    <li>${game.i18n.localize('playerQueue.priority.low')}: ${settings.enableLow ? '✅' : '❌'}</li>
-                    <li>${game.i18n.localize('playerQueue.priority.medium')}: ${settings.enableMedium ? '✅' : '❌'}</li>
-                    <li>${game.i18n.localize('playerQueue.priority.high')}: ${settings.enableHigh ? '✅' : '❌'}</li>
-                </ul>
-            </div>`;
+        const buttons = Object.values(PlayerQueue.PRIORITIES).map(p => ({
+            value: p.value,
+            color: p.color,
+            icon: priorityIconUrl(p.value),
+            name: loc(p.name),
+            file: p.sound,
+            muted: !soundsOn || !enabled[p.value]
+        }));
 
-        return container;
-    }
-
-    _replaceHTML(result, content, options) {
-        content.replaceChildren(result);
+        return {
+            buttons,
+            status: [
+                { label: loc('soundTest.labelSounds'), ...onOff(soundsOn) },
+                { label: loc('soundTest.labelVolume'), on: true, text: `${setting('soundVolume')}%` },
+                ...buttons.map(b => ({ label: b.name, ...onOff(enabled[b.value]) }))
+            ]
+        };
     }
 
     _onRender(context, options) {
-        this.element.querySelectorAll('.priority-test-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const priority = parseInt(btn.dataset.priority);
-                PlayerQueue.instance?.playPrioritySound(priority, true);
-            });
-        });
+        super._onRender?.(context, options);
+        applyForcedTheme(this.element);
+    }
+
+    static #onPlay(event, target) {
+        PlayerQueue.instance?.playPrioritySound(Number(target.dataset.priority), true);
     }
 }
 

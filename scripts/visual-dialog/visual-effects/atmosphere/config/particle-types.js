@@ -11,7 +11,7 @@ export const PARTICLE_GROUPS = [
     { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine_motes', 'ether_wisps'] },
     { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['eldritch_spores', 'blood_motes', 'shadow_wisps', 'glass_dust'] },
     { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['apocalypse_debris', 'void_shards', 'cosmic_dust', 'abyss_bubbles'] },
-    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['confetti', 'ghosts'] },
+    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['confetti', 'ghosts', 'feathers', 'page_scraps', 'balloons', 'comets', 'shooting_stars'] },
 ];
 
 /**
@@ -48,11 +48,36 @@ export const PARTICLE_LABELS = {
     abyss_bubbles:      'vn.atmosphere.particles.abyss_bubbles',
     confetti:           'vn.atmosphere.particles.confetti',
     ghosts:             'vn.atmosphere.particles.ghosts',
+    feathers:           'vn.atmosphere.particles.feathers',
+    page_scraps:        'vn.atmosphere.particles.page_scraps',
+    balloons:           'vn.atmosphere.particles.balloons',
+    comets:             'vn.atmosphere.particles.comets',
+    shooting_stars:     'vn.atmosphere.particles.shooting_stars',
 };
 
 /**
  * FontAwesome иконки для UI
  */
+/**
+ * Заранее созданные подварианты для отдельных типов частиц —
+ * позволяют сузить смешанный пул спрайтов (например «перья» —
+ * чёрные+белые) до одной палитры без создания отдельного типа
+ * частицы. Значение particleEffect кодируется как "type:variant"
+ * (например "feathers:black"); отсутствие суффикса == 'all'.
+ */
+export const PARTICLE_VARIANTS = {
+    feathers: [
+        { id: 'all',   label: 'vn.atmosphere.particleVariants.all' },
+        { id: 'black', label: 'vn.atmosphere.particleVariants.black' },
+        { id: 'white', label: 'vn.atmosphere.particleVariants.white' },
+    ],
+    page_scraps: [
+        { id: 'all',       label: 'vn.atmosphere.particleVariants.all' },
+        { id: 'pages',     label: 'vn.atmosphere.particleVariants.pages' },
+        { id: 'parchment', label: 'vn.atmosphere.particleVariants.parchment' },
+    ],
+};
+
 export const PARTICLE_ICONS = {
     none: 'fa-ban',
     particles: 'fa-circle',
@@ -79,4 +104,9 @@ export const PARTICLE_ICONS = {
     abyss_bubbles: 'fa-circle-notch',
     confetti: 'fa-champagne-glasses',
     ghosts: 'fa-ghost',
+    feathers: 'fa-feather',
+    page_scraps: 'fa-scroll',
+    balloons: 'fa-gift',
+    comets: 'fa-meteor',
+    shooting_stars: 'fa-star',
 };
