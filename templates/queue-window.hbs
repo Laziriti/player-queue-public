@@ -1,26 +1,108 @@
-<div class="queue-dialog">
-    <div class="queue-container">
-        {{#if queue.length}}
-            {{#each queue}}
-                <div class="queue-player" title="{{this.name}}">
-                    <img src="{{this.avatar}}" alt="{{this.name}}">
-                    <span class="queue-number">{{add @index 1}}</span>
+<section class="pq-win">
+
+    <header class="pq-head">
+        <div class="pq-count">
+            <i class="fas fa-users" aria-hidden="true"></i>
+            <span>{{countText}}</span>
+        </div>
+        {{#if next}}
+            <div class="pq-next-chip" title="{{localize "playerQueue.dialog.next"}}">
+                <span>{{localize "playerQueue.dialog.next"}}:</span>
+                <img src="{{next.avatar}}" alt="" draggable="false"
+                     onerror="this.onerror=null;this.src='{{fallbackAvatar}}'">
+                <strong>{{next.name}}</strong>
+            </div>
+        {{/if}}
+    </header>
+
+    <div class="pq-body">
+        {{#if rows.length}}
+            <ol class="pq-list" aria-label="{{localize "playerQueue.dialog.title"}}">
+                {{#each rows}}
+                    <li class="pq-row{{#if isNext}} is-next{{/if}}{{#if isMe}} is-me{{/if}}"
+                        data-user-id="{{id}}" data-priority="{{priority}}" style="--c: {{color}};">
+                        <span class="pq-pos" aria-hidden="true">{{position}}</span>
+                        <img class="pq-avatar" src="{{avatar}}" alt="" draggable="false"
+                             onerror="this.onerror=null;this.src='{{@root.fallbackAvatar}}'">
+                        <span class="pq-who">
+                            <span class="pq-name">{{name}}</span>
+                            <span class="pq-sub">
+                                <span>{{priorityName}}</span>
+                                {{#if isNext}}<span class="pq-pill next">{{localize "playerQueue.dialog.next"}}</span>{{/if}}
+                                {{#if isMe}}<span class="pq-pill me">{{localize "playerQueue.dialog.you"}}</span>{{/if}}
+                            </span>
+                        </span>
+                        <img class="pq-flag" src="{{icon}}" alt="" aria-hidden="true" draggable="false">
+                        {{#if @root.isGM}}
+                            <span class="pq-actions">
+                                <button type="button" class="pq-icon-btn" data-action="announce" data-user-id="{{id}}"
+                                        title="{{@root.announceLabel}}" aria-label="{{@root.announceLabel}}: {{name}}">
+                                    <i class="fas fa-bullhorn" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" class="pq-icon-btn danger" data-action="remove" data-user-id="{{id}}"
+                                        title="{{@root.removeLabel}}" aria-label="{{@root.removeLabel}}: {{name}}">
+                                    <i class="fas fa-xmark" aria-hidden="true"></i>
+                                </button>
+                            </span>
+                        {{/if}}
+                    </li>
+                {{/each}}
+            </ol>
+        {{else}}
+            <div class="pq-empty">
+                <i class="fas fa-hand" aria-hidden="true"></i>
+                <strong>{{localize "playerQueue.dialog.empty"}}</strong>
+                <span>{{localize "playerQueue.dialog.emptyHint"}}</span>
+            </div>
+        {{/if}}
+    </div>
+
+    <footer class="pq-panel">
+        {{#if inQueue}}
+            <h4 class="pq-panel-title">{{localize "playerQueue.dialog.yourPriority"}}</h4>
+            <div class="pq-choices" role="group" aria-label="{{localize "playerQueue.dialog.yourPriority"}}">
+                {{#each changeButtons}}
+                    <button type="button" class="pq-choice{{#if active}} active{{/if}}" style="--c: {{color}};"
+                            data-action="change" data-priority="{{value}}"
+                            title="{{title}}" aria-pressed="{{active}}">
+                        <img src="{{icon}}" alt="" aria-hidden="true" draggable="false">
+                        <span>{{text}}</span>
+                    </button>
+                {{/each}}
+            </div>
+            <div class="pq-panel-row">
+                <button type="button" class="pq-btn" data-action="leave">
+                    <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                    {{localize "playerQueue.dialog.leaveQueue"}}
+                </button>
+                {{#if isGM}}
+                    <button type="button" class="pq-btn danger" data-action="clear">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                        {{localize "playerQueue.dialog.clearQueue"}}
+                    </button>
+                {{/if}}
+            </div>
+        {{else}}
+            <h4 class="pq-panel-title">{{localize "playerQueue.dialog.joinHeading"}}</h4>
+            <p class="pq-hint">{{localize "playerQueue.dialog.joinHint"}}</p>
+            <div class="pq-choices" role="group" aria-label="{{localize "playerQueue.dialog.joinHeading"}}">
+                {{#each joinButtons}}
+                    <button type="button" class="pq-choice" style="--c: {{color}};"
+                            data-action="join" data-priority="{{value}}" title="{{title}}">
+                        <img src="{{icon}}" alt="" aria-hidden="true" draggable="false">
+                        <span>{{text}}</span>
+                    </button>
+                {{/each}}
+            </div>
+            {{#if isGM}}
+                <div class="pq-panel-row">
+                    <button type="button" class="pq-btn danger" data-action="clear"{{#unless rows.length}} disabled{{/unless}}>
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                        {{localize "playerQueue.dialog.clearQueue"}}
+                    </button>
                 </div>
-            {{/each}}
-        {{else}}
-            <div class="queue-empty">Очередь пуста</div>
+            {{/if}}
         {{/if}}
-    </div>
+    </footer>
 
-    <div class="queue-controls">
-        {{#if canJoin}}
-            <button id="join-queue" class="join-btn">Встать в очередь</button>
-        {{else}}
-            <button id="leave-queue" class="leave-btn">Покинуть очередь</button>
-        {{/if}}
-
-        {{#if isGM}}
-            <button id="clear-queue" class="clear-btn">Очистить очередь</button>
-        {{/if}}
-    </div>
-</div>
+</section>

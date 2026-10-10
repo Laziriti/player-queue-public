@@ -1,0 +1,23 @@
+<section class="pq-sound-test-win">
+    <p class="pq-sound-hint">{{localize "soundTest.hint"}}</p>
+
+    <div class="pq-sound-buttons">
+        {{#each buttons}}
+            <button type="button" class="pq-sound-btn{{#if muted}} is-muted{{/if}}" style="--c: {{color}};"
+                    data-action="play" data-priority="{{value}}">
+                <img src="{{icon}}" alt="" aria-hidden="true" draggable="false">
+                <strong>{{name}}</strong>
+                <small>{{file}}</small>
+            </button>
+        {{/each}}
+    </div>
+
+    <div class="pq-sound-status">
+        <h4>{{localize "soundTest.currentSettings"}}</h4>
+        <ul>
+            {{#each status}}
+                <li><span>{{label}}</span><b{{#unless on}} class="off"{{/unless}}>{{text}}</b></li>
+            {{/each}}
+        </ul>
+    </div>
+</section>

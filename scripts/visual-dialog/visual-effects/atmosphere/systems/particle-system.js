@@ -5,53 +5,97 @@
 import { R, RD } from '../utils.js';
 import { PARTICLE_CONFIGS } from '../config/particles.js';
 
+/**
+ * Раскладывает создаваемые элементы по двум контейнерам: основному (под
+ * персонажами) и, если он передан, верхнему (над персонажами) — случайно 50/50.
+ */
+class ParticleSink {
+    constructor(back, front = null) {
+        this.back = back;
+        this.front = front;
+        this._backFrag = document.createDocumentFragment();
+        this._frontFrag = front ? document.createDocumentFragment() : null;
+    }
+
+    get split() { return !!this.front; }
+
+    add(el) {
+        (this._frontFrag && Math.random() < 0.5 ? this._frontFrag : this._backFrag).appendChild(el);
+    }
+
+    addBack(el) { this._backFrag.appendChild(el); }
+
+    addFront(el) { this._frontFrag?.appendChild(el); }
+
+    flush() {
+        this.back.appendChild(this._backFrag);
+        this.front?.appendChild(this._frontFrag);
+    }
+}
+
 export class ParticleSystem {
     constructor() {
         this._container = null;
+        this._upperContainer = null;
         this._type = 'none';
     }
 
     /**
      * Заполнить контейнер частицами указанного типа
      * @param {HTMLElement} container — элемент .vn-particles
-     * @param {string} particleType — ключ из PARTICLE_CONFIGS
+     * @param {string} particleType — ключ из PARTICLE_CONFIGS, опционально с
+     *   суффиксом варианта через ":" (например "feathers:black") — см.
+     *   PARTICLE_VARIANTS в config/particle-types.js
      * @param {number} intensity — множитель количества частиц (1 = базовое, 1–20)
+     * @param {HTMLElement|null} upperContainer — элемент .vn-particles-upper; если
+     *   передан, часть частиц (случайно) создаётся в нём, а не в основном контейнере
      */
-    fill(container, particleType, intensity = 1) {
+    fill(container, particleType, intensity = 1, upperContainer = null) {
         this._container = container;
+        this._upperContainer = upperContainer;
         this._type = particleType;
 
         container.innerHTML = '';
+        if (upperContainer) upperContainer.innerHTML = '';
         if (particleType === 'none') return;
 
+        const [type, variant] = particleType.split(':');
         const safeIntensity = Math.min(Math.max(intensity, 1), 20);
+        const sink = new ParticleSink(container, upperContainer);
 
         // Призраки — особая структура: souls + vapor, offset-path анимация
-        if (particleType === 'ghosts') {
-            this._fillGhosts(container, safeIntensity);
+        if (type === 'ghosts') {
+            this._fillGhosts(sink, safeIntensity);
             return;
         }
 
         // Специальные фабрики для нестандартных частиц
-        const factory = this._getSpecialFactory(particleType);
+        const factory = this._getSpecialFactory(type);
         if (factory) {
-            this._fillWithFactory(container, factory, safeIntensity);
+            this._fillWithFactory(sink, factory, safeIntensity);
             return;
         }
 
         // Стандартная генерация
-        const config = PARTICLE_CONFIGS[particleType];
+        const config = PARTICLE_CONFIGS[type];
         if (!config) return;
 
-        this._fillFromConfig(container, config, safeIntensity);
+        const variantImages = variant && config.variants?.[variant]?.images;
+        const resolvedConfig = variantImages ? { ...config, images: variantImages } : config;
+
+        this._fillFromConfig(sink, resolvedConfig, safeIntensity);
     }
 
     /**
-     * Очистить контейнер
+     * Очистить контейнеры
      */
     clear() {
         if (this._container) {
             this._container.innerHTML = '';
+        }
+        if (this._upperContainer) {
+            this._upperContainer.innerHTML = '';
+            this._upperContainer = null;
         }
         this._type = 'none';
     }
@@ -65,10 +109,9 @@ export class ParticleSystem {
 
     // ─── Private ─────────────────────────────────────────────
 
-    _fillFromConfig(container, config, intensity = 1) {
+    _fillFromConfig(sink, config, intensity = 1) {
         const { className, count, sizeMin, sizeRange, style, images } = config;
         const actualCount = Math.round(count * intensity);
-        const fragment = document.createDocumentFragment();
 
         for (let i = 0; i < actualCount; i++) {
             const p = document.createElement('span');
@@ -77,10 +120,10 @@ export class ParticleSystem {
             let css = style(size);
             if (images?.length) css += `;${this._imageOverrideCss(images)}`;
             p.style.cssText = css;
-            fragment.appendChild(p);
+            sink.add(p);
         }
 
-        container.appendChild(fragment);
+        sink.flush();
     }
 
     /**
@@ -94,17 +137,16 @@ export class ParticleSystem {
             + `border:none;border-radius:0;box-shadow:none;clip-path:none;filter:none`;
     }
 
-    _fillWithFactory(container, factory, intensity = 1) {
+    _fillWithFactory(sink, factory, intensity = 1) {
         const config = PARTICLE_CONFIGS[factory.type];
         const baseCount = config?.count || 80;
         const count = Math.round(baseCount * intensity);
-        const fragment = document.createDocumentFragment();
 
         for (let i = 0; i < count; i++) {
-            fragment.appendChild(factory.create());
+            sink.add(factory.create());
         }
 
-        container.appendChild(fragment);
+        sink.flush();
     }
 
     /**
@@ -122,12 +164,11 @@ export class ParticleSystem {
         }
     }
 
-    _fillGhosts(container, intensity) {
+    _fillGhosts(sink, intensity) {
         const ghostConfig = PARTICLE_CONFIGS.ghosts;
         const baseSouls = ghostConfig?.count || 42;
         const soulCount = Math.min(Math.round(baseSouls * intensity), 84);
         const images = ghostConfig?.images;
-        const fragment = document.createDocumentFragment();
 
         // Туман — 8 размытых паров позади душ
         const mist = document.createElement('div');
@@ -140,11 +181,12 @@ export class ParticleSystem {
             vapor.appendChild(document.createElement('i'));
             mist.appendChild(vapor);
         }
-        fragment.appendChild(mist);
+        sink.addBack(mist);
 
         // Обёртка для правильной работы :nth-child на душах
         const soulsEl = document.createElement('div');
         soulsEl.className = 'vn-particle-ghost-souls';
+        const soulsFrontEl = sink.split ? soulsEl.cloneNode() : null;
 
         for (let n = 0; n < soulCount; n++) {
             const soul = document.createElement('div');
@@ -168,11 +210,12 @@ export class ParticleSystem {
             }
             soul.appendChild(head);
 
-            soulsEl.appendChild(soul);
+            (soulsFrontEl && Math.random() < 0.5 ? soulsFrontEl : soulsEl).appendChild(soul);
         }
 
-        fragment.appendChild(soulsEl);
-        container.appendChild(fragment);
+        sink.addBack(soulsEl);
+        if (soulsFrontEl) sink.addFront(soulsFrontEl);
+        sink.flush();
     }
 
     _createRainDrop() {
@@ -208,4 +251,5 @@ export class ParticleSystem {
 
         return p;
     }
+
 }

@@ -69,6 +69,31 @@
     border: 1px solid var(--vn-border);
 }
 
+.vn-particles-layer-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 4px 2px 8px;
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius);
+    color: rgba(255,255,255,0.5);
+}
+.vn-particles-layer-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border: 1px solid transparent;
+    border-radius: var(--vn-radius);
+    background: transparent;
+    color: var(--vn-text-dim, rgba(255,255,255,0.6));
+    font-size: 0.8em;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.vn-particles-layer-opt:hover { color: var(--vn-text); background: rgba(255,255,255,0.07); }
+.vn-particles-layer-opt.active { color: var(--vn-accent); border-color: var(--vn-accent-dim); background: rgba(136,192,208,0.1); }
+
 .vn-effects-grids {
     display: flex;
     flex-wrap: wrap;
@@ -76,8 +101,8 @@
 }
 
 .vn-effects-grid-col {
-    flex: 1 1 320px;
-    min-width: 280px;
+    flex: 1 1 350px;
+    min-width: 310px;
     background: rgba(0,0,0,0.15);
     border-radius: var(--vn-radius);
     border: 1px solid var(--vn-border);

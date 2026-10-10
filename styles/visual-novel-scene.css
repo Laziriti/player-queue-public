@@ -150,7 +150,8 @@
     overflow: hidden;
 }
 
-#vn-scene-overlay.vn-particles-fg .vn-particles {
+#vn-scene-overlay.vn-particles-fg .vn-particles,
+#vn-scene-overlay .vn-particles.vn-particles-upper {
     z-index: 101;
 }
 
@@ -635,7 +636,7 @@
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    width: 290px;
+    width: 320px;
     background: rgba(8, 8, 16, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
@@ -738,6 +739,103 @@
     margin-top: 2px;
 }
 .vn-atmo-group-header:first-child { border-top: none; margin-top: 0; }
+
+/* ── Particle variants (напр. чёрные/белые перья) — раскрывается прямо
+   ИЗ самого тайла типа частиц: клик по тайлу (feathers/page_scraps)
+   разворачивает список подвариантов у себя же, в потоке документа
+   (без position:absolute), чтобы не обрезаться overflow:hidden у
+   .vn-atmosphere-picker/.vn-effects-grid-col. Закрытая группа —
+   display:contents, так что кнопка-тайл ведёт себя как обычный элемент
+   грида; открытая — становится одним grid-item в своей же колонке
+   (без grid-column: 1/-1 — список не растягивается на всю ширину).
+   min-width: 0 на открытой группе/списке/опциях + text-overflow на
+   подписи вариантов — иначе длинный текст варианта раздувал бы трек
+   грида (min-content по цепочке вложенных flex), перекашивая весь
+   список тайлов. ── */
+
+.vn-atmo-item-group { display: contents; }
+
+.vn-atmo-item-group.vn-variant-open {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.vn-atmo-item-caret {
+    font-size: 0.65em;
+    opacity: 0.5;
+    flex-shrink: 0;
+    margin-left: auto;
+    transition: transform 0.15s ease;
+}
+
+.vn-atmo-item-group.vn-variant-open .vn-atmo-item-caret { transform: rotate(180deg); }
+
+.vn-atmo-item-variant-tag {
+    font-size: 0.72em;
+    font-weight: 400;
+    opacity: 0.55;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.vn-variant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 4px 2px 22px;
+    margin-top: 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    min-width: 0;
+}
+
+.vn-variant-list[hidden] { display: none !important; }
+
+.vn-variant-option {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.76em;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+    min-width: 0;
+}
+
+.vn-variant-option span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.vn-variant-option:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: #fff;
+}
+
+.vn-variant-option.active {
+    background: rgba(136, 192, 208, 0.12);
+    border-color: rgba(136, 192, 208, 0.25);
+    color: var(--vn-accent);
+}
+
+.vn-variant-option i {
+    font-size: 0.7em;
+    width: 10px;
+    text-align: center;
+    flex-shrink: 0;
+    opacity: 0;
+}
+
+.vn-variant-option.active i { opacity: 1; }
 
 
 /* ── Sounds Panel ── */
@@ -989,31 +1087,178 @@
     height: 40px;
     border: 2.5px solid;
     border-radius: 50%;
-    overflow: hidden;
-    cursor: pointer;
     transition: all var(--vn-transition);
 }
 
-.vn-queue-item:hover {
+.vn-queue-item.gm-clickable { cursor: pointer; }
+
+.vn-queue-item.gm-clickable:hover {
     transform: scale(1.15);
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
 }
 
-.vn-queue-item img { width: 100%; height: 100%; object-fit: cover; }
+.vn-queue-portrait {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Значок приоритета (assets/request0..2.webp) на верхнем правом краю кружка; кружок его не обрезает */
+.vn-queue-flag {
+    position: absolute;
+    top: -8px; right: -8px;
+    width: 24px; height: 24px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+    pointer-events: none;
+}
 
 .vn-queue-number {
     position: absolute;
-    bottom: -2px; right: -2px;
+    bottom: -4px; right: -4px;
     background: rgba(0, 0, 0, 0.9);
     color: white;
-    width: 16px; height: 16px;
-    border-radius: 50%;
+    min-width: 18px; height: 18px;
+    box-sizing: border-box;
+    padding: 0 3px;
+    border-radius: 999px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.65em;
+    font-size: 11px;
     font-weight: 700;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    line-height: 1;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+}
+
+/* Кнопка «поднять руку» для игроков (клавиша H) */
+.vn-queue-hand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--vn-transition);
+}
+
+.vn-queue-hand:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.vn-queue-hand:focus-visible {
+    outline: 2px solid var(--vn-accent);
+    outline-offset: 2px;
+}
+
+.vn-queue-hand.raised {
+    border-color: var(--vn-accent);
+    background: var(--vn-accent);
+    color: #111;
+}
+
+/* Меню приоритетов под рукой: три значка (+ «опустить», если рука поднята) */
+.vn-queue-hand-wrap {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.vn-queue-picker {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--vn-radius-lg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    animation: vnQueuePickerIn 0.18s ease-out both;
+}
+
+.vn-queue-pick,
+.vn-queue-lower {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--vn-transition);
+}
+
+.vn-queue-pick {
+    width: 52px;
+    height: 52px;
+    border: 2.5px solid var(--c);
+    background: color-mix(in srgb, var(--c) 22%, rgba(0, 0, 0, 0.55));
+}
+
+.vn-queue-pick img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+    pointer-events: none;
+}
+
+.vn-queue-pick:hover,
+.vn-queue-pick:focus-visible {
+    transform: scale(1.12);
+    background: color-mix(in srgb, var(--c) 45%, rgba(0, 0, 0, 0.55));
+}
+
+.vn-queue-pick.active {
+    background: var(--c);
+}
+
+.vn-queue-lower {
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 14px;
+}
+
+.vn-queue-lower:hover,
+.vn-queue-lower:focus-visible {
+    background: var(--vn-danger);
+    border-color: var(--vn-danger);
+}
+
+.vn-queue-pick:focus-visible,
+.vn-queue-lower:focus-visible {
+    outline: 2px solid var(--vn-accent);
+    outline-offset: 2px;
+}
+
+@keyframes vnQueuePickerIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vn-queue-picker { animation: none; }
 }
 
 
@@ -1139,16 +1384,44 @@
     drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6));
 }
 
-/* Queue priority active */
-.vn-character.queue-priority-1.active .vn-character-img {
-    filter: brightness(1) contrast(1) saturate(1)
-    drop-shadow(0 0 25px rgba(235,203,139,0.6))
-    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6));
+/* Игрок персонажа в очереди: значок с восклицательными знаками поверх портрета.
+   Отдельный элемент без фильтров на самом портрете, поэтому не мешает эффектам атмосферы. */
+.vn-queue-mark {
+    position: absolute;
+    top: 3%;
+    right: 3%;
+    z-index: 12;
+    width: clamp(44px, 30%, 120px);
+    height: auto;
+    aspect-ratio: 1;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.75));
+    transform-origin: 50% 100%;
+    animation: vnQueueMarkPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+               vnQueueMarkBob 1.6s ease-in-out 0.45s infinite;
 }
-.vn-character.queue-priority-2.active .vn-character-img {
-    filter: brightness(1) contrast(1) saturate(1)
-    drop-shadow(0 0 25px rgba(191,97,106,0.6))
-    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6));
+
+.vn-queue-mark[data-priority="2"] {
+    animation-duration: 0.45s, 0.9s;
+}
+
+.vn-character-hidden > .vn-queue-mark {
+    display: none;
+}
+
+@keyframes vnQueueMarkPop {
+    from { opacity: 0; transform: scale(0.3) translateY(20%); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes vnQueueMarkBob {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50%      { transform: translateY(-8%) rotate(4deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vn-queue-mark { animation: none; }
 }
 
 
@@ -2214,4 +2487,34 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-chat-panel #chat-form,
 .vn-chat-panel .chat-form {
     flex: 0 0 auto;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   Лёгкий режим (клиентская настройка liteMode, класс .vn-lite на оверлее)
+   Убирает самое дорогое для GPU: размытие под панелями, свечение под ногами,
+   тени-фильтры у говорящего и декоративные слои. Частицы, визуальные эффекты,
+   параллакс и камера отключаются в JS (VNAtmosphere.init).
+   ══════════════════════════════════════════════════════════ */
+
+#vn-scene-overlay.vn-lite,
+#vn-scene-overlay.vn-lite * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Без размытия подложка должна быть плотнее, иначе текст сливается с фоном */
+#vn-scene-overlay.vn-lite :is(.vn-queue-container, .vn-queue-picker, .vn-size-controls,
+    .vn-atmosphere-picker, .vn-sounds-picker, .vn-chat-panel) {
+    background-color: rgba(0, 0, 0, 0.82);
+}
+
+#vn-scene-overlay.vn-lite :is(.vn-ambient-light, .vn-ground-fog, .vn-particles, .vn-character-glow,
+    .vn-fx-tint, .vn-fx-rays, .vn-fx-edges, .vn-fx-scan, .vn-fx-flash, .vn-fx-bloom) {
+    display: none !important;
+}
+
+/* Говорящего выделяет размер и яркость, а не размытая тень */
+#vn-scene-overlay.vn-lite .vn-character.active .vn-character-img {
+    filter: none !important;
 }

@@ -6,6 +6,8 @@ import { VNPresets, VNFolders, MODULE_ID } from '../vn-state.js';
 import { countPendingMigrations } from '../vn-migrations.js';
 import { buildActorPipsHtml, groupPresetsByScene } from '../vn-id-utils.js';
 
+const FOLDER_STORAGE_KEY = 'player-queue.vn-presets-folder';
+
 export class VNPresetsManager {
     constructor() {
         this.searchQuery = '';
@@ -15,8 +17,24 @@ export class VNPresetsManager {
         this.sortMode = 'newest';
         this.groupMode = 'scenes';
         this.selectedPresetId = null;
-        this.currentFolderId = null;
+        this._currentFolderId = null;
         this._hooks = null;
+    }
+
+    get currentFolderId() { return this._currentFolderId; }
+    set currentFolderId(id) {
+        this._currentFolderId = id || null;
+        try {
+            if (this._currentFolderId) localStorage.setItem(FOLDER_STORAGE_KEY, this._currentFolderId);
+            else localStorage.removeItem(FOLDER_STORAGE_KEY);
+        } catch {}
+    }
+
+    _restoreFolderId() {
+        try {
+            const id = localStorage.getItem(FOLDER_STORAGE_KEY);
+            return id && VNFolders.get(id) ? id : null;
+        } catch { return null; }
     }
 
     _confirmDialog(title, content, yesLabel, yesIcon) {
@@ -33,7 +51,7 @@ export class VNPresetsManager {
         try { this.groupMode = game.settings.get(MODULE_ID, 'vnPresetsGroupMode') || 'scenes'; } catch {}
         try { this.viewMode = game.settings.get(MODULE_ID, 'vnPresetsViewMode') || 'list'; } catch {}
         this.selectedPresetId = null;
-        this.currentFolderId = null;
+        this._currentFolderId = this._restoreFolderId();
         return this._generateSection(sorted);
     }
 
@@ -447,7 +465,6 @@ export class VNPresetsManager {
             btn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 this.groupMode = btn.dataset.groupmode;
-                this.currentFolderId = null;
                 root.querySelectorAll('.vn-presets-groupmode-btn').forEach(b => b.classList.toggle('active', b.dataset.groupmode === this.groupMode));
                 try { await game.settings.set(MODULE_ID, 'vnPresetsGroupMode', this.groupMode); } catch {}
                 this.refresh(root);

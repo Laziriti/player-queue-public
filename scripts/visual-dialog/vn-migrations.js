@@ -36,7 +36,7 @@ export const MIGRATIONS = [
         version: '14.10.0',
         migrate(preset) {
             if ('particleEffect' in preset || 'visualEffect' in preset) return preset;
-            const legacyPreset = PRESETS[preset.atmosphereEffect] ?? PRESETS.particles;
+            const legacyPreset = PRESETS[preset.atmosphereEffect] ?? PRESETS.none;
             const result = { ...preset, particleEffect: legacyPreset.particles, visualEffect: legacyPreset.visual };
             delete result.atmosphereEffect;
             return result;

@@ -20,9 +20,8 @@ export class VNSocketHandler {
         setBackgroundOverlay: { gmOnly: true,  required: ['enabled'] },
         setParticleEffect:    { gmOnly: true,  required: ['particle'] },
         setVisualEffect:      { gmOnly: true,  required: ['visual'] },
-        setParticlesForeground: { gmOnly: true, required: ['enabled'] },
+        setParticlesLayer: { gmOnly: true, required: ['layer'] },
         setVisibility:        { gmOnly: true,  required: ['tokenId', 'visibility'] },
-        updateQueue:          { gmOnly: false },
     };
 
     /**
@@ -95,7 +94,6 @@ export class VNSocketHandler {
                     s.setActiveSpeaker(p.tokenId, false, p.position);
                 }
                 break;
-            case 'updateQueue':          s.updateQueueDisplay(); break;
             case 'updateScene':
                 s.updateSceneLayout({
                     leftIds: p.leftIds,
@@ -107,6 +105,7 @@ export class VNSocketHandler {
                     particleEffect: p.particleEffect ?? null,
                     visualEffect: p.visualEffect ?? null,
                     particleIntensity: p.particleIntensity ?? null,
+                    particlesLayer: p.particlesLayer ?? null,
                     particlesForeground: p.particlesForeground ?? null,
                     flipped: p.flipped ?? null,
                     visibility: p.visibility ?? null,
@@ -126,7 +125,7 @@ export class VNSocketHandler {
             case 'setBackgroundOverlay': s.setBackgroundOverlay(!!p.enabled, false); break;
             case 'setParticleEffect':    s.setParticleEffect(p.particle, false); break;
             case 'setVisualEffect':      s.setVisualEffect(p.visual, false); break;
-            case 'setParticlesForeground': s.setParticlesForeground(!!p.enabled, false); break;
+            case 'setParticlesLayer':    s.setParticlesLayer(p.layer, false); break;
             case 'setVisibility':        s.applyVisibility(p.tokenId, p.visibility, false); break;
             default: console.warn(`[VN] No handler for action: ${action}`);
         }

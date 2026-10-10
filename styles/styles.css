@@ -72,12 +72,12 @@
 
 .floating-queue.vertical .queue-items {
     flex-direction: column;
-    max-height: calc(var(--queue-max-items, 8) * (var(--queue-size, 50px) + 5px));
+    max-height: calc(var(--queue-max-items, 8) * (var(--queue-size, 50px) + 5px) + 14px);
 }
 
 .floating-queue.horizontal .queue-items {
     flex-direction: row;
-    max-width: calc(var(--queue-max-items, 8) * (var(--queue-size, 50px) + 5px));
+    max-width: calc(var(--queue-max-items, 8) * (var(--queue-size, 50px) + 5px) + 11px);
 }
 
 .floating-queue .queue-items.scrollable {
@@ -113,6 +113,7 @@
     align-items: center;
     justify-content: center;
     cursor: move;
+    touch-action: none;
     font-size: 12px;
     font-weight: bold;
     z-index: 10;
@@ -123,471 +124,731 @@
 }
 
 /* Портреты игроков */
-.floating-queue .queue-player,
-.queue-dialog .queue-player {
+.floating-queue .queue-player{
     position: relative;
     width: var(--queue-size, 50px);
     height: var(--queue-size, 50px);
     border-radius: 50%;
-    overflow: hidden;
     border: 3px solid #fff;
     flex-shrink: 0;
-    animation: fadeIn 0.3s ease-out;
+    --pq-flag-size: max(24px, calc(var(--queue-size, 50px) * 0.6));
+    --pq-num-size: max(16px, calc(var(--queue-size, 50px) * 0.38));
 }
 
-.floating-queue .queue-player.gm-clickable,
-.queue-dialog .queue-player.gm-clickable {
+.floating-queue .queue-player.gm-clickable{
     cursor: pointer;
 }
 
-.floating-queue .queue-player.gm-clickable:hover,
-.queue-dialog .queue-player.gm-clickable:hover {
+.floating-queue .queue-player.gm-clickable:hover{
     opacity: 0.8;
     transform: scale(1.05);
     transition: all 0.2s ease;
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
 }
 
-.floating-queue .queue-player img,
-.queue-dialog .queue-player img {
+.floating-queue .queue-player img.queue-portrait{
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-/* Бейдж приоритета */
-.floating-queue .priority-badge,
-.queue-dialog .priority-badge {
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    color: white;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+}
+
+/* Значок приоритета (assets/request0..2.webp: 1–3 восклицательных знака) на верхнем правом краю кружка */
+.floating-queue .priority-flag{
+    position: absolute;
+    top: calc(var(--queue-size, 50px) * 0.1 - var(--pq-flag-size) / 2);
+    right: calc(var(--queue-size, 50px) * 0.1 - var(--pq-flag-size) / 2);
+    width: var(--pq-flag-size);
+    height: var(--pq-flag-size);
+    object-fit: contain;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+    pointer-events: none;
+}
+
+/* Номер в очереди — отдельный бейдж на нижнем правом краю, ничем не перекрыт и не обрезается кругом */
+.floating-queue .queue-position{
+    position: absolute;
+    bottom: calc(var(--queue-size, 50px) * 0.1 - var(--pq-num-size) / 2);
+    right: calc(var(--queue-size, 50px) * 0.1 - var(--pq-num-size) / 2);
+    min-width: var(--pq-num-size);
+    height: var(--pq-num-size);
+    box-sizing: border-box;
+    padding: 0 3px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
-    font-weight: bold;
-    border: 2px solid white;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.88);
+    color: #fff;
+    font-size: max(10px, calc(var(--queue-size, 50px) * 0.24));
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
 }
 
-/* Диалог очереди — хром окна */
-.pq-queue-window,
-.pq-queue-window .window-content,
-.pq-queue-window .dialog-form,
-.pq-queue-window .dialog-content,
-.pq-queue-window .standard-form {
-    background: var(--pq-bg-primary) !important;
-    color: var(--pq-text-primary) !important;
+/* Первый в очереди — «следующий» */
+.floating-queue .queue-player.is-next{
+    box-shadow: 0 0 0 2px #fff, 0 0 10px 3px var(--queue-color, #fff);
 }
 
-.pq-queue-window .window-header {
-    background: var(--pq-bg-secondary) !important;
-    color: var(--pq-text-primary) !important;
-    border-bottom: 1px solid var(--pq-border-light) !important;
+.floating-queue .queue-player.is-next {
+    animation: queueNextPulse 2.4s ease-in-out infinite;
 }
 
-.pq-queue-window .window-title,
-.pq-queue-window .window-header i {
-    color: var(--pq-text-primary) !important;
+/* Появление / исчезновение портретов */
+.floating-queue .queue-player.entering {
+    animation: fadeIn 0.3s ease-out;
 }
 
-.pq-queue-window .form-footer {
-    background: var(--pq-bg-secondary) !important;
-    border-top: 1px solid var(--pq-border-light) !important;
+.floating-queue .queue-player.leaving {
+    animation: queueLeave 0.22s ease-in forwards;
 }
 
-.pq-queue-window .form-footer button {
-    background: var(--pq-button-bg) !important;
-    color: var(--pq-text-primary) !important;
-    border-color: var(--pq-button-border) !important;
+/* Запас под значки, выступающие за край кружков, чтобы их не обрезала прокрутка */
+.floating-queue .queue-items {
+    position: relative;
+    padding: 9px 9px 5px 2px;
 }
 
-.pq-queue-window .dialog-content {
-    padding: 15px !important;
-}
-
-.queue-dialog .queue-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 15px;
-    min-height: 120px;
-    border: 2px dashed var(--pq-container-border);
-    padding: 15px;
-    border-radius: 8px;
-    background: var(--pq-container-bg);
-}
-
-.queue-dialog .queue-empty {
+/* Компактный режим: одна плашка вместо портретов */
+.floating-queue .queue-compact {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: var(--pq-text-secondary);
-    font-style: italic;
-    width: 100%;
+    gap: 6px;
+    padding: 4px 12px;
+    background: transparent;
+    color: #fff;
+    border: 3px solid var(--queue-color, #fff);
+    border-radius: 999px;
+    font-weight: 700;
+    cursor: pointer;
+    width: auto;
+    height: auto;
+    line-height: 1.2;
 }
 
-/* Контролы очереди */
-.queue-dialog .queue-controls {
+.floating-queue .queue-compact:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.floating-queue .queue-compact-flag {
+    height: 1.8em;
+    width: auto;
+    margin: -0.3em -0.2em;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+/* Доступность: видимый фокус и сенсорное перетаскивание */
+.floating-queue .queue-player:focus-visible,
+.floating-queue .queue-compact:focus-visible,
+.floating-queue .drag-handle:focus-visible{
+    outline: 3px solid #4dabf7;
+    outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Окно очереди (QueueDialog)
+
+   Цвета берутся из переменных темы Foundry (--color-text-*, --color-border), поэтому окно само
+   следует светлой/тёмной цветовой схеме (body.theme-light / body.theme-dark). Свои фоны не задаются:
+   фон окна — родной (--background). Полупрозрачные «поверхности» строятся от цвета текста темы:
+   на тёмной теме это светлая дымка, на светлой — тёмная.
+   ══════════════════════════════════════════════════════════ */
+.pq-queue-window .window-content {
+    padding: 0;
+    overflow: hidden;
+}
+
+.pq-win {
+    --pq-fg: var(--color-text-primary);
+    --pq-fg-dim: var(--color-text-secondary);
+    --pq-surface: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+    --pq-surface-strong: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+    --pq-line: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
+    --pq-accent: #4dabf7;
+
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 15px;
+    flex: 1;
+    min-height: 0;
+    color: var(--pq-fg);
+    container-type: inline-size;
 }
 
-.queue-dialog .queue-controls button {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.2s ease;
-}
-
-.queue-dialog .join-btn {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.queue-dialog .join-btn:hover {
-    background: linear-gradient(135deg, #20c997, #28a745);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.queue-dialog .leave-btn {
-    background: linear-gradient(135deg, #6c757d, #868e96);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s ease;
-}
-
-.queue-dialog .leave-btn:hover {
-    background: linear-gradient(135deg, #868e96, #6c757d);
-    transform: translateY(-1px);
-}
-
-.queue-dialog .clear-btn {
-    background: linear-gradient(135deg, #ffc107, #ffca2c);
-    color: #333;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.2s ease;
-    margin-top: 5px;
-}
-
-.queue-dialog .clear-btn:hover {
-    background: linear-gradient(135deg, #ffca2c, #ffc107);
-    transform: translateY(-1px);
-}
-
-.queue-dialog .change-priority-btn {
-    background: linear-gradient(135deg, #17a2b8, #20c997);
-    color: white;
-    margin-left: 10px;
-}
-
-.queue-dialog .change-priority-btn:hover {
-    background: linear-gradient(135deg, #20c997, #17a2b8);
-    transform: translateY(-1px);
-}
-
-/* Текущий приоритет */
-.queue-dialog .current-priority {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.queue-dialog .current-priority span {
-    color: var(--pq-text-primary);
-    font-size: 14px;
-}
-
-/* Информация об очереди */
-.queue-dialog .queue-info {
-    text-align: center;
-    font-size: 12px;
-    color: var(--pq-text-secondary);
-}
-
-.queue-dialog .priority-legend {
-    margin-top: 8px;
-    padding: 8px;
-    background: var(--pq-settings-bg);
-    border-radius: 4px;
-    border: 1px solid var(--pq-settings-border);
-}
-
-/* Селектор приоритета */
-.queue-dialog .priority-btn {
-    background: var(--pq-button-bg);
-    border: 2px solid var(--pq-button-border);
-    color: var(--pq-text-primary);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin: 5px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 120px;
-    text-align: center;
-}
-
-.queue-dialog .priority-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.queue-dialog .priority-btn:active {
-    transform: translateY(0px);
-}
-
-/* Кнопки приоритета для вступления в очередь */
-.queue-dialog .priority-buttons {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.queue-dialog .priority-join-btn {
-    display: flex;
-    max-width: 100px;
-    max-height: 100px;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
+.pq-win button {
+    margin: 0;
     font-family: inherit;
-    font-weight: bold;
-    transition: all 0.2s ease;
-    min-width: 70px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: none;
 }
 
-.queue-dialog .priority-join-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+.pq-win :is(button, .pq-body):focus-visible {
+    outline: 2px solid var(--pq-accent);
+    outline-offset: 2px;
 }
 
-.queue-dialog .priority-join-btn:active {
-    transform: translateY(0px);
-}
-
-.queue-dialog .priority-join-btn.low {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-}
-
-.queue-dialog .priority-join-btn.medium {
-    background: linear-gradient(135deg, #ffc107, #ffca2c);
-    color: #333;
-}
-
-.queue-dialog .priority-join-btn.high {
-    background: linear-gradient(135deg, #dc3545, #e74c3c);
-    color: white;
-}
-
-.queue-dialog .priority-join-btn .priority-icon {
-    font-size: 16px;
-    margin-bottom: 2px;
-}
-
-.queue-dialog .priority-join-btn .priority-text {
-    font-size: 11px;
-}
-
-/* Управление для игроков уже в очереди */
-.queue-dialog .current-player-controls {
+/* Шапка: сколько человек и кто следующий */
+.pq-head {
+    flex: 0 0 auto;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
     align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--pq-line);
+    background: var(--pq-surface);
 }
 
-.queue-dialog .current-priority-info {
+.pq-count {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-weight: 700;
 }
 
-.queue-dialog .current-priority-label {
-    color: var(--pq-text-primary);
-}
-
-.queue-dialog .current-priority-value {
-    font-weight: bold;
-    font-size: 16px;
-}
-
-/* Кнопки изменения приоритета */
-.queue-dialog .priority-change-buttons {
-    display: flex;
-    gap: 5px;
-}
-
-.queue-dialog .priority-change-btn {
-    width: 35px;
-    height: 35px;
-    border: 2px solid;
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 12px;
-    transition: all 0.2s ease;
+.pq-next-chip {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 0.9em;
+    color: var(--pq-fg-dim);
 }
 
-.queue-dialog .priority-change-btn.low {
-    border-color: #28a745;
-    color: #28a745;
+.pq-next-chip img {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    object-fit: cover;
 }
 
-.queue-dialog .priority-change-btn.medium {
-    border-color: #ffc107;
-    color: #ffc107;
+.pq-next-chip strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--pq-fg);
 }
 
-.queue-dialog .priority-change-btn.high {
+/* Список очереди */
+.pq-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 14px;
+}
+
+.pq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pq-row {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px 8px 12px;
+    border: 1px solid var(--pq-line);
+    border-left: 4px solid var(--c);
+    border-radius: 10px;
+    background: var(--pq-surface);
+}
+
+.pq-row.is-next {
+    border-color: color-mix(in srgb, var(--c) 55%, var(--pq-line));
+    border-left-color: var(--c);
+    background: color-mix(in srgb, var(--c) 14%, var(--pq-surface));
+}
+
+.pq-row.is-me {
+    outline: 2px solid var(--pq-accent);
+    outline-offset: -1px;
+}
+
+.pq-pos {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--pq-surface-strong);
+    font-size: 0.85em;
+    font-weight: 700;
+}
+
+.pq-avatar {
+    display: block;
+    width: 42px;
+    height: 42px;
+    border: 2px solid var(--c);
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.pq-who {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.pq-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.pq-sub {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    font-size: 0.8em;
+    color: var(--pq-fg-dim);
+}
+
+.pq-pill {
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.9em;
+    font-weight: 700;
+    line-height: 1.6;
+}
+
+.pq-pill.next {
+    background: var(--c);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.pq-row[data-priority="1"] .pq-pill.next {
+    color: #222;
+    text-shadow: none;
+}
+
+.pq-pill.me {
+    background: var(--pq-accent);
+    color: #0b2a40;
+}
+
+.pq-flag {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+.pq-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.pq-icon-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    min-height: 0;
+    padding: 0;
+    border: 1px solid var(--pq-line);
+    border-radius: 8px;
+    background: var(--pq-surface-strong);
+    color: var(--pq-fg);
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pq-icon-btn:hover {
+    background: color-mix(in srgb, var(--pq-fg) 22%, transparent);
+}
+
+.pq-icon-btn.danger:hover {
     border-color: #dc3545;
-    color: #dc3545;
-}
-
-.queue-dialog .priority-change-btn:hover {
-    transform: scale(1.1);
-}
-
-.queue-dialog .priority-change-btn.active {
-    background: currentColor;
-    color: white;
-    box-shadow: 0 0 10px currentColor;
-}
-
-.queue-dialog .priority-change-btn.low.active {
-    background: #28a745;
-}
-
-.queue-dialog .priority-change-btn.medium.active {
-    background: #ffc107;
-    color: #333;
-}
-
-.queue-dialog .priority-change-btn.high.active {
     background: #dc3545;
+    color: #fff;
 }
 
-/* Диалог тестирования звуков */
-.sound-test-dialog {
-    padding: 20px;
-    background: var(--pq-bg-primary);
-    color: var(--pq-text-primary);
+/* Пустая очередь */
+.pq-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 40px 12px;
+    text-align: center;
+    color: var(--pq-fg-dim);
 }
 
-.sound-test-dialog .sound-test-buttons {
+.pq-empty i {
+    font-size: 2.4em;
+    opacity: 0.45;
+}
+
+.pq-empty strong {
+    color: var(--pq-fg);
+}
+
+/* Нижняя панель: заявка / смена приоритета / управление */
+.pq-panel {
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-bottom: 20px;
+    padding: 12px 14px 14px;
+    border-top: 1px solid var(--pq-line);
+    background: var(--pq-surface);
 }
 
-.sound-test-dialog .priority-test-btn {
+.pq-panel-title {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.95em;
+    font-weight: 700;
+    color: var(--pq-fg);
+}
+
+.pq-hint {
+    margin: -6px 0 0;
+    font-size: 0.85em;
+    color: var(--pq-fg-dim);
+}
+
+.pq-choices {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.pq-choice {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 15px;
-    border: 2px solid;
-    border-radius: 8px;
-    background: transparent;
+    gap: 4px;
+    height: auto;
+    min-height: 0;
+    padding: 8px 6px;
+    border: 2px solid var(--c);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--c) 12%, transparent);
+    color: var(--pq-fg);
+    line-height: 1.2;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.12s ease, transform 0.12s ease;
 }
 
-.sound-test-dialog .priority-test-btn:disabled {
-    opacity: 0.5;
+.pq-choice img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+    pointer-events: none;
+}
+
+.pq-choice span {
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.pq-choice:hover {
+    background: color-mix(in srgb, var(--c) 28%, transparent);
+    transform: translateY(-1px);
+}
+
+.pq-choice:active {
+    transform: none;
+}
+
+.pq-choice.active {
+    background: var(--c);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.pq-choice[data-priority="1"].active {
+    color: #222;
+    text-shadow: none;
+}
+
+.pq-panel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pq-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--pq-line);
+    border-radius: 8px;
+    background: var(--pq-surface-strong);
+    color: var(--pq-fg);
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.pq-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--pq-fg) 22%, transparent);
+}
+
+.pq-btn:disabled {
+    opacity: 0.45;
     cursor: not-allowed;
 }
 
-.sound-test-dialog .priority-test-btn.low {
-    border-color: #28a745;
-    color: #28a745;
+.pq-btn.danger {
+    border-color: color-mix(in srgb, #dc3545 65%, transparent);
+    color: color-mix(in srgb, #dc3545 80%, var(--pq-fg));
 }
 
-.sound-test-dialog .priority-test-btn.medium {
-    border-color: #ffc107;
-    color: #ffc107;
-}
-
-.sound-test-dialog .priority-test-btn.high {
+.pq-btn.danger:hover:not(:disabled) {
     border-color: #dc3545;
-    color: #dc3545;
+    background: #dc3545;
+    color: #fff;
 }
 
-.sound-test-dialog .priority-test-btn:hover:not(:disabled) {
-    background: currentColor;
-    color: white;
-    transform: scale(1.02);
+/* Узкое окно: кнопки приоритета в столбик, строка без значка приоритета */
+@container (max-width: 380px) {
+    .pq-choices {
+        grid-template-columns: 1fr;
+    }
+
+    .pq-choice {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+    }
+
+    .pq-choice img {
+        width: 32px;
+        height: 32px;
+    }
+
+    .pq-row {
+        grid-template-columns: auto auto minmax(0, 1fr) auto;
+    }
+
+    .pq-row > .pq-flag {
+        display: none;
+    }
 }
 
-.sound-test-dialog .priority-test-btn .priority-icon {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 5px;
+@media (prefers-reduced-motion: reduce) {
+    .pq-choice,
+    .pq-icon-btn,
+    .pq-btn {
+        transition: none;
+    }
+
+    .pq-choice:hover {
+        transform: none;
+    }
 }
 
-.sound-test-dialog .priority-test-btn .priority-name {
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 3px;
+/* ══════════════════════════════════════════════════════════
+   Тест звуков и карточка объявления в чате: только переменные Foundry,
+   поэтому оба следуют светлой/тёмной схеме сами.
+   ══════════════════════════════════════════════════════════ */
+.pq-sound-test .window-content {
+    padding: 0;
 }
 
-.sound-test-dialog .priority-test-btn .sound-file {
-    font-size: 11px;
-    opacity: 0.7;
+.pq-sound-test-win {
+    --pq-fg: var(--color-text-primary);
+    --pq-fg-dim: var(--color-text-secondary);
+    --pq-surface: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+    --pq-line: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
+    --pq-accent: #4dabf7;
+
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    color: var(--pq-fg);
 }
 
-.sound-test-dialog .current-settings {
-    background: var(--pq-settings-bg);
-    padding: 15px;
-    border-radius: 6px;
-    border: 1px solid var(--pq-settings-border);
-}
-
-.sound-test-dialog .current-settings h4 {
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: var(--pq-text-primary);
-}
-
-.sound-test-dialog .current-settings ul {
+.pq-sound-hint {
     margin: 0;
-    padding-left: 20px;
+    font-size: 0.9em;
+    color: var(--pq-fg-dim);
 }
 
-.sound-test-dialog .current-settings li {
-    margin-bottom: 5px;
-    font-size: 13px;
-    color: var(--pq-text-secondary);
+.pq-sound-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.pq-sound-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 10px 6px;
+    border: 2px solid var(--c);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--c) 12%, transparent);
+    color: var(--pq-fg);
+    line-height: 1.2;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.pq-sound-btn:hover {
+    background: color-mix(in srgb, var(--c) 28%, transparent);
+    transform: translateY(-1px);
+}
+
+.pq-sound-btn:active {
+    transform: none;
+}
+
+.pq-sound-btn:focus-visible {
+    outline: 2px solid var(--pq-accent);
+    outline-offset: 2px;
+}
+
+.pq-sound-btn.is-muted {
+    opacity: 0.55;
+}
+
+.pq-sound-btn img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+    pointer-events: none;
+}
+
+.pq-sound-btn strong {
+    font-size: 0.9em;
+}
+
+.pq-sound-btn small {
+    font-size: 0.75em;
+    color: var(--pq-fg-dim);
+}
+
+.pq-sound-status {
+    margin: 0;
+    padding: 10px 12px;
+    list-style: none;
+    border: 1px solid var(--pq-line);
+    border-radius: 8px;
+    background: var(--pq-surface);
+}
+
+.pq-sound-status h4 {
+    margin: 0 0 6px;
+    padding: 0;
+    border: 0;
+    font-size: 0.95em;
+}
+
+.pq-sound-status ul {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pq-sound-status li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.9em;
+    color: var(--pq-fg-dim);
+}
+
+.pq-sound-status li b {
+    color: var(--pq-fg);
+}
+
+.pq-sound-status li b.off {
+    color: color-mix(in srgb, #dc3545 80%, var(--pq-fg));
+}
+
+@media (max-width: 420px) {
+    .pq-sound-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Карточка «сейчас выступает» в чате */
+.pq-announce {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+    border-left: 4px solid var(--c);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--c) 10%, transparent);
+}
+
+.pq-announce-avatar {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--c);
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.pq-announce-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+.pq-announce-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.05em;
+}
+
+.pq-announce-text {
+    font-size: 0.9em;
+}
+
+.pq-announce-priority {
+    font-size: 0.8em;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--c) 70%, var(--color-text-primary));
+}
+
+.pq-announce-flag {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 /* Анимации */
@@ -596,46 +857,22 @@
     to { opacity: 1; transform: scale(1); }
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-    .queue-dialog .queue-container {
-        padding: 10px;
-        min-height: 100px;
-    }
-
-    .queue-dialog .queue-controls {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .queue-dialog .current-priority {
-        flex-direction: column;
-        text-align: center;
-    }
+@keyframes queueLeave {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.6); }
 }
 
-/* Адаптивность для мобильных */
-@media (max-width: 480px) {
-    .queue-dialog .priority-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .queue-dialog .priority-join-btn {
-        min-width: 100px;
-    }
-
-    .queue-dialog .priority-change-buttons {
-        gap: 8px;
-    }
-
-    .queue-dialog .priority-change-btn {
-        width: 40px;
-        height: 40px;
-    }
+@keyframes queueNextPulse {
+    0%, 100% { box-shadow: 0 0 0 2px #fff, 0 0 6px 1px var(--queue-color, #fff); }
+    50% { box-shadow: 0 0 0 2px #fff, 0 0 14px 5px var(--queue-color, #fff); }
 }
 
-
+@media (prefers-reduced-motion: reduce) {
+    .floating-queue .queue-player,
+    .floating-queue .queue-player.is-next {
+        animation: none;
+    }
+}
 
 /* Темная тема для визуальной новеллы */
 body.player-queue-dark-theme #vn-scene-overlay {

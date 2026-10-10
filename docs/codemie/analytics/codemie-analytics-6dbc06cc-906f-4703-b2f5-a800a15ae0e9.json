@@ -1,0 +1,628 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-23T18:21:51.661Z",
+    "rangeLabel": "all",
+    "agents": [
+      "claude"
+    ],
+    "projectFilter": "all",
+    "totals": {
+      "sessions": 1,
+      "durationMs": 16926983,
+      "turns": 423,
+      "files": 34,
+      "netLines": 1169,
+      "toolCallsTotal": 499,
+      "toolSuccessRate": 98.4,
+      "totalCostUSD": 26.7568545,
+      "cacheReadCostUSD": 12.8094765,
+      "pricedSessions": 1
+    },
+    "unpricedModels": [],
+    "coverage": [
+      {
+        "agentName": "claude",
+        "total": 1,
+        "priced": 1,
+        "withLog": 1
+      }
+    ],
+    "periodStart": "2026-08-23T13:37:52.147Z"
+  },
+  "sessions": [
+    {
+      "sessionId": "6dbc06cc-906f-4703-b2f5-a800a15ae0e9",
+      "agentName": "claude",
+      "provider": "ai-run-sso",
+      "title": "проанализируй модуль для фаундри и предложи как можно его улучшить",
+      "project": "C:\\Users\\vadim\\Documents\\repos\\player-queue",
+      "branch": "main",
+      "startTime": 1787492272147,
+      "durationMs": 16926983,
+      "turns": 423,
+      "fileOps": 34,
+      "linesAdded": 1755,
+      "linesRemoved": 586,
+      "linesModified": 0,
+      "netLines": 1169,
+      "filesChanged": 26,
+      "filesWritten": 3,
+      "filesEdited": 25,
+      "toolCallsTotal": 499,
+      "toolCallsSuccess": 491,
+      "toolCallsFailure": 8,
+      "models": [
+        "claude-sonnet-4-6"
+      ],
+      "languages": [
+        "javascript",
+        "markdown",
+        "json"
+      ],
+      "tools": [
+        {
+          "toolName": "Edit",
+          "totalCalls": 201,
+          "successCount": 196,
+          "failureCount": 5,
+          "successRate": 97.51243781094527
+        },
+        {
+          "toolName": "Read",
+          "totalCalls": 166,
+          "successCount": 166,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Grep",
+          "totalCalls": 60,
+          "successCount": 59,
+          "failureCount": 1,
+          "successRate": 98.33333333333333
+        },
+        {
+          "toolName": "TaskUpdate",
+          "totalCalls": 22,
+          "successCount": 22,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "TaskCreate",
+          "totalCalls": 11,
+          "successCount": 11,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Glob",
+          "totalCalls": 9,
+          "successCount": 9,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Agent",
+          "totalCalls": 8,
+          "successCount": 8,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Write",
+          "totalCalls": 7,
+          "successCount": 5,
+          "failureCount": 2,
+          "successRate": 71.42857142857143
+        },
+        {
+          "toolName": "Bash",
+          "totalCalls": 7,
+          "successCount": 7,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "EnterPlanMode",
+          "totalCalls": 3,
+          "successCount": 3,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "ExitPlanMode",
+          "totalCalls": 3,
+          "successCount": 3,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "SendMessage",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "PowerShell",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        }
+      ],
+      "tokens": {
+        "input": 36279,
+        "output": 415357,
+        "cacheRead": 42698255,
+        "cacheCreation": 1268031,
+        "cacheCreation1h": 1268031,
+        "total": 44417922
+      },
+      "costUSD": 26.7568545,
+      "cacheReadCostUSD": 12.8094765,
+      "perModelCost": [
+        {
+          "model": "claude-sonnet-4-6",
+          "tokens": {
+            "input": 36279,
+            "output": 415357,
+            "cacheRead": 42698255,
+            "cacheCreation": 1268031,
+            "cacheCreation1h": 1268031,
+            "total": 44417922
+          },
+          "costUSD": 26.7568545,
+          "unpriced": false
+        }
+      ],
+      "costSeries": [
+        {
+          "t": 1787486192322,
+          "cost": 0.0832059,
+          "tokens": 45669
+        },
+        {
+          "t": 1787489153038,
+          "cost": 0.9399456,
+          "tokens": 778013
+        },
+        {
+          "t": 1787489708826,
+          "cost": 1.5622245,
+          "tokens": 1749888
+        },
+        {
+          "t": 1787490358818,
+          "cost": 1.9110273,
+          "tokens": 2619064
+        },
+        {
+          "t": 1787490497763,
+          "cost": 3.2227113,
+          "tokens": 3487672
+        },
+        {
+          "t": 1787492020346,
+          "cost": 4.3062654,
+          "tokens": 4860246
+        },
+        {
+          "t": 1787492137464,
+          "cost": 4.890807,
+          "tokens": 6273428
+        },
+        {
+          "t": 1787492582974,
+          "cost": 6.0066864,
+          "tokens": 7256319
+        },
+        {
+          "t": 1787492891863,
+          "cost": 7.216518,
+          "tokens": 8446439
+        },
+        {
+          "t": 1787493013704,
+          "cost": 8.3795811,
+          "tokens": 9688404
+        },
+        {
+          "t": 1787493060851,
+          "cost": 9.0155436,
+          "tokens": 11069852
+        },
+        {
+          "t": 1787493112384,
+          "cost": 9.5673543,
+          "tokens": 12260161
+        },
+        {
+          "t": 1787493201853,
+          "cost": 10.0687383,
+          "tokens": 13457989
+        },
+        {
+          "t": 1787493248826,
+          "cost": 10.6214178,
+          "tokens": 14370829
+        },
+        {
+          "t": 1787493271403,
+          "cost": 10.9774566,
+          "tokens": 15301944
+        },
+        {
+          "t": 1787493301709,
+          "cost": 11.3341821,
+          "tokens": 16228295
+        },
+        {
+          "t": 1787493342551,
+          "cost": 11.8448061,
+          "tokens": 17499488
+        },
+        {
+          "t": 1787493429250,
+          "cost": 12.4718502,
+          "tokens": 18711689
+        },
+        {
+          "t": 1787493507058,
+          "cost": 13.1125998,
+          "tokens": 19907253
+        },
+        {
+          "t": 1787493860779,
+          "cost": 13.965792,
+          "tokens": 20829146
+        },
+        {
+          "t": 1787494706878,
+          "cost": 14.4755559,
+          "tokens": 21783234
+        },
+        {
+          "t": 1787495029787,
+          "cost": 15.3161061,
+          "tokens": 22991024
+        },
+        {
+          "t": 1787495143906,
+          "cost": 15.8810976,
+          "tokens": 24549726
+        },
+        {
+          "t": 1787495184802,
+          "cost": 16.4065425,
+          "tokens": 26152988
+        },
+        {
+          "t": 1787495223806,
+          "cost": 16.945329,
+          "tokens": 27792409
+        },
+        {
+          "t": 1787495432322,
+          "cost": 17.64999,
+          "tokens": 29209379
+        },
+        {
+          "t": 1787496301498,
+          "cost": 17.9585223,
+          "tokens": 29951268
+        },
+        {
+          "t": 1787497070125,
+          "cost": 18.4491573,
+          "tokens": 30895258
+        },
+        {
+          "t": 1787498431811,
+          "cost": 19.0579539,
+          "tokens": 32029623
+        },
+        {
+          "t": 1787498628621,
+          "cost": 19.8147918,
+          "tokens": 32711291
+        },
+        {
+          "t": 1787499079328,
+          "cost": 20.8210416,
+          "tokens": 33949105
+        },
+        {
+          "t": 1787499462639,
+          "cost": 21.2116008,
+          "tokens": 34944071
+        },
+        {
+          "t": 1787499514180,
+          "cost": 21.6296637,
+          "tokens": 36087663
+        },
+        {
+          "t": 1787499585498,
+          "cost": 22.1095401,
+          "tokens": 37290291
+        },
+        {
+          "t": 1787499644309,
+          "cost": 22.5908724,
+          "tokens": 38587784
+        },
+        {
+          "t": 1787504435615,
+          "cost": 23.6594073,
+          "tokens": 39999092
+        },
+        {
+          "t": 1787504693998,
+          "cost": 24.2653419,
+          "tokens": 41515222
+        },
+        {
+          "t": 1787507695565,
+          "cost": 24.8439918,
+          "tokens": 42826857
+        },
+        {
+          "t": 1787508651048,
+          "cost": 25.7187159,
+          "tokens": 43470911
+        },
+        {
+          "t": 1787509199965,
+          "cost": 26.7568545,
+          "tokens": 44417922
+        }
+      ],
+      "dispatches": [
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1787486192322,
+          "durationMs": 552206,
+          "costUSD": 0.6829854,
+          "tokens": {
+            "input": 966,
+            "output": 14272,
+            "cacheRead": 493978,
+            "cacheCreation": 52969,
+            "cacheCreation1h": 52969,
+            "total": 562185
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 13
+            },
+            {
+              "name": "Grep",
+              "calls": 8
+            },
+            {
+              "name": "Glob",
+              "calls": 2
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1787490354402,
+          "durationMs": 299054,
+          "costUSD": 1.2628392,
+          "tokens": {
+            "input": 9517,
+            "output": 22073,
+            "cacheRead": 860744,
+            "cacheCreation": 107495,
+            "cacheCreation1h": 107495,
+            "total": 999829
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 15
+            },
+            {
+              "name": "Glob",
+              "calls": 3
+            },
+            {
+              "name": "Grep",
+              "calls": 1
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1787490361730,
+          "durationMs": 137249,
+          "costUSD": 0.563331,
+          "tokens": {
+            "input": 7,
+            "output": 9258,
+            "cacheRead": 242340,
+            "cacheCreation": 58623,
+            "cacheCreation1h": 58623,
+            "total": 310228
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 8
+            },
+            {
+              "name": "Grep",
+              "calls": 5
+            },
+            {
+              "name": "Glob",
+              "calls": 1
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "agent",
+          "start": 1787492654068,
+          "durationMs": 1665,
+          "costUSD": 4.4404269,
+          "tokens": {
+            "input": 3417,
+            "output": 84342,
+            "cacheRead": 6915313,
+            "cacheCreation": 181742,
+            "cacheCreation1h": 181742,
+            "total": 7184814
+          },
+          "tools": [
+            {
+              "name": "Edit",
+              "calls": 56
+            },
+            {
+              "name": "Read",
+              "calls": 7
+            },
+            {
+              "name": "Grep",
+              "calls": 4
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1787494698983,
+          "durationMs": 98700,
+          "costUSD": 0.3395973,
+          "tokens": {
+            "input": 7,
+            "output": 7604,
+            "cacheRead": 181841,
+            "cacheCreation": 28494,
+            "cacheCreation1h": 28494,
+            "total": 217946
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 6
+            },
+            {
+              "name": "Grep",
+              "calls": 3
+            }
+          ]
+        },
+        {
+          "kind": "command",
+          "name": "update-memory",
+          "start": 1787497016161,
+          "durationMs": 0
+        },
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1787498467079,
+          "durationMs": 47227,
+          "costUSD": 0.320355,
+          "tokens": {
+            "input": 5,
+            "output": 3079,
+            "cacheRead": 93830,
+            "cacheCreation": 41001,
+            "cacheCreation1h": 41001,
+            "total": 137915
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 2
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1787498549140,
+          "durationMs": 81010,
+          "costUSD": 0.2045901,
+          "tokens": {
+            "input": 7,
+            "output": 5468,
+            "cacheRead": 133077,
+            "cacheCreation": 13771,
+            "cacheCreation1h": 13771,
+            "total": 152323
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 9
+            },
+            {
+              "name": "Grep",
+              "calls": 1
+            }
+          ]
+        },
+        {
+          "kind": "command",
+          "name": "update-memory",
+          "start": 1787504656158,
+          "durationMs": 0
+        },
+        {
+          "kind": "agent",
+          "name": "agent",
+          "start": 1787508520217,
+          "durationMs": 50652,
+          "costUSD": 0.5500038,
+          "tokens": {
+            "input": 14929,
+            "output": 2664,
+            "cacheRead": 152156,
+            "cacheCreation": 69935,
+            "cacheCreation1h": 69935,
+            "total": 239684
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 3
+            },
+            {
+              "name": "Grep",
+              "calls": 1
+            }
+          ]
+        }
+      ],
+      "skillInvocations": [],
+      "agentInvocations": [
+        {
+          "name": "Explore",
+          "totalCalls": 119,
+          "successCount": 119,
+          "failureCount": 0
+        }
+      ],
+      "commandInvocations": [
+        {
+          "name": "update-memory",
+          "totalCalls": 18,
+          "successCount": 18,
+          "failureCount": 0
+        }
+      ],
+      "sessionSource": "Pure chat"
+    }
+  ]
+}

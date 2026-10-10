@@ -1,0 +1,449 @@
+{
+  "meta": {
+    "generatedAt": "2026-09-16T14:48:30.879Z",
+    "rangeLabel": "all",
+    "agents": [
+      "claude"
+    ],
+    "projectFilter": "all",
+    "totals": {
+      "sessions": 1,
+      "durationMs": 11372285,
+      "turns": 105,
+      "files": 14,
+      "netLines": 823,
+      "toolCallsTotal": 138,
+      "toolSuccessRate": 97.8,
+      "totalCostUSD": 7.4323932,
+      "cacheReadCostUSD": 2.7739781999999997,
+      "pricedSessions": 1
+    },
+    "unpricedModels": [],
+    "coverage": [
+      {
+        "agentName": "claude",
+        "total": 1,
+        "priced": 1,
+        "withLog": 1
+      }
+    ],
+    "periodStart": "2026-09-16T11:38:49.693Z"
+  },
+  "sessions": [
+    {
+      "sessionId": "a803eccd-cacb-4bf7-a808-bd5e2a4e8a07",
+      "agentName": "claude",
+      "provider": "ai-run-sso",
+      "title": "Explore the Visual Novel preset system in C:\\Users\\vadim\\Documents\\repos\\player-queue. I need to understand: 1. How presets are stored (data structure in vn-state.js, especially VNPresets) 2. How the preset UI is rendered — where the list of presets is shown, how they're grouped by scene 3. How presets are created/saved 4. How the import system works (vn-adventure-io.js) 5. What vn-migrations.js looks like (structure of MIGRATIONS array) 6. Where the main UI for preset management is (likely in visual-novel-scene.js) Read the full content of: vn-state.js, vn-migrations.js, vn-adventure-io.js, and relevant sections of visual-novel-scene.js that deal with preset listing/rendering. Search breadth: very thorough.",
+      "project": "C:\\Users\\vadim\\Documents\\repos\\player-queue",
+      "branch": "main",
+      "startTime": 1789558729693,
+      "durationMs": 11372285,
+      "turns": 105,
+      "fileOps": 14,
+      "linesAdded": 883,
+      "linesRemoved": 60,
+      "linesModified": 0,
+      "netLines": 823,
+      "filesChanged": 9,
+      "filesWritten": 1,
+      "filesEdited": 8,
+      "toolCallsTotal": 138,
+      "toolCallsSuccess": 135,
+      "toolCallsFailure": 3,
+      "models": [
+        "claude-sonnet-4-6",
+        "<synthetic>"
+      ],
+      "languages": [
+        "javascript",
+        "markdown",
+        "json"
+      ],
+      "tools": [
+        {
+          "toolName": "Read",
+          "totalCalls": 55,
+          "successCount": 55,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Edit",
+          "totalCalls": 32,
+          "successCount": 31,
+          "failureCount": 1,
+          "successRate": 96.875
+        },
+        {
+          "toolName": "Grep",
+          "totalCalls": 21,
+          "successCount": 19,
+          "failureCount": 2,
+          "successRate": 90.47619047619048
+        },
+        {
+          "toolName": "TaskUpdate",
+          "totalCalls": 12,
+          "successCount": 12,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "TaskCreate",
+          "totalCalls": 7,
+          "successCount": 7,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Bash",
+          "totalCalls": 3,
+          "successCount": 3,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Glob",
+          "totalCalls": 2,
+          "successCount": 2,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Agent",
+          "totalCalls": 2,
+          "successCount": 2,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "AskUserQuestion",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "EnterPlanMode",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Write",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "ExitPlanMode",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        }
+      ],
+      "tokens": {
+        "input": 216,
+        "output": 89999,
+        "cacheRead": 9246594,
+        "cacheCreation": 551297,
+        "cacheCreation1h": 551297,
+        "total": 9888106
+      },
+      "costUSD": 7.4323932,
+      "cacheReadCostUSD": 2.7739781999999997,
+      "perModelCost": [
+        {
+          "model": "claude-sonnet-4-6",
+          "tokens": {
+            "input": 216,
+            "output": 89999,
+            "cacheRead": 9246594,
+            "cacheCreation": 551297,
+            "cacheCreation1h": 551297,
+            "total": 9888106
+          },
+          "costUSD": 7.4323932,
+          "unpriced": false
+        }
+      ],
+      "costSeries": [
+        {
+          "t": 1789558996954,
+          "cost": 0.0877419,
+          "tokens": 46278
+        },
+        {
+          "t": 1789559008527,
+          "cost": 0.1930854,
+          "tokens": 129666
+        },
+        {
+          "t": 1789559015201,
+          "cost": 0.2256537,
+          "tokens": 197662
+        },
+        {
+          "t": 1789559029197,
+          "cost": 0.4708503,
+          "tokens": 358647
+        },
+        {
+          "t": 1789559095684,
+          "cost": 0.866928,
+          "tokens": 481827
+        },
+        {
+          "t": 1789559776476,
+          "cost": 0.9975555,
+          "tokens": 617757
+        },
+        {
+          "t": 1789559793191,
+          "cost": 1.3366005,
+          "tokens": 751885
+        },
+        {
+          "t": 1789559800975,
+          "cost": 1.4209398,
+          "tokens": 867335
+        },
+        {
+          "t": 1789559934555,
+          "cost": 1.6648914,
+          "tokens": 1060025
+        },
+        {
+          "t": 1789562145210,
+          "cost": 1.745916,
+          "tokens": 1196713
+        },
+        {
+          "t": 1789562157744,
+          "cost": 1.9423716,
+          "tokens": 1441719
+        },
+        {
+          "t": 1789562167685,
+          "cost": 2.0954448,
+          "tokens": 1640738
+        },
+        {
+          "t": 1789562420660,
+          "cost": 2.7275139,
+          "tokens": 2032976
+        },
+        {
+          "t": 1789562440338,
+          "cost": 3.4679064,
+          "tokens": 2443839
+        },
+        {
+          "t": 1789562458233,
+          "cost": 3.5834841,
+          "tokens": 2721615
+        },
+        {
+          "t": 1789562482849,
+          "cost": 3.7764393,
+          "tokens": 3145494
+        },
+        {
+          "t": 1789562489773,
+          "cost": 3.8702172,
+          "tokens": 3429502
+        },
+        {
+          "t": 1789562502111,
+          "cost": 4.0103148,
+          "tokens": 3857297
+        },
+        {
+          "t": 1789562530702,
+          "cost": 4.1954226,
+          "tokens": 4290484
+        },
+        {
+          "t": 1789562541112,
+          "cost": 4.3130676,
+          "tokens": 4582274
+        },
+        {
+          "t": 1789562555747,
+          "cost": 4.4687676,
+          "tokens": 5022349
+        },
+        {
+          "t": 1789562696641,
+          "cost": 4.6883103,
+          "tokens": 5231048
+        },
+        {
+          "t": 1789562709348,
+          "cost": 4.8762732,
+          "tokens": 5412746
+        },
+        {
+          "t": 1789562806778,
+          "cost": 5.1676542,
+          "tokens": 5637954
+        },
+        {
+          "t": 1789562829512,
+          "cost": 5.2848267,
+          "tokens": 5809680
+        },
+        {
+          "t": 1789562840117,
+          "cost": 5.3905917,
+          "tokens": 6073214
+        },
+        {
+          "t": 1789562846783,
+          "cost": 5.7280884,
+          "tokens": 6251298
+        },
+        {
+          "t": 1789562866120,
+          "cost": 5.8459491,
+          "tokens": 6523056
+        },
+        {
+          "t": 1789562898550,
+          "cost": 6.0176721,
+          "tokens": 6806616
+        },
+        {
+          "t": 1789562906767,
+          "cost": 6.0895161,
+          "tokens": 6998595
+        },
+        {
+          "t": 1789562924077,
+          "cost": 6.2535636,
+          "tokens": 7295635
+        },
+        {
+          "t": 1789562934157,
+          "cost": 6.3393537,
+          "tokens": 7497188
+        },
+        {
+          "t": 1789563003879,
+          "cost": 6.5880948,
+          "tokens": 7822463
+        },
+        {
+          "t": 1789563015030,
+          "cost": 6.7294254,
+          "tokens": 8044333
+        },
+        {
+          "t": 1789563036776,
+          "cost": 6.8655456,
+          "tokens": 8380662
+        },
+        {
+          "t": 1789563047186,
+          "cost": 7.0022271,
+          "tokens": 8722528
+        },
+        {
+          "t": 1789563059218,
+          "cost": 7.0874142,
+          "tokens": 8952848
+        },
+        {
+          "t": 1789563070289,
+          "cost": 7.2114087,
+          "tokens": 9300019
+        },
+        {
+          "t": 1789563078417,
+          "cost": 7.2973029,
+          "tokens": 9533279
+        },
+        {
+          "t": 1789563100826,
+          "cost": 7.4323932,
+          "tokens": 9888106
+        }
+      ],
+      "dispatches": [
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1789558996954,
+          "durationMs": 79608,
+          "costUSD": 0.7256559,
+          "tokens": {
+            "input": 11,
+            "output": 4919,
+            "cacheRead": 285873,
+            "cacheCreation": 94346,
+            "cacheCreation1h": 94346,
+            "total": 385149
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 9
+            },
+            {
+              "name": "Grep",
+              "calls": 3
+            },
+            {
+              "name": "Glob",
+              "calls": 2
+            },
+            {
+              "name": "Bash",
+              "calls": 2
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1789559772745,
+          "durationMs": 83342,
+          "costUSD": 0.5299803,
+          "tokens": {
+            "input": 9,
+            "output": 5774,
+            "cacheRead": 272651,
+            "cacheCreation": 60258,
+            "cacheCreation1h": 60258,
+            "total": 338692
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 11
+            },
+            {
+              "name": "Grep",
+              "calls": 3
+            }
+          ]
+        }
+      ],
+      "skillInvocations": [],
+      "agentInvocations": [
+        {
+          "name": "Explore",
+          "totalCalls": 6,
+          "successCount": 6,
+          "failureCount": 0
+        }
+      ],
+      "commandInvocations": [],
+      "sessionSource": "Pure chat"
+    }
+  ]
+}

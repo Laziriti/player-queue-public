@@ -1,0 +1,500 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-11T22:49:12.595Z",
+    "rangeLabel": "all",
+    "agents": [
+      "claude"
+    ],
+    "projectFilter": "all",
+    "totals": {
+      "sessions": 1,
+      "durationMs": 6575299,
+      "turns": 321,
+      "files": 34,
+      "netLines": 205,
+      "toolCallsTotal": 403,
+      "toolSuccessRate": 99.8,
+      "totalCostUSD": 25.5259198,
+      "cacheReadCostUSD": 16.4956038,
+      "pricedSessions": 1
+    },
+    "unpricedModels": [],
+    "coverage": [
+      {
+        "agentName": "claude",
+        "total": 1,
+        "priced": 1,
+        "withLog": 1
+      }
+    ],
+    "periodStart": "2026-08-11T20:59:23.931Z"
+  },
+  "sessions": [
+    {
+      "sessionId": "549b2bfc-2936-4234-a4ba-0a33ae56b301",
+      "agentName": "claude",
+      "provider": "ai-run-sso",
+      "title": "/model",
+      "project": "C:\\Users\\vadim\\Documents\\repos\\player-queue",
+      "branch": "main",
+      "startTime": 1786481963931,
+      "durationMs": 6575299,
+      "turns": 321,
+      "fileOps": 34,
+      "linesAdded": 678,
+      "linesRemoved": 473,
+      "linesModified": 0,
+      "netLines": 205,
+      "filesChanged": 14,
+      "filesWritten": 2,
+      "filesEdited": 12,
+      "toolCallsTotal": 403,
+      "toolCallsSuccess": 402,
+      "toolCallsFailure": 1,
+      "models": [
+        "claude-opus-4-6",
+        "claude-sonnet-4-6"
+      ],
+      "languages": [
+        "javascript",
+        "markdown",
+        "json"
+      ],
+      "tools": [
+        {
+          "toolName": "Read",
+          "totalCalls": 159,
+          "successCount": 159,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Edit",
+          "totalCalls": 96,
+          "successCount": 96,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "TaskUpdate",
+          "totalCalls": 60,
+          "successCount": 60,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Grep",
+          "totalCalls": 38,
+          "successCount": 38,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "TaskCreate",
+          "totalCalls": 37,
+          "successCount": 37,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Agent",
+          "totalCalls": 5,
+          "successCount": 5,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Glob",
+          "totalCalls": 3,
+          "successCount": 3,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Bash",
+          "totalCalls": 3,
+          "successCount": 2,
+          "failureCount": 1,
+          "successRate": 66.66666666666666
+        },
+        {
+          "toolName": "Write",
+          "totalCalls": 2,
+          "successCount": 2,
+          "failureCount": 0,
+          "successRate": 100
+        }
+      ],
+      "tokens": {
+        "input": 368,
+        "output": 156124,
+        "cacheRead": 33296276,
+        "cacheCreation": 700578,
+        "cacheCreation1h": 700578,
+        "total": 34153346
+      },
+      "costUSD": 25.5259198,
+      "cacheReadCostUSD": 16.4956038,
+      "perModelCost": [
+        {
+          "model": "claude-opus-4-6",
+          "tokens": {
+            "input": 339,
+            "output": 111539,
+            "cacheRead": 32533605,
+            "cacheCreation": 341954,
+            "cacheCreation1h": 341954,
+            "total": 32987437
+          },
+          "costUSD": 22.476512500000002,
+          "unpriced": false
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "tokens": {
+            "input": 29,
+            "output": 44585,
+            "cacheRead": 762671,
+            "cacheCreation": 358624,
+            "cacheCreation1h": 358624,
+            "total": 1165909
+          },
+          "costUSD": 3.0494073,
+          "unpriced": false
+        }
+      ],
+      "costSeries": [
+        {
+          "t": 1786482025775,
+          "cost": 0.50193,
+          "tokens": 49617
+        },
+        {
+          "t": 1786482313877,
+          "cost": 1.0884855,
+          "tokens": 600690
+        },
+        {
+          "t": 1786482605783,
+          "cost": 1.7761379,
+          "tokens": 979333
+        },
+        {
+          "t": 1786482910654,
+          "cost": 3.0039856,
+          "tokens": 1624341
+        },
+        {
+          "t": 1786482955836,
+          "cost": 3.5259721,
+          "tokens": 2402953
+        },
+        {
+          "t": 1786482995227,
+          "cost": 4.0288896,
+          "tokens": 3214973
+        },
+        {
+          "t": 1786483029012,
+          "cost": 4.5250861,
+          "tokens": 4055250
+        },
+        {
+          "t": 1786483076593,
+          "cost": 5.0566886,
+          "tokens": 4921232
+        },
+        {
+          "t": 1786483477732,
+          "cost": 5.7549161,
+          "tokens": 5942870
+        },
+        {
+          "t": 1786483527054,
+          "cost": 6.3245686,
+          "tokens": 6890779
+        },
+        {
+          "t": 1786483575771,
+          "cost": 6.9345056,
+          "tokens": 7872122
+        },
+        {
+          "t": 1786483613435,
+          "cost": 7.5311536,
+          "tokens": 8892385
+        },
+        {
+          "t": 1786483662599,
+          "cost": 8.1500391,
+          "tokens": 9940438
+        },
+        {
+          "t": 1786484134735,
+          "cost": 8.8568296,
+          "tokens": 11158375
+        },
+        {
+          "t": 1786484177875,
+          "cost": 9.5272516,
+          "tokens": 12277232
+        },
+        {
+          "t": 1786484216216,
+          "cost": 10.1836851,
+          "tokens": 13429174
+        },
+        {
+          "t": 1786484268317,
+          "cost": 10.9150866,
+          "tokens": 14620458
+        },
+        {
+          "t": 1786484703001,
+          "cost": 11.8339576,
+          "tokens": 15477490
+        },
+        {
+          "t": 1786484765017,
+          "cost": 12.4050921,
+          "tokens": 16137781
+        },
+        {
+          "t": 1786484803171,
+          "cost": 12.8145726,
+          "tokens": 16790504
+        },
+        {
+          "t": 1786484841909,
+          "cost": 13.2237856,
+          "tokens": 17469421
+        },
+        {
+          "t": 1786484873100,
+          "cost": 13.6424211,
+          "tokens": 18170664
+        },
+        {
+          "t": 1786484921241,
+          "cost": 14.1762826,
+          "tokens": 18999348
+        },
+        {
+          "t": 1786484977578,
+          "cost": 14.6940026,
+          "tokens": 19778337
+        },
+        {
+          "t": 1786485355657,
+          "cost": 15.2777186,
+          "tokens": 20627856
+        },
+        {
+          "t": 1786485423759,
+          "cost": 15.8845551,
+          "tokens": 21544371
+        },
+        {
+          "t": 1786485532279,
+          "cost": 16.6179456,
+          "tokens": 22531064
+        },
+        {
+          "t": 1786485608891,
+          "cost": 17.4251641,
+          "tokens": 23712013
+        },
+        {
+          "t": 1786485665233,
+          "cost": 18.1095531,
+          "tokens": 24822100
+        },
+        {
+          "t": 1786485734713,
+          "cost": 18.8200186,
+          "tokens": 25970922
+        },
+        {
+          "t": 1786486730976,
+          "cost": 19.5854846,
+          "tokens": 27166131
+        },
+        {
+          "t": 1786487395871,
+          "cost": 20.514171,
+          "tokens": 28083864
+        },
+        {
+          "t": 1786487986480,
+          "cost": 21.6353226,
+          "tokens": 28832744
+        },
+        {
+          "t": 1786488055227,
+          "cost": 22.1508951,
+          "tokens": 29483436
+        },
+        {
+          "t": 1786488085565,
+          "cost": 22.5558116,
+          "tokens": 30168411
+        },
+        {
+          "t": 1786488126226,
+          "cost": 23.0198576,
+          "tokens": 30884157
+        },
+        {
+          "t": 1786488166091,
+          "cost": 23.4958636,
+          "tokens": 31635198
+        },
+        {
+          "t": 1786488206962,
+          "cost": 24.0308961,
+          "tokens": 32517451
+        },
+        {
+          "t": 1786488242556,
+          "cost": 24.4905491,
+          "tokens": 33324252
+        },
+        {
+          "t": 1786488540609,
+          "cost": 25.5259198,
+          "tokens": 34153346
+        }
+      ],
+      "dispatches": [
+        {
+          "kind": "command",
+          "name": "model",
+          "start": 1786481973146,
+          "durationMs": 0
+        },
+        {
+          "kind": "agent",
+          "name": "agent",
+          "start": 1786482591240,
+          "durationMs": 272,
+          "costUSD": 0.3356796,
+          "tokens": {
+            "input": 4,
+            "output": 5419,
+            "cacheRead": 24782,
+            "cacheCreation": 41158,
+            "cacheCreation1h": 41158,
+            "total": 71363
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 4
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "agent",
+          "start": 1786482593878,
+          "durationMs": 331,
+          "costUSD": 0.3082614,
+          "tokens": {
+            "input": 4,
+            "output": 8000,
+            "cacheRead": 42498,
+            "cacheCreation": 29250,
+            "cacheCreation1h": 29250,
+            "total": 79752
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 4
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "agent",
+          "start": 1786482595859,
+          "durationMs": 293,
+          "costUSD": 0.4042599,
+          "tokens": {
+            "input": 5,
+            "output": 6858,
+            "cacheRead": 99423,
+            "cacheCreation": 45258,
+            "cacheCreation1h": 45258,
+            "total": 151544
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 4
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "agent",
+          "start": 1786482599685,
+          "durationMs": 334,
+          "costUSD": 0.2866362,
+          "tokens": {
+            "input": 4,
+            "output": 6666,
+            "cacheRead": 42594,
+            "cacheCreation": 28976,
+            "cacheCreation1h": 28976,
+            "total": 78240
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 8
+            }
+          ]
+        },
+        {
+          "kind": "agent",
+          "name": "agent",
+          "start": 1786487385561,
+          "durationMs": 285374,
+          "costUSD": 0.977967,
+          "tokens": {
+            "input": 7,
+            "output": 15314,
+            "cacheRead": 346020,
+            "cacheCreation": 107405,
+            "cacheCreation1h": 107405,
+            "total": 468746
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 11
+            }
+          ]
+        },
+        {
+          "kind": "command",
+          "name": "model",
+          "start": 1786488492410,
+          "durationMs": 0
+        }
+      ],
+      "skillInvocations": [],
+      "agentInvocations": [],
+      "commandInvocations": [
+        {
+          "name": "model",
+          "totalCalls": 20,
+          "successCount": 20,
+          "failureCount": 0
+        }
+      ],
+      "sessionSource": "Pure chat"
+    }
+  ]
+}

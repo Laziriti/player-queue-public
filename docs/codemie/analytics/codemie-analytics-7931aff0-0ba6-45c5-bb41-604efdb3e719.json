@@ -1,0 +1,377 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-10T19:16:30.535Z",
+    "rangeLabel": "all",
+    "agents": [
+      "claude"
+    ],
+    "projectFilter": "all",
+    "totals": {
+      "sessions": 1,
+      "durationMs": 423007,
+      "turns": 73,
+      "files": 13,
+      "netLines": 904,
+      "toolCallsTotal": 76,
+      "toolSuccessRate": 100,
+      "totalCostUSD": 4.9153872,
+      "cacheReadCostUSD": 2.2314372,
+      "pricedSessions": 1
+    },
+    "unpricedModels": [],
+    "coverage": [
+      {
+        "agentName": "claude",
+        "total": 1,
+        "priced": 1,
+        "withLog": 1
+      }
+    ],
+    "periodStart": "2026-08-10T19:09:26.998Z",
+    "periodEnd": "2026-08-10T19:16:30.005Z"
+  },
+  "sessions": [
+    {
+      "sessionId": "7931aff0-0ba6-45c5-bb41-604efdb3e719",
+      "agentName": "claude",
+      "provider": "ai-run-sso",
+      "title": "ривет, мне нужно улучшить диалоговую часть модуля. А именно я хочу что бы у каждой сцены могла быть своя композиция. собственно на экране настройки должна быть возможность перетянуть куданибудь композицию музыкальную из вкладки музыки. сохранение в пресет сохраняет также выбранную композицию. Как это работает. В момент запуска все остальные музкальные композиции паузятся(если запущены) и запускается конкретно эта, как только сцена закрыта или я через настройки пересоздал её с другой музыкой, то музыка сцены полностью стопается, если пересоздал с новой музыкой то стартует новая. Музыка стартанувшая таким образом должна быть зациклена.",
+      "project": "C:\\Users\\vadim\\Documents\\repos\\player-queue",
+      "branch": "main",
+      "startTime": 1786388966998,
+      "durationMs": 423007,
+      "turns": 73,
+      "fileOps": 13,
+      "linesAdded": 961,
+      "linesRemoved": 57,
+      "linesModified": 0,
+      "netLines": 904,
+      "filesChanged": 11,
+      "filesWritten": 6,
+      "filesEdited": 6,
+      "toolCallsTotal": 76,
+      "toolCallsSuccess": 76,
+      "toolCallsFailure": 0,
+      "models": [
+        "claude-sonnet-4-6"
+      ],
+      "languages": [
+        "markdown",
+        "javascript",
+        "json"
+      ],
+      "tools": [
+        {
+          "toolName": "Edit",
+          "totalCalls": 34,
+          "successCount": 34,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Read",
+          "totalCalls": 22,
+          "successCount": 22,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Bash",
+          "totalCalls": 10,
+          "successCount": 10,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Write",
+          "totalCalls": 6,
+          "successCount": 6,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "TaskUpdate",
+          "totalCalls": 2,
+          "successCount": 2,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "Agent",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        },
+        {
+          "toolName": "TaskCreate",
+          "totalCalls": 1,
+          "successCount": 1,
+          "failureCount": 0,
+          "successRate": 100
+        }
+      ],
+      "tokens": {
+        "input": 1666,
+        "output": 91634,
+        "cacheRead": 7438124,
+        "cacheCreation": 217407,
+        "cacheCreation1h": 217407,
+        "total": 7748831
+      },
+      "costUSD": 4.9153872,
+      "cacheReadCostUSD": 2.2314372,
+      "perModelCost": [
+        {
+          "model": "claude-sonnet-4-6",
+          "tokens": {
+            "input": 1666,
+            "output": 91634,
+            "cacheRead": 7438124,
+            "cacheCreation": 217407,
+            "cacheCreation1h": 217407,
+            "total": 7748831
+          },
+          "costUSD": 4.9153872,
+          "unpriced": false
+        }
+      ],
+      "costSeries": [
+        {
+          "t": 1786381797948,
+          "cost": 0.1220097,
+          "tokens": 51788
+        },
+        {
+          "t": 1786382051426,
+          "cost": 0.6713136,
+          "tokens": 150883
+        },
+        {
+          "t": 1786382057486,
+          "cost": 0.7168257,
+          "tokens": 256586
+        },
+        {
+          "t": 1786382237561,
+          "cost": 1.1171022,
+          "tokens": 418315
+        },
+        {
+          "t": 1786382241951,
+          "cost": 1.2397383,
+          "tokens": 514580
+        },
+        {
+          "t": 1786382282224,
+          "cost": 1.346628,
+          "tokens": 712124
+        },
+        {
+          "t": 1786382289078,
+          "cost": 1.4275719,
+          "tokens": 913371
+        },
+        {
+          "t": 1786384186576,
+          "cost": 1.5062898,
+          "tokens": 1116659
+        },
+        {
+          "t": 1786384200618,
+          "cost": 1.587042,
+          "tokens": 1321688
+        },
+        {
+          "t": 1786384213206,
+          "cost": 1.674027,
+          "tokens": 1529499
+        },
+        {
+          "t": 1786384222427,
+          "cost": 1.7207541,
+          "tokens": 1634546
+        },
+        {
+          "t": 1786384230481,
+          "cost": 1.799865,
+          "tokens": 1845813
+        },
+        {
+          "t": 1786384252478,
+          "cost": 1.9026837,
+          "tokens": 2060992
+        },
+        {
+          "t": 1786384262330,
+          "cost": 1.9813026,
+          "tokens": 2277659
+        },
+        {
+          "t": 1786384279125,
+          "cost": 2.0783046,
+          "tokens": 2497651
+        },
+        {
+          "t": 1786384291765,
+          "cost": 2.1681084,
+          "tokens": 2720018
+        },
+        {
+          "t": 1786384299611,
+          "cost": 2.2487247,
+          "tokens": 2944148
+        },
+        {
+          "t": 1786384310237,
+          "cost": 2.2994853,
+          "tokens": 3057583
+        },
+        {
+          "t": 1786384318666,
+          "cost": 2.3832543,
+          "tokens": 3285681
+        },
+        {
+          "t": 1786384343378,
+          "cost": 2.4907614,
+          "tokens": 3519310
+        },
+        {
+          "t": 1786384362362,
+          "cost": 2.577411,
+          "tokens": 3754771
+        },
+        {
+          "t": 1786384706651,
+          "cost": 2.8433511,
+          "tokens": 4009217
+        },
+        {
+          "t": 1786384715027,
+          "cost": 2.9358195,
+          "tokens": 4265839
+        },
+        {
+          "t": 1786384736465,
+          "cost": 2.9961504,
+          "tokens": 4395857
+        },
+        {
+          "t": 1786385094752,
+          "cost": 3.0979959,
+          "tokens": 4658772
+        },
+        {
+          "t": 1786388074916,
+          "cost": 3.2101212,
+          "tokens": 4926785
+        },
+        {
+          "t": 1786388178836,
+          "cost": 3.4255041,
+          "tokens": 5208019
+        },
+        {
+          "t": 1786388188977,
+          "cost": 3.5739849,
+          "tokens": 5499788
+        },
+        {
+          "t": 1786388198985,
+          "cost": 3.6778662,
+          "tokens": 5793259
+        },
+        {
+          "t": 1786388215789,
+          "cost": 3.7915011,
+          "tokens": 6089059
+        },
+        {
+          "t": 1786388219567,
+          "cost": 3.8460315,
+          "tokens": 6237902
+        },
+        {
+          "t": 1786388831175,
+          "cost": 3.9482385,
+          "tokens": 6537326
+        },
+        {
+          "t": 1786388839609,
+          "cost": 4.0597323,
+          "tokens": 6840314
+        },
+        {
+          "t": 1786388978787,
+          "cost": 4.227519,
+          "tokens": 6962531
+        },
+        {
+          "t": 1786388995540,
+          "cost": 4.2863673,
+          "tokens": 7089941
+        },
+        {
+          "t": 1786389011815,
+          "cost": 4.3457139,
+          "tokens": 7219470
+        },
+        {
+          "t": 1786389026744,
+          "cost": 4.3793499,
+          "tokens": 7285292
+        },
+        {
+          "t": 1786389121570,
+          "cost": 4.5818478,
+          "tokens": 7418675
+        },
+        {
+          "t": 1786389274640,
+          "cost": 4.7933163,
+          "tokens": 7578481
+        },
+        {
+          "t": 1786389304284,
+          "cost": 4.9153872,
+          "tokens": 7748831
+        }
+      ],
+      "dispatches": [
+        {
+          "kind": "agent",
+          "name": "Explore",
+          "start": 1786381797948,
+          "durationMs": 254573,
+          "costUSD": 0.5493039,
+          "tokens": {
+            "input": 4,
+            "output": 23575,
+            "cacheRead": 45163,
+            "cacheCreation": 30353,
+            "cacheCreation1h": 30353,
+            "total": 99095
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "calls": 3
+            }
+          ]
+        }
+      ],
+      "skillInvocations": [],
+      "agentInvocations": [
+        {
+          "name": "Explore",
+          "totalCalls": 2,
+          "successCount": 2,
+          "failureCount": 0
+        }
+      ],
+      "commandInvocations": [],
+      "sessionSource": "Pure chat"
+    }
+  ]
+}
