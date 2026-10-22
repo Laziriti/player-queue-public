@@ -39,7 +39,8 @@
     },
     "notify": {
       "noGM": "The queue is unavailable: the GM is offline.",
-      "requestFailed": "Could not send the queue request. Please try again."
+      "requestFailed": "Could not send the queue request. Please try again.",
+      "retry": "The queue is unavailable right now, please try again"
     },
     "floatingQueue": {
       "dragHandle": "Drag the queue (arrow keys move it from the keyboard)",
@@ -155,6 +156,10 @@
       "random": "Random",
       "left": "Left",
       "right": "Right"
+    },
+    "thumbnailFolder": {
+      "name": "Preset thumbnail folder",
+      "hint": "Where thumbnails of dialog scene presets are saved. Empty = a separate folder inside the world. Any folder in Data works, including one inside a module, so the thumbnails travel with it. Existing thumbnails keep working after a change; to rebuild them in the new place use \"Regenerate all\" in the Presets tab menu."
     }
   },
   "soundTest": {
@@ -338,7 +343,9 @@
         "sandstorm": "🏜️ Sandstorm",
         "carnival": "🎉 Carnival",
         "ghosts": "👻 Ghosts"
-      }
+      },
+      "combosHeader": "Ready-made combinations",
+      "searchPlaceholder": "Search effects…"
     },
     "sounds": {
       "header": "Sounds",
@@ -374,12 +381,23 @@
       "back": "Back",
       "default": "Default",
       "noBackground": "No background",
-      "custom": "Custom"
+      "custom": "Custom",
+      "applyPathTitle": "Use this path",
+      "cardSizeTitle": "Card size",
+      "cardSizeLabel": "Size"
     },
     "io": {
       "loadError": "Failed to load presets from {moduleId}: {msg}"
     },
+    "charFx": {
+      "none": "No effect",
+      "hologram": "Hologram",
+      "shadow": "Shadow",
+      "ghost": "Ghost",
+      "glitch": "Glitch"
+    },
     "dialog": {
+      "charFxTitle": "Portrait effect: {name}",
       "editTitle": "✏️ Edit scene",
       "createTitle": "🎭 Create dialog scene",
       "btnUpdate": "Update",
@@ -480,6 +498,7 @@
       "panelSelectHint": "Select a preset to edit",
       "panelLabelName": "Name",
       "panelLabelTags": "Tags",
+      "panelTagsExisting": "Existing tags — click to add",
       "tagAddPlaceholder": "Add tag…",
       "tagBarSearch": "Tags…",
       "macroDialogTitle": "Macro for preset \"{name}\"",
@@ -561,7 +580,25 @@
       "bgFolderNote": "Backgrounds folder: <code>{folder}</code>",
       "exportFileSaved": "File <code>vn-presets.json</code> saved to <code>modules/{moduleId}/integrations/player-queue/</code>.",
       "addToModuleJson": "Add this to your module's <code>module.json</code>:",
-      "moduleJsonRestartNote": "After changing <code>module.json</code>, the Foundry server must be restarted."
+      "moduleJsonRestartNote": "After changing <code>module.json</code>, the Foundry server must be restarted.",
+      "titlePresets": "Scene presets",
+      "titleIO": "Import and export presets",
+      "presetsMenu": "More",
+      "ioGroupBy": "Group the list",
+      "ioGroupScenes": "By scene",
+      "ioGroupFolders": "By folder",
+      "ioNoFolder": "No folder",
+      "pickFromPlaylist": "Pick from playlist",
+      "pickSoundTitle": "Pick a track",
+      "pickSoundConfirm": "Select",
+      "pickSoundNoPlaylists": "No playlists with tracks",
+      "pickSoundSearch": "Search tracks and playlists…",
+      "thumbFolderBtn": "Thumbnail folder…",
+      "thumbFolderReset": "Default thumbnail folder",
+      "thumbFolderSet": "Thumbnail folder: {folder}",
+      "thumbFolderRebuildTitle": "New thumbnail folder",
+      "thumbFolderRebuildConfirm": "Rebuild the thumbnails of all presets in \"{folder}\"? The old files stay where they are.",
+      "fileTooLarge": "The file is too large (maximum {mb} MB)"
     },
     "folders": {
       "modeScenes": "By scene",
@@ -582,6 +619,83 @@
       "importChoiceMsg": "The import contains {count} folders. What should happen to the structure?",
       "btnImportRecreateFolders": "Recreate structure",
       "btnImportDropToRoot": "Drop all to root"
+    },
+    "sequence": {
+      "btnNew": "Composite",
+      "btnNewTitle": "Create a composite preset: several scenes the GM steps through one by one",
+      "newTitle": "New composite preset",
+      "namePlaceholder": "Composite preset name",
+      "badgeTitle": "Composite preset, steps: {count}",
+      "stepsLabel": "Steps",
+      "addFromForm": "From form",
+      "addFromFormTitle": "Add a step from the current dialog settings (characters, background, effects, music)",
+      "addLive": "From scene",
+      "addLiveTitle": "Add a step from the scene that is running right now",
+      "noLiveScene": "No scene is running",
+      "dropHint": "Drag presets here from the list on the left, or add a step with the buttons above",
+      "stepTitle": "Step {n}",
+      "stepLoad": "Edit this step in the form",
+      "stepSave": "Save the form into this step",
+      "stepSettings": "Caption, auto-advance, transition",
+      "stepDuplicate": "Duplicate step",
+      "stepDelete": "Delete step",
+      "stepUpdated": "Step {n} updated",
+      "overwriteTitle": "Update step",
+      "overwriteConfirm": "Replace step {n} with the current form settings? Its caption, timer and speaker are kept.",
+      "deleteTitle": "Delete step",
+      "deleteConfirm": "Delete step {n}?",
+      "nestedWarn": "A composite preset cannot be added to another composite preset",
+      "caption": "Caption",
+      "captionPlaceholder": "Text at the bottom of the screen (optional)",
+      "autoAdvance": "Auto-advance, sec",
+      "autoAdvanceHint": "Seconds before moving to the next step by itself. 0 means manual only",
+      "musicHint": "The step's music comes from the form. If a step has none, the previous music keeps playing.",
+      "secShort": "s",
+      "metaCharacters": "Characters",
+      "metaMusic": "Has its own music",
+      "metaCaption": "Has a caption",
+      "metaAutoAdvance": "Auto-advance",
+      "first": "First step",
+      "prev": "Back (←)",
+      "next": "Next (→)",
+      "last": "Last step",
+      "autoplayOn": "Auto-advance is on — click to pause",
+      "autoplayOff": "Auto-advance is paused — click to resume",
+      "saveStep": "Save the current scene state into this step (including speakers)",
+      "stepSaved": "Step {n} saved",
+      "emptyWarn": "This composite preset has no steps",
+      "optionsLabel": "Playback",
+      "transition": "Transition between steps",
+      "speedLabel": "Speed",
+      "preload": "Preload all steps",
+      "preloadHint": "After launch the images of every step are quietly loaded for the GM and the players, so switching does not stutter",
+      "transitionDefault": "Same as the composite",
+      "transitionIn": "Transition into step",
+      "transitionInHint": "How the background changes when moving to this step",
+      "transitions": {
+        "dissolve": "Dissolve",
+        "zoom": "Zoom",
+        "blur": "Blur",
+        "flash": "Flash",
+        "black": "Through black",
+        "sweep": "Wipe",
+        "cut": "Cut"
+      },
+      "speeds": {
+        "fast": "Fast",
+        "normal": "Normal",
+        "slow": "Slow"
+      },
+      "tagLabel": "Composite",
+      "startTitle": "Launch: {name}",
+      "startHint": "Which step to start from? You can switch steps with the arrows on the scene bar afterwards.",
+      "stepPlay": "Launch from this step",
+      "inheritActors": "Keep the previous step's characters",
+      "inheritActorsHint": "Only works if this step has no characters of its own: then the whole cast of the previous step is used, with its positions and settings",
+      "editBanner": "Editing step {n} of \"{name}\": change the scene, then save",
+      "editSave": "Save to step",
+      "editCancel": "Cancel editing",
+      "editLost": "The step was not found — it may have been deleted"
     },
     "scenePresets": {
       "title": "Scene dialogs: {scene}",

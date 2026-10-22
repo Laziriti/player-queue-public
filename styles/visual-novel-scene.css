@@ -90,13 +90,21 @@
     top: 0; left: 0; right: 0; bottom: 0;
 }
 
-.vn-background-overlay {
+.vn-background-overlay,
+.vn-bo-leaving {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     background: radial-gradient(ellipse at center, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.65) 100%);
     z-index: 1;
     pointer-events: none;
 }
+
+/* Плавное появление/исчезновение затенения при смене шага (VNBackgroundManager.fadeOverlay) */
+.vn-background-overlay.vn-bo-in  { animation: vnBoIn  var(--vn-tr-fx, 0.2s) ease both; }
+.vn-bo-leaving.vn-bo-out         { animation: vnBoOut var(--vn-tr-fx, 0.2s) ease both; }
+
+@keyframes vnBoIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vnBoOut { from { opacity: 1; } to { opacity: 0; } }
 
 .vn-bg-video {
     position: absolute;
@@ -1825,6 +1833,169 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     max-height: calc(100vh - 100px);
 }
 
+/* ── Foundry theme bridge ──
+   Foundry paints focus / hover / scrollbars / checkboxes in its signature orange through these variables
+   (that is where the orange outlines on clicked tabs and tiles and the maroon scrollbars came from).
+   Re-point them to the module accent inside our windows, so there is one accent colour instead of two. */
+.application:has(.vn-scene-dialog),
+.application:has(.vn-scale-dialog),
+.application.vn-confirm-dialog,
+.application.vn-instructions-dialog {
+    --color-shadow-primary: var(--vn-accent);
+    --color-shadow-highlight: var(--vn-accent);
+    --color-border-highlight: var(--vn-accent);
+    --color-border-highlight-alt: var(--vn-accent);
+    --color-scrollbar: var(--vn-accent-dim);
+    --color-scrollbar-track: transparent;
+    --button-focus-outline-color: var(--vn-accent);
+    --button-hover-border-color: var(--vn-border-hover);
+    accent-color: var(--vn-accent);
+}
+
+/* No orange ring that sticks to a button after a mouse click; keyboard focus keeps the accent outline */
+.application:has(.vn-scene-dialog) :is(button, select, input, textarea, [role="button"]):focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+}
+
+/* The variables above did not catch everything: Foundry also sets accent-color on checkboxes and draws the
+   focus / toggled ring with its own rules, so the orange survived on clicked tabs, toggles and tiles.
+   Pin the look explicitly instead of guessing variable names. */
+.application:has(.vn-scene-dialog) :is(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+    accent-color: var(--vn-accent);
+}
+
+.application:has(.vn-scene-dialog) :is(button, select, input, textarea, summary, [role="button"]):focus:not(:focus-visible),
+.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-btn, .vn-atmo-item, .vn-effects-preset-item,
+    .vn-particles-layer-opt, .vn-bg-option, .vn-token-option, .vn-preset-item, .vn-preset-card).active:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Tabs: the selected one is marked by the accent underline only (a stray full border was drawn on focus) */
+.application:has(.vn-scene-dialog) .vn-tab-btn,
+.application:has(.vn-scene-dialog) .vn-tab-btn:is(:hover, :focus, :active) {
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+.application:has(.vn-scene-dialog) .vn-tab-btn.active { border-bottom-color: var(--vn-accent); }
+
+/* Toggled buttons keep their own faint accent halo */
+.application:has(.vn-scene-dialog) .vn-btn.active:not(:focus-visible) {
+    box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.25) !important;
+}
+
+/* The Characters tab has no list to stretch, so the three position slots take the free height:
+   big drop targets instead of a quarter of the window left empty. */
+.vn-tab-panel[data-tab="characters"].active { display: flex; flex-direction: column; }
+.vn-tab-panel[data-tab="characters"] > .vn-dialog-layout { flex: 1 1 auto; min-height: 0; }
+.vn-dialog-main > .vn-positions-grid { flex: 1 1 auto; min-height: 150px; }
+.vn-positions-grid > .vn-position-slot { display: flex; flex-direction: column; }
+.vn-positions-grid .vn-token-selector { flex: 1 1 auto; align-content: flex-start; }
+
+/* ── Main dialog shell: the tab fills the window, the footer stays at the bottom ──
+   window-content > form.dialog-form > (div.dialog-content, footer.form-footer). Every level is a flex column
+   with min-height: 0 so only the active tab panel scrolls. The levels above keep overflow: auto, so if
+   Foundry's markup ever differs the window falls back to scrolling as a whole instead of clipping. */
+.application:has(.vn-scene-dialog--tabs) .window-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.application:has(.vn-scene-dialog--tabs) .dialog-form {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.application:has(.vn-scene-dialog--tabs) .dialog-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.vn-scene-dialog--tabs { flex: 1 1 auto; min-height: 0; }
+
+.vn-scene-dialog--tabs > .vn-tab-panel.active {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* ── Footer hierarchy: Create is the primary action, background-only is secondary, Cancel is quiet ── */
+.application:has(.vn-scene-dialog--tabs) .form-footer {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--vn-border);
+}
+
+.application:has(.vn-scene-dialog--tabs) .form-footer button {
+    flex: 0 0 auto;
+    min-width: 150px;
+    height: 36px;
+    padding: 0 18px;
+    border-radius: var(--vn-radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--vn-border);
+    color: var(--vn-text);
+    transition: all var(--vn-transition);
+}
+.application:has(.vn-scene-dialog--tabs) .form-footer button:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--vn-border-hover);
+}
+
+.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="cancel"] {
+    order: 1;
+    background: transparent;
+    border-color: transparent;
+    color: var(--vn-text-dim);
+}
+.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="cancel"]:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--vn-text);
+}
+
+.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="background-only"] { order: 2; }
+
+.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="create"] {
+    order: 3;
+    background: var(--vn-accent);
+    border-color: var(--vn-accent);
+    color: #0d1117;
+}
+.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="create"]:hover {
+    background: #a5d3df;
+    border-color: #a5d3df;
+}
+
+/* The import/export tab has no use for "create a scene" */
+.application:has(.vn-scene-dialog--tabs[data-tab="adventure-io"]) .form-footer
+    :is(button[data-action="create"], button[data-action="background-only"]) {
+    display: none;
+}
+
+/* One height and weight for text inputs and selects (Foundry's own are 40px and bold, next to 24px buttons) */
+:root { --vn-control-h: 30px; }
+.vn-scene-dialog :is(input[type="text"], input[type="number"], input[type="search"], select) {
+    height: var(--vn-control-h);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+/* Tabs: no focus box after a click */
+.vn-tab-btn:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+
 .vn-btn {
     display: inline-flex;
     align-items: center;
@@ -1845,8 +2016,8 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     border-color: var(--vn-border-hover);
 }
 
-.vn-btn-sm { padding: 3px 8px; font-size: 0.75em; }
-.vn-btn-xs { padding: 2px 6px; font-size: 0.7em; }
+.vn-btn-sm { padding: 3px 8px; font-size: max(11px, 0.75em); }
+.vn-btn-xs { padding: 2px 6px; font-size: max(11px, 0.7em); }
 
 .vn-btn-accent {
     background: var(--vn-accent-dim);
@@ -1905,6 +2076,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 .vn-tabs {
+    flex: 0 0 auto;
     display: flex;
     gap: 2px;
     border-bottom: 2px solid var(--vn-border);
@@ -1983,7 +2155,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 
 .vn-chevron {
     margin-left: auto;
-    font-size: 0.7em;
+    font-size: max(11px, 0.7em);
     transition: transform var(--vn-transition);
     opacity: 0.5;
 }
@@ -2034,11 +2206,11 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 .vn-order-info {
-    font-size: 0.8em;
+    font-size: max(11px, 0.8em);
     color: var(--vn-text-dim);
     font-weight: 400;
     margin-left: auto;
-    opacity: 0.6;
+    opacity: 0.9;
 }
 
 .vn-token-selector {
@@ -2105,7 +2277,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 
 .vn-token-name {
-    font-size: 0.7em;
+    font-size: max(11px, 0.7em);
     text-align: center;
     max-width: calc(var(--vn-tok-size, 48px) + 12px);
     overflow: hidden;
@@ -2130,7 +2302,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     border-radius: 3px;
     background: rgba(0, 0, 0, 0.5);
     color: rgba(255, 255, 255, 0.7);
-    font-size: 0.65em;
+    font-size: max(11px, 0.65em);
     cursor: pointer;
     display: none;
     align-items: center;
@@ -2164,6 +2336,114 @@ body.vn-dragging .vn-token-option { transition: none; }
     color: var(--vn-danger);
 }
 
+/* ── Portrait effect button (top-left, mirrors the hide button) ── */
+
+.vn-token-fx-btn {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.5);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: max(11px, 0.65em);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: background 0.15s ease, color 0.15s ease;
+    line-height: 1;
+}
+
+.vn-token-fx-btn:hover {
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+}
+
+.vn-token-selector .vn-token-option .vn-token-fx-btn {
+    display: flex;
+}
+
+.vn-token-option[data-char-fx] .vn-token-fx-btn {
+    background: rgba(136, 192, 208, 0.75);
+    color: #0b1620;
+}
+
+/* Effect picker (native popover, shared by all cards). Not setting `display` on the closed state keeps [popover] hidden. */
+.vn-fx-menu {
+    inset: auto;
+    margin: 0;
+    padding: 4px;
+    min-width: 150px;
+    border: 1px solid var(--vn-border-hover);
+    border-radius: var(--vn-radius-sm);
+    background: var(--vn-bg-option);
+    color: var(--vn-text);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.vn-fx-menu:popover-open {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.vn-fx-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 5px 8px;
+    border: none;
+    border-radius: var(--vn-radius-sm);
+    background: transparent;
+    color: inherit;
+    font-size: 0.85em;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--vn-transition);
+}
+
+.vn-fx-menu-item i {
+    width: 16px;
+    text-align: center;
+    color: var(--vn-text-dim);
+}
+
+.vn-fx-menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.vn-fx-menu-item.current {
+    background: var(--vn-accent-dim);
+}
+
+.vn-fx-menu-item.current i {
+    color: var(--vn-accent);
+}
+
+/* Rough preview of the effect on the card portrait */
+.vn-token-option[data-char-fx="hologram"] .vn-token-preview img {
+    filter: sepia(1) hue-rotate(155deg) saturate(2.6) brightness(1.1);
+}
+.vn-token-option[data-char-fx="shadow"] .vn-token-preview img {
+    filter: brightness(0.12) contrast(1.3) drop-shadow(0 0 4px rgba(139, 92, 246, 0.9));
+}
+.vn-token-option[data-char-fx="ghost"] .vn-token-preview img {
+    filter: grayscale(0.55) brightness(1.2);
+    opacity: 0.6;
+}
+.vn-token-option[data-char-fx="glitch"] .vn-token-preview img {
+    filter: drop-shadow(2px 0 0 rgba(255, 0, 70, 0.8)) drop-shadow(-2px 0 0 rgba(0, 240, 255, 0.8));
+}
+.vn-token-option[data-char-fx][data-visibility="hidden"] .vn-token-preview img {
+    filter: brightness(0.2);
+}
+
 /* ── Character controls (search + card size) ── */
 
 .vn-characters-controls {
@@ -2195,7 +2475,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     gap: 5px;
     flex-shrink: 0;
     color: var(--vn-text-muted, #777);
-    font-size: 0.75em;
+    font-size: max(11px, 0.75em);
 }
 
 .vn-token-size-slider {
@@ -2235,7 +2515,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 
 .vn-participants-hint {
     margin: 0 0 6px;
-    font-size: 0.75em;
+    font-size: max(11px, 0.75em);
     color: var(--vn-text-dim);
     font-style: italic;
     line-height: 1.4;
@@ -2284,7 +2564,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 
 .vn-favorites-empty {
     color: var(--vn-text-dim);
-    font-size: 0.75em;
+    font-size: max(11px, 0.75em);
     text-align: center;
     padding: 16px 6px;
     font-style: italic;
@@ -2296,7 +2576,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 
 .vn-favorites-hint {
-    font-size: 0.65em;
+    font-size: max(11px, 0.65em);
     color: var(--vn-text-dim);
     text-align: center;
     padding: 4px;
@@ -2305,7 +2585,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     align-items: center;
     justify-content: center;
     gap: 3px;
-    opacity: 0.6;
+    opacity: 0.9;
 }
 
 

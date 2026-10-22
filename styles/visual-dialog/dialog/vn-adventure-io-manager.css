@@ -37,10 +37,11 @@
 
 .vn-io-controls {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
 }
+.vn-io-controls .vn-io-bulk-btns { margin-left: auto; }
 
 .vn-io-view-toggle,
 .vn-io-bulk-btns {
@@ -48,7 +49,8 @@
     gap: 4px;
 }
 
-.vn-io-view-btn.active {
+.vn-io-view-btn.active,
+.vn-io-group-btn.active {
     background: var(--vn-accent-dim);
     border-color: var(--vn-accent);
     color: var(--vn-accent);
@@ -283,7 +285,7 @@
 }
 .vn-io-apply-nameplate,
 .vn-io-apply-folder {
-    font-size: 0.75em;
+    font-size: max(11px, 0.75em);
     opacity: 0.85;
 }
 .vn-io-apply-nameplate:hover,

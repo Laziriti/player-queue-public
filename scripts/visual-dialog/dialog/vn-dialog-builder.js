@@ -4,10 +4,15 @@
 
 import { VNSceneState, VNPresets, resolveParticlesLayer } from '../vn-state.js';
 import { VNAtmosphere } from '../visual-effects/atmosphere/index.js';
-import { stripDupSuffix, parseActorId, toActorTokenId, FALLBACK_AVATAR } from '../vn-id-utils.js';
+import { stripDupSuffix, parseActorId, toActorTokenId, FALLBACK_AVATAR, escapeHtml } from '../vn-id-utils.js';
+import { CHAR_FX, CHAR_FX_ICONS, VNCharFx } from '../visual-effects/character-fx/vn-character-fx.js';
 
 const VIS_ICON  = { visible: 'fa-eye', hidden: 'fa-eye-slash', 'name-hidden': 'fa-user-secret' };
 const VIS_TITLE = { visible: 'vn.dialog.vis.visible', hidden: 'vn.dialog.vis.hidden', 'name-hidden': 'vn.dialog.vis.nameHidden' };
+
+function charFxButton() {
+    return `<button type="button" class="vn-token-fx-btn" title="${game.i18n.format('vn.dialog.charFxTitle', { name: game.i18n.localize('vn.charFx.none') })}" draggable="false"><i class="fas ${CHAR_FX_ICONS.none}"></i></button>`;
+}
 
 export class VNDialogBuilder {
     constructor(scene) {
@@ -38,6 +43,7 @@ export class VNDialogBuilder {
         if (this._dialog) { try { this._dialog.close(); } catch {} }
         this._pendingFlipped = null;
         this._pendingScales = null;
+        this._stepEdit = null;
         this._tokenSearchQuery = '';
         this._dialogAbortCtrl?.abort();
         this._dialogAbortCtrl = new AbortController();
@@ -61,8 +67,9 @@ export class VNDialogBuilder {
             ? { width: savedSize.width, height: savedSize.height }
             : { width: 1050, height: 840 };
 
+        this._baseTitle = isEdit ? game.i18n.localize('vn.dialog.editTitle') : game.i18n.localize('vn.dialog.createTitle');
         const dialog = new foundry.applications.api.DialogV2({
-            window: { title: isEdit ? game.i18n.localize('vn.dialog.editTitle') : game.i18n.localize('vn.dialog.createTitle'), icon: isEdit ? 'fas fa-edit' : 'fas fa-theater-masks', resizable: true },
+            window: { title: this._baseTitle, icon: isEdit ? 'fas fa-edit' : 'fas fa-theater-masks', resizable: true },
             position: dialogPosition,
             content: dialogContent,
             buttons: [
@@ -150,6 +157,7 @@ export class VNDialogBuilder {
         const soundCues = this._scene._musicManager.gatherCues(root);
 
         const visibilityData = this._collectVisibilityData(root, allRaw, allDeduped);
+        const charFxData = this._collectCharFxData(root, allRaw, allDeduped);
 
         const { portraitImages, portraitNames } = backgroundOnly
             ? { portraitImages: {}, portraitNames: {} }
@@ -168,14 +176,14 @@ export class VNDialogBuilder {
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
             flipped: pendingFlipped ?? null, particleEffect, visualEffect, particlesLayer, particleIntensity,
-            visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
+            visibility: visibilityData, charFx: charFxData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales ?? null, gmOnly, presetActors,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay,
             flipped: pendingFlipped || {}, particleEffect, visualEffect, particlesLayer, particleIntensity,
-            visibility: visibilityData, musicUuid, soundCues, portraitImages, portraitNames,
+            visibility: visibilityData, charFx: charFxData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales || {}, gmOnly, presetActors,
         });
     }
@@ -194,7 +202,12 @@ export class VNDialogBuilder {
         this._scene._presetsManager.attachListeners(root, {
             gatherState: (root) => this._gatherDialogState(root),
             applyPreset: (root, preset) => this.applyPreset(root, preset),
-            launchScene: (preset) => { this._scene.createScene(preset); this._dialog?.close(); },
+            launchScene: async (preset, stepIndex = null) => {
+                if (await this._scene.launchPreset(preset, { stepIndex })) this._dialog?.close();
+            },
+            getLiveState: () => (this._scene.state.isActive ? this._scene.state : null),
+            onSequenceChanged: (preset) => this._scene._sequence.syncPreset(preset),
+            beginStepEdit: (root, edit) => this.beginStepEdit(root, edit),
             syncPresetActors: (presetActors) => { if (this._scene.state.isActive) this._scene.state.presetActors = [...presetActors]; },
             onChanged: (root) => this._scene._ioManager.refreshExportList(root),
         });
@@ -202,7 +215,9 @@ export class VNDialogBuilder {
             onImported: (root) => this._scene._presetsManager.refresh(root),
         });
         this._setupTabs(root);
+        this._setupStepEditBanner(root);
         this._setupHideButtons(root);
+        this._setupCharFxMenu(root);
         this._attachCharacterControlListeners(root);
 
         if (isEdit && this._scene.state.isActive) {
@@ -270,6 +285,59 @@ export class VNDialogBuilder {
         });
     }
 
+    // Writes a token option's portrait effect to its dataset plus the matching button icon/title ('none' clears it).
+    _applyCharFxIcon(tokenOpt, fx) {
+        const id = CHAR_FX.includes(fx) ? fx : 'none';
+        if (id === 'none') delete tokenOpt.dataset.charFx;
+        else tokenOpt.dataset.charFx = id;
+        const btn = tokenOpt.querySelector('.vn-token-fx-btn');
+        if (!btn) return;
+        btn.querySelector('i').className = `fas ${CHAR_FX_ICONS[id]}`;
+        btn.title = game.i18n.format('vn.dialog.charFxTitle', { name: game.i18n.localize(`vn.charFx.${id}`) });
+    }
+
+    // One shared popover menu: the effect button of a card opens it next to the button, a pick applies to that card.
+    // The popover lives in the top layer, so the scroll containers of the dialog cannot clip it.
+    _setupCharFxMenu(root) {
+        const host = root.querySelector('.vn-scene-dialog');
+        if (!host) return;
+        const menu = document.createElement('div');
+        menu.className = 'vn-fx-menu';
+        menu.popover = 'auto';
+        menu.innerHTML = CHAR_FX.map(id => `<button type="button" class="vn-fx-menu-item" data-fx="${id}">
+            <i class="fas ${CHAR_FX_ICONS[id]}"></i><span>${game.i18n.localize(`vn.charFx.${id}`)}</span></button>`).join('');
+        host.append(menu);
+
+        let target = null;
+        root.addEventListener('click', (e) => {
+            const btn = e.target.closest('.vn-token-fx-btn');
+            if (!btn) return;
+            e.stopPropagation();
+            e.preventDefault();
+            const tokenOpt = btn.closest('.vn-token-option');
+            if (!tokenOpt || !tokenOpt.closest('.vn-token-selector')) return;
+            target = tokenOpt;
+            const current = tokenOpt.dataset.charFx ?? 'none';
+            menu.querySelectorAll('.vn-fx-menu-item').forEach(item => item.classList.toggle('current', item.dataset.fx === current));
+
+            const r = btn.getBoundingClientRect();
+            menu.showPopover();
+            const left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8));
+            const below = r.bottom + 4;
+            const top = below + menu.offsetHeight > window.innerHeight - 8 ? Math.max(8, r.top - menu.offsetHeight - 4) : below;
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+        });
+
+        menu.addEventListener('click', (e) => {
+            const item = e.target.closest('.vn-fx-menu-item');
+            if (!item || !target) return;
+            this._applyCharFxIcon(target, item.dataset.fx);
+            target = null;
+            menu.hidePopover();
+        });
+    }
+
     _setupTabs(root) {
         root.querySelectorAll('.vn-tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -279,8 +347,62 @@ export class VNDialogBuilder {
                 root.querySelectorAll('.vn-tab-panel').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
                 root.querySelector(`.vn-tab-panel[data-tab="${tab}"]`)?.classList.add('active');
+                // The active tab is mirrored on the dialog root so CSS can adapt the footer to it
+                const dialogRoot = root.querySelector('.vn-scene-dialog--tabs');
+                if (dialogRoot) dialogRoot.dataset.tab = tab;
+                this._syncTitle(tab);
             });
         });
+    }
+
+    // ── Editing one step of a composite preset in the regular form ──
+    // The step is loaded into the form, a banner says what is being edited, and "Save to step" writes the form back
+    // and returns to the presets tab — instead of hopping between tabs to find the right button.
+
+    beginStepEdit(root, { preset, step, stepId, index }) {
+        this.applyPreset(root, step);
+        this._stepEdit = { presetId: preset.id, stepId, index, name: preset.name };
+        const banner = root.querySelector('.vn-edit-banner');
+        if (banner) {
+            banner.querySelector('.vn-edit-banner-text').textContent = game.i18n.format('vn.sequence.editBanner', { n: index + 1, name: preset.name });
+            banner.hidden = false;
+        }
+        const dialogRoot = root.querySelector('.vn-scene-dialog--tabs');
+        if (dialogRoot) dialogRoot.dataset.editing = 'step';
+        root.querySelector('.vn-tab-btn[data-tab="characters"]')?.click();
+    }
+
+    endStepEdit(root) {
+        this._stepEdit = null;
+        const banner = root.querySelector('.vn-edit-banner');
+        if (banner) banner.hidden = true;
+        root.querySelector('.vn-scene-dialog--tabs')?.removeAttribute('data-editing');
+    }
+
+    _setupStepEditBanner(root) {
+        root.querySelector('.vn-edit-banner-save')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (!this._stepEdit) return;
+            const saved = await this._scene._presetsManager._sequenceEditor.saveFormToStep(root, this._stepEdit);
+            if (!saved) {
+                ui.notifications.warn(game.i18n.localize('vn.sequence.editLost'));
+                this.endStepEdit(root);
+                return;
+            }
+            this.endStepEdit(root);
+            root.querySelector('.vn-tab-btn[data-tab="presets"]')?.click();
+        });
+        root.querySelector('.vn-edit-banner-cancel')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.endStepEdit(root);
+        });
+    }
+
+    /** Presets and import/export are not "creating a scene" — the window title says what the tab is for. */
+    _syncTitle(tab) {
+        const key = { presets: 'vn.dialog.titlePresets', 'adventure-io': 'vn.dialog.titleIO' }[tab];
+        const heading = this._dialog?.window?.title;
+        if (heading) heading.textContent = key ? game.i18n.localize(key) : this._baseTitle;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -364,7 +486,15 @@ export class VNDialogBuilder {
             el.classList.remove('dragging');
             document.body.classList.remove('vn-dragging');
             this._draggedEl = null;
+            this._syncParticipantsBadge(el.closest('.vn-scene-dialog') ?? this._dialog?.element);
         }, { signal });
+    }
+
+    /** The badge counts what is in the list, however the actor got there or left (drag from outside, between zones, preset load). */
+    _syncParticipantsBadge(root) {
+        const badge = root?.querySelector('.vn-participants-badge');
+        const list = root?.querySelector('#scene-participants');
+        if (badge && list) badge.textContent = list.querySelectorAll('.vn-token-option').length;
     }
 
     _setupActorsDragAndDrop(root) {
@@ -528,6 +658,7 @@ export class VNDialogBuilder {
             defaultsUsed.add(el);
             this._applyVisIcon(el, vis);
         }
+        this._restoreCharFx(root, state.charFx);
 
         if (state.musicUuid) this._scene._musicManager.setMusic(root, state.musicUuid);
         this._scene._musicManager.applyCues(root, state.soundCues || []);
@@ -623,6 +754,8 @@ export class VNDialogBuilder {
             visUsed.add(el);
             this._applyVisIcon(el, vis);
         }
+        root.querySelectorAll('.vn-token-option').forEach(el => this._applyCharFxIcon(el, 'none'));
+        this._restoreCharFx(root, preset.charFx);
 
         this._scene._musicManager.setMusic(root, preset.musicUuid || null);
         this._scene._musicManager.applyCues(root, preset.soundCues || []);
@@ -656,6 +789,29 @@ export class VNDialogBuilder {
         return visibilityData;
     }
 
+    _collectCharFxData(root, allRaw = null, allDeduped = null) {
+        const charFxData = {};
+        const elements = Array.from(root.querySelectorAll('#left-tokens .vn-token-option, #center-tokens .vn-token-option, #right-tokens .vn-token-option'));
+        elements.forEach((el, i) => {
+            const fx = el.dataset.charFx;
+            if (!fx || fx === 'none') return;
+            const id = (allDeduped && allRaw) ? allDeduped[i]
+                : (el.dataset.tokenId || (el.dataset.actorId ? `actor-${el.dataset.actorId}` : null));
+            if (id) charFxData[id] = fx;
+        });
+        return charFxData;
+    }
+
+    _restoreCharFx(root, charFx) {
+        const used = new Set();
+        for (const [tokenId, fx] of Object.entries(VNCharFx.normalize(charFx))) {
+            const el = this._findTokenElement(root, tokenId, used, true);
+            if (!el) continue;
+            used.add(el);
+            this._applyCharFxIcon(el, fx);
+        }
+    }
+
     _gatherDialogState(root) {
         const scene = this._scene;
         const getRawIds = (sel) => Array.from(root.querySelectorAll(`${sel} .vn-token-option`))
@@ -666,6 +822,7 @@ export class VNDialogBuilder {
         const centerCount = root.querySelectorAll('#center-tokens .vn-token-option').length;
 
         const visibilityData = this._collectVisibilityData(root, allRaw, allDeduped);
+        const charFxData = this._collectCharFxData(root, allRaw, allDeduped);
         const { portraitImages, portraitNames } = this._gatherPortraitData(root, allRaw, allDeduped);
 
         // Build positional canvas-token-ID → deduped-actor-ID mapping.
@@ -704,6 +861,7 @@ export class VNDialogBuilder {
             portraitScale: scene.state.portraitScale,
             portraitScales: remappedScales,
             visibility: visibilityData,
+            charFx: charFxData,
             musicUuid: root.querySelector('#vn-music-uuid')?.value || null,
             soundCues: this._scene._musicManager.gatherCues(root),
             flipped: Object.fromEntries(
@@ -797,9 +955,10 @@ export class VNDialogBuilder {
         const currentSoundCues = sceneState?.soundCues || [];
 
         const favHTML = scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean).map(a => VNDialogBuilder.generateActorToken(a)).join('');
-        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${t.id}" data-actor-id="${t.actor.id}" data-type="token" data-visibility="visible" data-name="${t.name.toLowerCase()}">
+        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${escapeHtml(t.id)}" data-actor-id="${escapeHtml(t.actor.id)}" data-type="token" data-visibility="visible" data-name="${escapeHtml(t.name.toLowerCase())}">
             <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
-            <div class="vn-token-preview"><img src="${t.actor.img || t.document.texture.src}" alt="${t.name}" loading="lazy"><div class="vn-token-name">${t.name}</div></div></div>`).join('');
+            ${charFxButton()}
+            <div class="vn-token-preview"><img src="${escapeHtml(t.actor.img || t.document.texture.src)}" alt="${escapeHtml(t.name)}" loading="lazy"><div class="vn-token-name">${escapeHtml(t.name)}</div></div></div>`).join('');
 
         const participantTokensHtml = (sceneState?.presetActors || []).map(id => {
             const aid = parseActorId(id);
@@ -812,7 +971,13 @@ export class VNDialogBuilder {
             return aid && game.actors.get(aid);
         }).length;
 
-        return `<div class="vn-scene-dialog">
+        return `<div class="vn-scene-dialog vn-scene-dialog--tabs" data-tab="characters">
+            <div class="vn-edit-banner" hidden>
+                <i class="fas fa-pen-to-square"></i>
+                <span class="vn-edit-banner-text"></span>
+                <button type="button" class="vn-btn vn-btn-sm vn-btn-accent vn-edit-banner-save"><i class="fas fa-floppy-disk"></i> ${game.i18n.localize('vn.sequence.editSave')}</button>
+                <button type="button" class="vn-btn vn-btn-sm vn-edit-banner-cancel">${game.i18n.localize('vn.sequence.editCancel')}</button>
+            </div>
             <div class="vn-tabs">
                 <button type="button" class="vn-tab-btn active" data-tab="characters"><i class="fas fa-users"></i> ${game.i18n.localize('vn.dialog.tabCharacters')}</button>
                 <button type="button" class="vn-tab-btn" data-tab="background"><i class="fas fa-image"></i> ${game.i18n.localize('vn.dialog.tabBackground')}</button>
@@ -889,8 +1054,9 @@ export class VNDialogBuilder {
     static generateActorToken(actor) {
         const id = actor.id || actor._id;
         const img = actor.img || actor.prototypeToken?.texture?.src || FALLBACK_AVATAR;
-        return `<div class="vn-token-option" draggable="true" data-actor-id="${id}" data-token-id="" data-type="actor" data-visibility="visible" data-name="${actor.name.toLowerCase()}">
+        return `<div class="vn-token-option" draggable="true" data-actor-id="${escapeHtml(id)}" data-token-id="" data-type="actor" data-visibility="visible" data-name="${escapeHtml(actor.name.toLowerCase())}">
             <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
-            <div class="vn-token-preview"><img src="${img}" alt="${actor.name}" loading="lazy"><div class="vn-token-name">${actor.name}</div></div></div>`;
+            ${charFxButton()}
+            <div class="vn-token-preview"><img src="${escapeHtml(img)}" alt="${escapeHtml(actor.name)}" loading="lazy"><div class="vn-token-name">${escapeHtml(actor.name)}</div></div></div>`;
     }
 }

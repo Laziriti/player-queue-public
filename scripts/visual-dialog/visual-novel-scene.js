@@ -6,6 +6,7 @@ import { VNSceneState, VNPresets, VNFolders, PARTICLE_LAYERS, PARTICLE_LAYER_ICO
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { QueueBridge } from './vn-queue-bridge.js';
 import { VNTransitions } from './visual-effects/vn-transitions.js';
+import { VNCharFx } from './visual-effects/character-fx/vn-character-fx.js';
 import { VNBackgroundManager } from './dialog/vn-background-manager.js';
 import { VNEffectsManager } from './dialog/vn-effects-manager.js';
 import { VNMusicManager } from './dialog/vn-music-manager.js';
@@ -13,9 +14,11 @@ import { VNPresetsManager } from './dialog/vn-presets-manager.js';
 import { VNAdventureIOManager } from './dialog/vn-adventure-io-manager.js';
 import { VNDialogBuilder } from './dialog/vn-dialog-builder.js';
 import { VNSocketHandler } from './vn-socket-handler.js';
-import { stripDupSuffix, parseActorId, parsePlaylistUuid } from './vn-id-utils.js';
+import { stripDupSuffix, parseActorId, parsePlaylistUuid, escapeHtml } from './vn-id-utils.js';
 import { VNChatPanel } from './vn-chat-panel.js';
 import { VNSceneHTML } from './vn-scene-html.js';
+import { VNSequence } from './vn-sequence.js';
+import { VNPreloader } from './vn-preload.js';
 
 const VN_DEBUG = false;
 const vnLog = VN_DEBUG ? (...args) => console.log('[VN]', ...args) : () => {};
@@ -65,6 +68,7 @@ class VisualNovelScene {
         this._closing = false;
 
         this._chatPanel = new VNChatPanel(() => this.$overlay);
+        this._sequence = new VNSequence(this);
         this._html = new VNSceneHTML(this, VisualNovelScene.ROW_CONFIG);
         this._persistStateDebounced = VisualNovelScene.debounce(() => this._persistState(), 400);
     }
@@ -119,7 +123,8 @@ class VisualNovelScene {
 
     _invalidateOverlayCache() { this._$overlay = null; }
 
-    _cleanupListeners() {
+    /** `keepAtmosphere`: the scene is closing and its effects must stay until the overlay has faded out with them. */
+    _cleanupListeners({ keepAtmosphere = false } = {}) {
         $(document).off(VisualNovelScene.NS);
         if (this._wheelListener) {
             document.removeEventListener('wheel', this._wheelListener);
@@ -132,7 +137,7 @@ class VisualNovelScene {
             Hooks.off('updatePlaylistSound', this._soundHookId);
             this._soundHookId = null;
         }
-        this._atmosphere.destroy();
+        if (!keepAtmosphere) this._atmosphere.destroy();
     }
 
     _removeParticleOutsideListener() {
@@ -182,8 +187,8 @@ class VisualNovelScene {
         this._socketHandler?.emit(action, payload);
     }
 
-    handleSocketEvent(data) {
-        this._socketHandler?.handle(data);
+    handleSocketEvent(data, senderId) {
+        this._socketHandler?.handle(data, senderId);
     }
 
     setParallaxOptions(opts) {
@@ -266,7 +271,7 @@ class VisualNovelScene {
         if (!game.user.isGM) return;
         try {
             await game.settings.set(VisualNovelScene.ID, 'activeScene',
-                this.state.isActive ? this.state.toPayload() : {});
+                this.state.isActive ? { ...this.state.toPayload(), sequence: this._sequence.snapshot() } : {});
         } catch (e) { console.error('VN: Failed to persist state:', e); }
     }
 
@@ -278,6 +283,7 @@ class VisualNovelScene {
             vnLog('Restoring scene');
             this._sceneMusicUuid = s.musicUuid || null;
             this.createScene(s, false);
+            if (s.sequence && game.user.isGM) this._sequence.restore(s.sequence);
         } catch { /* no saved state */ }
     }
 
@@ -326,8 +332,14 @@ class VisualNovelScene {
         document.documentElement.style.setProperty('--portrait-scale', this.state.portraitScale);
         document.querySelectorAll(VisualNovelScene.SEL.CHARACTER).forEach(charEl => {
             const tid = charEl.dataset.tokenId;
+            // A character that is no longer in the state is about to leave: keep its current flip/scale until it is
+            // gone. The state is replaced before the exit animation runs, so applying it here would make the leaving
+            // portrait un-flip and shrink first (players hit this on every step switch via setPortraitScale).
+            if (!this.state.hasToken(tid)) return;
             const img = charEl.querySelector('.vn-character-img');
-            if (img) img.style.setProperty('--flip-x', this.state.flipped[tid] ? '-1' : '1');
+            const flip = this.state.flipped[tid] ? '-1' : '1';
+            if (img) img.style.setProperty('--flip-x', flip);
+            charEl.style.setProperty('--flip-x', flip);
             const charScale = this.state.portraitScales?.[tid];
             if (charScale !== undefined) charEl.style.setProperty('--char-scale', charScale);
             else charEl.style.removeProperty('--char-scale');
@@ -383,6 +395,13 @@ class VisualNovelScene {
     applyFlip(tokenId, flip) {
         this.state.flipped[tokenId] = flip;
         this._applyAllPortraitTransforms();
+    }
+
+    _applyAllCharFx() {
+        document.querySelectorAll(VisualNovelScene.SEL.CHARACTER).forEach(charEl => {
+            const tid = charEl.dataset.tokenId;
+            if (this.state.hasToken(tid)) VNCharFx.apply(charEl, this.state.charFx[tid]);
+        });
     }
 
     static _applyVisibilityToElement(charEl, visibility) {
@@ -614,8 +633,8 @@ class VisualNovelScene {
         const playing = parsePlaylistUuid(cue.uuid)?.sound?.playing ?? false;
         const icon = playing ? 'fa-stop-circle' : 'fa-play-circle';
         const cls = playing ? ' playing' : '';
-        return `<button type="button" class="vn-sound-item${cls}" data-uuid="${cue.uuid}" title="${cue.label || ''}">`
-            + `<i class="fas ${icon}"></i><span>${cue.label || game.i18n.localize('vn.sounds.untitled')}</span></button>`;
+        return `<button type="button" class="vn-sound-item${cls}" data-uuid="${escapeHtml(cue.uuid)}" title="${escapeHtml(cue.label || '')}">`
+            + `<i class="fas ${icon}"></i><span>${escapeHtml(cue.label || game.i18n.localize('vn.sounds.untitled'))}</span></button>`;
     }
 
     _generateSoundsWrapHTML() {
@@ -683,8 +702,15 @@ class VisualNovelScene {
         if (!game.user.isGM || !this.state.isActive) return;
         this._gmOnly = false;
         this.emitSocketEvent('open', this.state.toPayload());
+        this._sequence.preload();
         if (this._sceneMusicUuid) this.startSceneMusic(this._sceneMusicUuid);
         this._updateGmOnlyUI();
+    }
+
+    /** Socket `preload`: warm the browser cache with the images of upcoming sequence steps. */
+    preloadImages(urls) {
+        if (!Array.isArray(urls)) return;
+        VNPreloader.enqueue(urls.filter(url => typeof url === 'string').slice(0, 300));
     }
 
     _updateGmOnlyUI() {
@@ -784,15 +810,41 @@ class VisualNovelScene {
     // ══════════════════════════════════════════════════════════
 
     createScene(payload, emit = true) {
-        if (this._creating) return;
+        if (this._creating) return false;
         this._creating = true;
         this._closing = false;
         try { this._doCreateScene(payload, emit); }
         finally { this._creating = false; }
+        return true;
+    }
+
+    /**
+     * Launches any preset: a regular one as a single scene; a sequence from `stepIndex` with the step controls.
+     * Without an explicit `stepIndex` the GM is asked which step to start from (a one-step sequence just starts).
+     * Resolves to true if a scene was started, false if the GM cancelled or the preset is empty.
+     */
+    async launchPreset(preset, { gmOnly = false, stepIndex = null } = {}) {
+        if (!VNPresets.isSequence(preset)) {
+            this.createScene(gmOnly ? { ...preset, gmOnly } : preset);
+            return true;
+        }
+        const steps = preset.steps ?? [];
+        if (!steps.length) { ui.notifications.warn(game.i18n.localize('vn.sequence.emptyWarn')); return false; }
+
+        let index = stepIndex === null || stepIndex === undefined ? (steps.length > 1 ? await VNSequence.promptStart(preset) : 0) : Number(stepIndex);
+        if (index === null) return false;
+        index = Math.min(Math.max(Math.trunc(index) || 0, 0), steps.length - 1);
+
+        const step = VNSequence.resolveStep(steps, index);
+        const musicUuid = step.musicUuid || VNSequence.inheritedMusic(steps, index);
+        if (!this.createScene({ ...step, musicUuid, gmOnly })) return false;
+        this._sequence.start(preset, index);
+        return true;
     }
 
     _doCreateScene(payload, emit) {
         vnLog('createScene, emit:', emit);
+        this._sequence.stop();
         this._atmosphere.destroy();
         this.state.reset();
         this.state.fromPayload({
@@ -812,8 +864,10 @@ class VisualNovelScene {
             flipped: payload.flipped || {},
             visibility: payload.visibility || null,
             hidden: payload.hidden || null,
+            charFx: payload.charFx || {},
             musicUuid: payload.musicUuid ?? null,
             soundCues: payload.soundCues || [],
+            caption: payload.caption || '',
             portraitImages: payload.portraitImages || {},
             portraitNames: payload.portraitNames || {},
             portraitScales: payload.portraitScales || {},
@@ -863,6 +917,7 @@ class VisualNovelScene {
             this._applyParticlesLayerUI();
             this._animateInitialCharacters();
             this._restoreSpeakers(speakersSnapshot);
+            this._applyCaption();
             if (game.user.isGM) this._updateGmOnlyUI();
         }, VisualNovelScene.DEFAULTS.ANIMATION_DELAY);
 
@@ -872,8 +927,14 @@ class VisualNovelScene {
     updateSceneLayout(payload, emit = true) {
         if (!this.state.isActive) return;
 
-        const prevSpeakers = { ...this.state.speakers };
+        // A payload that carries speakers (a sequence step) replaces them; otherwise the current ones are kept
+        const speakersAfter = payload.speakers
+            ? Object.fromEntries(VNSceneState.POSITIONS.map(pos => [pos, payload.speakers[pos] ?? null]))
+            : { ...this.state.speakers };
+        for (const pos of VNSceneState.POSITIONS) this.state.speakers[pos] = speakersAfter[pos];
+        if (typeof payload.caption === 'string') this.state.caption = payload.caption;
         const prevBackground = this.state.background;
+        const prevCast = VNSceneState.POSITIONS.map(pos => JSON.stringify(this.state[`${pos}Ids`]));
 
         this.state.leftIds = payload.leftIds ? [...payload.leftIds] : [];
         this.state.centerIds = payload.centerIds ? [...payload.centerIds] : [];
@@ -883,6 +944,7 @@ class VisualNovelScene {
         if (payload.backgroundOverlay != null) this.state.backgroundOverlay = payload.backgroundOverlay;
         if (payload.flipped !== undefined && payload.flipped !== null) this.state.flipped = VisualNovelScene._normalizeFlipped({ ...payload.flipped });
         if (payload.visibility !== undefined && payload.visibility !== null) this.state.visibility = { ...payload.visibility };
+        if (payload.charFx !== undefined && payload.charFx !== null) this.state.charFx = VNCharFx.normalize(payload.charFx);
         if (payload.portraitImages !== undefined && payload.portraitImages !== null) this.state.portraitImages = { ...payload.portraitImages };
         if (payload.portraitNames !== undefined && payload.portraitNames !== null) this.state.portraitNames = { ...payload.portraitNames };
         if (payload.portraitScales !== undefined && payload.portraitScales !== null) {
@@ -899,12 +961,28 @@ class VisualNovelScene {
         const newLayer = (payload.particlesLayer != null || payload.particlesForeground != null)
             ? resolveParticlesLayer(payload) : this.state.particlesLayer;
         const layerChanged = newLayer !== this.state.particlesLayer;
-        if (particleChanged || visualChanged || intensityChanged) {
-            this.state.particlesLayer = newLayer;
-            this._reinitAtmosphere();
-        } else if (layerChanged) {
-            this.setParticlesLayer(newLayer, false);
-        }
+        const castChanged = VNSceneState.POSITIONS.some((pos, i) => JSON.stringify(this.state[`${pos}Ids`]) !== prevCast[i]);
+        // `transition` is a one-shot instruction (a sequence step can pick its type/speed), not scene state: it only
+        // rides along on the socket. Without it every scene change uses the default dissolve at normal speed.
+        const transition = payload.transition ?? null;
+        const timing = VNTransitions.timing(transition);
+
+        // Each axis is swapped on its own: changing only the visual effect must not restart the falling particles
+        // (nor the parallax drift and camera), and the other way round.
+        const applyAtmosphere = () => {
+            if (particleChanged || intensityChanged) {
+                this.state.particlesLayer = newLayer;
+                this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, newLayer);
+            } else if (layerChanged) {
+                this.setParticlesLayer(newLayer, false);
+            }
+            if (visualChanged) this._atmosphere.setVisual(this.state.visualEffect);
+            if (particleChanged || visualChanged || intensityChanged) {
+                this._updateAtmosphereButtons();
+                this._applyParticlesLayerUI();
+            }
+        };
+
         if ('musicUuid' in payload && emit && game.user.isGM) {
             const prevMusicUuid = this._sceneMusicUuid;
             this.state.musicUuid = payload.musicUuid;
@@ -917,26 +995,73 @@ class VisualNovelScene {
 
         if ('gmOnly' in payload && emit && game.user.isGM) this._gmOnly = !!payload.gmOnly;
 
-        if (emit && !this._gmOnly) this.emitSocketEvent('updateScene', this.state.toPayload());
+        if (emit && !this._gmOnly) this.emitSocketEvent('updateScene', { ...this.state.toPayload(), transition });
         const queueData = QueueBridge.getQueue();
 
         requestAnimationFrame(async () => {
             const bgChanged = payload.background != null && payload.background !== prevBackground && prevBackground;
-            if (bgChanged) await this._bgManager.switchWithTransition(this.$overlay, this.state.background, this.state.backgroundOverlay, this._atmosphere);
-            else this._bgManager.applyBackground(this.$overlay, this.state.background, this.state.backgroundOverlay);
+            const settle = () => {
+                this._applyAllPortraitTransforms();
+                this._applyAllVisibilityStates();
+                this._applyAllCharFx();
+                this._restoreSpeakers(speakersAfter);
+            };
+            const updateSides = (t = timing) => Promise.all(VNSceneState.POSITIONS.map(side =>
+                this._updateSide(this.state[`${side}Ids`], `.vn-${side}-side`, side, queueData, t)));
 
-            await Promise.all(VNSceneState.POSITIONS.map(side =>
-                this._updateSide(this.state[`${side}Ids`], `.vn-${side}-side`, side, queueData)));
+            // Background, outgoing and incoming characters all run at once instead of one after another
+            this._beginQuickTransition(timing);
+            // Nothing starts before the new picture is decoded, so effect, background and characters stay in step
+            if (bgChanged) await VNPreloader.ready(this.state.background);
 
-            this._applyAllPortraitTransforms();
-            this._applyAllVisibilityStates();
-            this._restoreSpeakers(prevSpeakers);
+            // Curtain transitions (flash / black / sweep) cover the whole stage when the cast changes along with the
+            // background; under the curtain everything swaps instantly. A background-only change keeps the layer-only version.
+            if (timing.cover && bgChanged && castChanged) {
+                await VNTransitions.cover(this.$overlay[0], timing, async () => {
+                    applyAtmosphere();
+                    this._bgManager.applyBackgroundInstant(this.$overlay, this.state.background, this.state.backgroundOverlay);
+                    this._applyCaption();
+                    await updateSides({ ...timing, exit: 0, enter: 0, stagger: 0 });
+                    settle();
+                });
+                return;
+            }
+
+            // The whole "look" — visual effect, effect layers, background dimming — switches in the very frame the new
+            // picture starts to fade in, and within ~0.2 s (--vn-tr-fx), far ahead of the dissolve.
+            // So the new picture is never shown bare and then darkened afterwards.
+            applyAtmosphere();
+            // Characters who stay on stage change their portrait effect together with the step, not after the dissolve
+            this._applyAllCharFx();
+            this._bgManager.fadeOverlay(this.$overlay, this.state.backgroundOverlay, this.state.background);
+
+            const bgDone = bgChanged
+                ? this._bgManager.switchWithTransition(this.$overlay, this.state.background, this.state.backgroundOverlay, this._atmosphere, timing)
+                : Promise.resolve(this._bgManager.applyBackground(this.$overlay, this.state.background, this.state.backgroundOverlay));
+            this._applyCaption();
+            await updateSides();
+            settle();
+            await bgDone;
         });
 
         this._persistState();
     }
 
-    async _updateSide(ids, sideSelector, position, queueData) {
+    /** Shortens the speaker-highlight / glow / nameplate / effect-layer CSS transitions while a scene change plays out. */
+    _beginQuickTransition(timing) {
+        const overlay = this.$overlay?.[0];
+        if (!overlay) return;
+        overlay.style.setProperty('--vn-tr-live', `${timing.exit}ms`);
+        overlay.style.setProperty('--vn-tr-fx', `${Math.min(220, Math.max(100, Math.round(timing.bg * 0.25)))}ms`);
+        overlay.classList.add('vn-tr-live');
+        clearTimeout(this._quickTransitionTimer);
+        this._quickTransitionTimer = setTimeout(
+            () => overlay.classList.remove('vn-tr-live'),
+            timing.bg + timing.exit + timing.enter + 600
+        );
+    }
+
+    async _updateSide(ids, sideSelector, position, queueData, timing) {
         const tokens = VisualNovelScene.resolveTokens(ids, this.state.portraitImages, this.state.portraitNames);
         const container = document.querySelector(`.vn-side${sideSelector}`);
         if (!container) return;
@@ -955,10 +1080,24 @@ class VisualNovelScene {
         const removingEls = Array.from(oldChars).filter(el => !newIdSet.has(el.dataset.tokenId));
         const addingIds = new Set(newIds.filter(id => !oldIdSet.has(id)));
 
-        if (removingEls.length) await Promise.all(removingEls.map(el => VNTransitions.exitCharacter(el)));
+        if (removingEls.length) await Promise.all(removingEls.map(el => VNTransitions.exitCharacter(el, timing.exit)));
 
         if (tokens.length) {
-            container.innerHTML = this._html.sideCharacters(tokens, position, queueData);
+            // Characters that stay are moved into the new markup instead of being re-created: a rebuilt portrait
+            // flickers while its image decodes and restarts its highlight transition (a speaker who stayed would
+            // dim and then brighten again). Read after the exit await: another update may have run meanwhile.
+            const staying = new Map(Array.from(container.querySelectorAll('.vn-character'))
+                .filter(el => newIdSet.has(el.dataset.tokenId))
+                .map(el => [el.dataset.tokenId, el]));
+            const fresh = document.createElement('div');
+            fresh.innerHTML = this._html.sideCharacters(tokens, position, queueData);
+            for (const newEl of fresh.querySelectorAll('.vn-character')) {
+                const kept = staying.get(newEl.dataset.tokenId);
+                if (!kept) continue;
+                for (const rowClass of ['vn-row-front', 'vn-row-back']) kept.classList.toggle(rowClass, newEl.classList.contains(rowClass));
+                newEl.replaceWith(kept);
+            }
+            container.replaceChildren(...fresh.childNodes);
             container.classList.remove('empty');
 
             const activeSpeaker = this.state.speakers[position];
@@ -979,7 +1118,7 @@ class VisualNovelScene {
             let idx = 0;
             container.querySelectorAll('.vn-character').forEach(charEl => {
                 if (addingIds.has(charEl.dataset.tokenId)) {
-                    setTimeout(() => VNTransitions.enterCharacter(charEl, 'auto'), idx++ * 100);
+                    setTimeout(() => VNTransitions.enterCharacter(charEl, 'auto', timing.enter), idx++ * timing.stagger);
                 }
             });
         } else {
@@ -999,6 +1138,25 @@ class VisualNovelScene {
                 $(`.vn-${pos}-side .vn-row`).removeClass('vn-row-promoted');
             }
         }
+        // Nobody speaks any more (e.g. a sequence step without a speaker): release the camera focus
+        if (!Object.values(this.state.speakers).some(Boolean)) {
+            this._atmosphere?.onSpeakerChange(null);
+            this._reapplyCameraDof();
+        }
+    }
+
+    _applyCaption() {
+        const box = this.$overlay?.[0]?.querySelector('.vn-caption');
+        const textEl = box?.querySelector('.vn-caption-text');
+        if (!box || !textEl) return;
+        const text = this.state.caption || '';
+        if (!text) { box.hidden = true; textEl.textContent = ''; return; }
+        if (!box.hidden && textEl.textContent === text) return;
+        textEl.textContent = text;
+        box.hidden = false;
+        box.classList.remove('vn-caption--in');
+        void box.offsetWidth; // restart the entrance animation
+        box.classList.add('vn-caption--in');
     }
 
     closeScene(emit = true) {
@@ -1008,17 +1166,26 @@ class VisualNovelScene {
         this._handPickerOpen = false;
 
         if (emit) this.stopSceneMusic(true);
+        this._sequence.stop();
         this._closeChatPanel();
-        this._cleanupListeners();
 
         const $ov = this.$overlay;
+        // Particles, the visual effect, parallax and camera are part of the picture: they go away together with the
+        // background (the overlay fade), not at the first frame of closing while the background is still on screen
+        this._cleanupListeners({ keepAtmosphere: !!$ov.length });
+
         if ($ov.length) {
-            const characters = $ov[0].querySelectorAll('.vn-character');
+            const overlayEl = $ov[0];
+            const characters = overlayEl.querySelectorAll('.vn-character');
             characters.forEach((charEl, i) => setTimeout(() => VNTransitions.exitCharacter(charEl), i * 50));
             const exitDelay = Math.min(characters.length * 50 + 600, 900);
             setTimeout(() => {
                 $ov.addClass('vn-closing');
-                setTimeout(() => { $ov.remove(); this._closing = false; }, 600);
+                setTimeout(() => {
+                    $ov.remove();
+                    this._atmosphere.destroyFor(overlayEl);
+                    this._closing = false;
+                }, 600);
             }, exitDelay);
         } else {
             this._closing = false;
@@ -1290,6 +1457,7 @@ class VisualNovelScene {
         for (const [sel, fn] of Object.entries(actions)) $(document).on(`click${ns}`, sel, fn);
 
         $(document).on(`click${ns}`, '.vn-broadcast-button', () => this.broadcastToPlayers());
+        this._sequence.attachListeners(ns);
 
         $(document).on(`click${ns}`, '.vn-sounds-btn', (e) => {
             e.stopPropagation();

@@ -2,15 +2,21 @@
 // vn-adventure-io-manager.js — вкладка "Adventure IO": экспорт/импорт пресетов в модули
 // ============================================================
 
-import { VNPresets, MODULE_ID } from '../vn-state.js';
+import { VNPresets, VNFolders, MODULE_ID } from '../vn-state.js';
 import { VNAdventureIO } from '../vn-adventure-io.js';
 import { NAMEPLATE_CONFIGS, applyNameplateImage } from '../../settings.js';
-import { buildActorPipsHtml, groupPresetsByScene } from '../vn-id-utils.js';
+import { buildActorPipsHtml, groupPresetsByScene, escapeHtml } from '../vn-id-utils.js';
 import { VNBackgroundManager } from './vn-background-manager.js';
 
+const esc = escapeHtml;
+const decodePath = (p) => { try { return decodeURIComponent(p); } catch { return p; } };
+
 export class VNAdventureIOManager {
+    static MAX_IMPORT_BYTES = 30 * 1048576;
+
     constructor() {
         this.viewMode = 'detailed';
+        this.groupMode = 'scenes';
         this.foundModules = [];
         this.selectedModuleId = null;
         this.modulePresets = [];
@@ -19,7 +25,7 @@ export class VNAdventureIOManager {
     }
 
     generateTab(sorted) {
-        const exportList = this._buildIOPresetGroups(sorted, 'exp', true);
+        const exportList = this._buildIOPresetGroups(sorted, 'exp', true, this.groupMode);
         const exportEmpty = sorted.length === 0
             ? `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noPresetsToExport')}</div>`
             : '';
@@ -28,6 +34,10 @@ export class VNAdventureIOManager {
             <div class="vn-io-section">
                 <div class="vn-io-section-title"><i class="fas fa-file-export"></i> ${game.i18n.localize('vn.dialog.exportPresetsTitle')}</div>
                 <div class="vn-io-controls">
+                    <div class="vn-io-view-toggle" title="${game.i18n.localize('vn.dialog.ioGroupBy')}">
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-group-btn ${this.groupMode === 'scenes' ? 'active' : ''}" data-group="scenes"><i class="fas fa-map-location-dot"></i> ${game.i18n.localize('vn.dialog.ioGroupScenes')}</button>
+                        <button type="button" class="vn-btn vn-btn-xs vn-io-group-btn ${this.groupMode === 'folders' ? 'active' : ''}" data-group="folders"><i class="fas fa-folder"></i> ${game.i18n.localize('vn.dialog.ioGroupFolders')}</button>
+                    </div>
                     <div class="vn-io-view-toggle">
                         <button type="button" class="vn-btn vn-btn-xs vn-io-view-btn ${this.viewMode === 'detailed' ? 'active' : ''}" data-view="detailed">${game.i18n.localize('vn.dialog.viewDetailed')}</button>
                         <button type="button" class="vn-btn vn-btn-xs vn-io-view-btn ${this.viewMode === 'compact' ? 'active' : ''}" data-view="compact">${game.i18n.localize('vn.dialog.viewCompact')}</button>
@@ -51,7 +61,7 @@ export class VNAdventureIOManager {
                         <label class="vn-io-label"><i class="fas fa-folder-open"></i> ${game.i18n.localize('vn.dialog.bgFolderLabel')}</label>
                         <div class="vn-io-folder-row">
                             <input type="text" id="vn-io-export-folder" class="vn-io-select" placeholder="${game.i18n.localize('vn.dialog.bgFolderPlaceholder')}"
-                                   value="${VNBackgroundManager.getCustomFolder() || ''}">
+                                   value="${esc(decodePath(VNBackgroundManager.getCustomFolder() || ''))}" data-raw="${esc(VNBackgroundManager.getCustomFolder() || '')}">
                             <button type="button" class="vn-btn vn-btn-xs" id="vn-io-pick-folder-btn" title="${game.i18n.localize('vn.dialog.pickFolderBtnTitle')}"><i class="fas fa-search"></i></button>
                         </div>
                     </div>
@@ -110,9 +120,9 @@ export class VNAdventureIOManager {
             .sort((a, b) => (a.title || a.id).localeCompare(b.title || b.id))
             .map(m => {
                 const label = m.active
-                    ? `${m.title || m.id} (${m.id})`
-                    : `${m.title || m.id} (${m.id}) ${game.i18n.localize('vn.dialog.moduleInactive')}`;
-                return `<option value="${m.id}">${label}</option>`;
+                    ? `${esc(m.title || m.id)} (${esc(m.id)})`
+                    : `${esc(m.title || m.id)} (${esc(m.id)}) ${game.i18n.localize('vn.dialog.moduleInactive')}`;
+                return `<option value="${esc(m.id)}">${label}</option>`;
             })
             .join('');
         return `<select id="vn-io-module-id" class="vn-io-select">
@@ -124,7 +134,7 @@ export class VNAdventureIOManager {
     _buildNameplateSelect() {
         const current = (() => { try { return game.settings.get(MODULE_ID, 'nameplateImage') || ''; } catch { return ''; } })();
         const opts = Object.entries(NAMEPLATE_CONFIGS).map(([path, cfg]) =>
-            `<option value="${path}" ${path === current ? 'selected' : ''}>${cfg.label || path.split('/').pop().replace(/\.[^.]+$/, '')}</option>`
+            `<option value="${esc(path)}" ${path === current ? 'selected' : ''}>${esc(cfg.label || path.split('/').pop().replace(/\.[^.]+$/, ''))}</option>`
         ).join('');
         return `<select id="vn-io-nameplate" class="vn-io-select">
             <option value="" ${!current ? 'selected' : ''}>${game.i18n.localize('vn.dialog.selectNameplate')}</option>
@@ -132,10 +142,31 @@ export class VNAdventureIOManager {
         </select>`;
     }
 
-    _buildIOPresetGroups(presets, idPrefix, allChecked = false) {
+    _groupPresets(presets, groupBy) {
+        if (groupBy !== 'folders') {
+            return groupPresetsByScene(presets).map(({ key, presets: group }) => ({
+                label: key || game.i18n.localize('vn.dialog.noScene'), icon: 'fa-map-pin', presets: group,
+            }));
+        }
+        const groups = new Map();
+        for (const p of presets) {
+            const key = p.folderId && VNFolders.get(p.folderId) ? p.folderId : '';
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(p);
+        }
+        return [...groups.entries()]
+            .map(([id, group]) => ({
+                label: id ? VNFolders.getPath(id).map(f => f.name).join(' / ') : game.i18n.localize('vn.dialog.ioNoFolder'),
+                icon: id ? 'fa-folder' : 'fa-folder-open',
+                presets: group,
+                root: !id,
+            }))
+            .sort((a, b) => (a.root - b.root) || a.label.localeCompare(b.label));
+    }
+
+    _buildIOPresetGroups(presets, idPrefix, allChecked = false, groupBy = 'scenes') {
         if (!presets.length) return '';
-        return groupPresetsByScene(presets).map(({ key, presets: group }) => {
-            const label = key || game.i18n.localize('vn.dialog.noScene');
+        return this._groupPresets(presets, groupBy).map(({ label, icon, presets: group }) => {
             const items = this.viewMode === 'compact'
                 ? group.map(p => this._buildIORowCompact(p, idPrefix, allChecked)).join('')
                 : group.map(p => this._buildIOCardDetailed(p, idPrefix, allChecked)).join('');
@@ -144,7 +175,7 @@ export class VNAdventureIOManager {
                     <label class="vn-io-group-check-label" title="${game.i18n.localize('vn.dialog.selectGroup')}">
                         <input type="checkbox" class="vn-io-group-cb"${allChecked ? ' checked' : ''}>
                     </label>
-                    <i class="fas fa-map-pin"></i> ${label}
+                    <i class="fas ${icon}"></i> ${esc(label)}
                     <span class="vn-badge">${group.length}</span>
                 </div>
                 <div class="vn-io-scene-presets ${this.viewMode === 'compact' ? 'vn-io-compact' : 'vn-io-detailed'}">${items}</div>
@@ -156,7 +187,7 @@ export class VNAdventureIOManager {
         const cbId = `${idPrefix}-cb-${preset.id}`;
         const bgSrc = preset.thumbnailData || (preset.background && preset.background !== 'none' ? preset.background : null);
         const imgHtml = bgSrc
-            ? `<img class="vn-preset-card-img" src="${bgSrc}" loading="lazy" decoding="async" alt="">`
+            ? `<img class="vn-preset-card-img" src="${esc(bgSrc)}" loading="lazy" decoding="async" alt="">`
             : `<div class="vn-preset-card-placeholder"><i class="fas fa-film"></i></div>`;
 
         const allIds = [...(preset.leftIds || []), ...(preset.centerIds || []), ...(preset.rightIds || [])];
@@ -167,7 +198,7 @@ export class VNAdventureIOManager {
                 ${imgHtml}
                 ${pipsHtml}
                 <div class="vn-preset-card-footer">
-                    <div class="vn-preset-card-name" title="${preset.name}">${preset.name}</div>
+                    <div class="vn-preset-card-name" title="${esc(preset.name)}">${esc(preset.name)}</div>
                 </div>
                 <div class="vn-io-card-check-corner">
                     <input type="checkbox" class="vn-io-preset-cb" id="${cbId}" value="${preset.id}"${checked ? ' checked' : ''}>
@@ -179,10 +210,10 @@ export class VNAdventureIOManager {
     _buildIORowCompact(preset, idPrefix, checked) {
         const cbId = `${idPrefix}-cb-${preset.id}`;
         const sceneTag = preset.sceneName
-            ? `<span class="vn-io-row-scene"><i class="fas fa-map-pin"></i>${preset.sceneName}</span>` : '';
+            ? `<span class="vn-io-row-scene"><i class="fas fa-map-pin"></i>${esc(preset.sceneName)}</span>` : '';
         return `<label class="vn-io-row" data-preset-id="${preset.id}">
             <input type="checkbox" class="vn-io-preset-cb" id="${cbId}" value="${preset.id}"${checked ? ' checked' : ''}>
-            <span class="vn-io-row-name" title="${preset.name}">${preset.name}</span>
+            <span class="vn-io-row-name" title="${esc(preset.name)}">${esc(preset.name)}</span>
             ${sceneTag}
         </label>`;
     }
@@ -219,7 +250,7 @@ export class VNAdventureIOManager {
             ].filter(Boolean).join('');
             return `<div class="vn-io-module-item ${this.selectedModuleId === m.id ? 'active' : ''}" data-module-id="${m.id}">
                 <div class="vn-io-module-info">
-                    <span class="vn-io-module-title">${m.title}</span>
+                    <span class="vn-io-module-title">${esc(m.title)}</span>
                     <span class="vn-io-module-id">${m.id}</span>
                     ${applyBtns ? `<div class="vn-io-module-apply-row">${applyBtns}</div>` : ''}
                 </div>
@@ -287,6 +318,13 @@ export class VNAdventureIOManager {
         });
     }
 
+    /** The field shows a readable path, but the stored (possibly percent-encoded) one is exported while the text is untouched. */
+    _folderValue(input) {
+        const shown = input?.value?.trim() || '';
+        const raw = input?.dataset.raw || '';
+        return raw && decodePath(raw) === shown ? raw : shown;
+    }
+
     _syncGroupCb(groupEl) {
         if (!groupEl) return;
         const cbs = [...groupEl.querySelectorAll('.vn-io-preset-cb')];
@@ -307,7 +345,7 @@ export class VNAdventureIOManager {
         VNPresets.getSorted().then(sorted => {
             if (!listEl.isConnected) return;
             listEl.innerHTML = sorted.length
-                ? this._buildIOPresetGroups(sorted, 'exp', true)
+                ? this._buildIOPresetGroups(sorted, 'exp', true, this.groupMode)
                 : `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noPresetsToExport')}</div>`;
             this._updateIOExportCounter(root);
         });
@@ -351,6 +389,16 @@ export class VNAdventureIOManager {
                 btn.classList.add('active');
                 this.refreshExportList(root);
                 if (this.modulePresets.length) this._renderImportPresets(root);
+            });
+        });
+
+        // Export list grouping: by scene / by preset folder
+        root.querySelectorAll('.vn-io-group-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.groupMode = btn.dataset.group;
+                root.querySelectorAll('.vn-io-group-btn').forEach(b => b.classList.toggle('active', b === btn));
+                this.refreshExportList(root);
             });
         });
 
@@ -416,11 +464,15 @@ export class VNAdventureIOManager {
         root.querySelector('#vn-io-pick-folder-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
             const input = root.querySelector('#vn-io-export-folder');
-            const startPath = input?.value?.trim() || 'modules/player-queue/assets/scenes';
+            const startPath = this._folderValue(input) || 'modules/player-queue/assets/scenes';
             const fp = new FilePicker({
                 type: 'folder',
                 current: startPath,
-                callback: (folderPath) => { if (input) input.value = folderPath; }
+                callback: (folderPath) => {
+                    if (!input) return;
+                    input.dataset.raw = folderPath;
+                    input.value = decodePath(folderPath);
+                }
             });
             fp.browse(startPath);
         });
@@ -435,7 +487,7 @@ export class VNAdventureIOManager {
             const all = await VNPresets.getAll();
             const toExport = ids.map(id => all[id]).filter(Boolean);
             const nameplate = root.querySelector('#vn-io-nameplate')?.value || '';
-            const backgroundFolder = root.querySelector('#vn-io-export-folder')?.value?.trim() || '';
+            const backgroundFolder = this._folderValue(root.querySelector('#vn-io-export-folder'));
             try {
                 await VNAdventureIO.exportToModule(toExport, moduleId);
                 ui.notifications.info(game.i18n.format('vn.dialog.exportSuccess', {count: toExport.length, moduleId}));
@@ -481,6 +533,10 @@ export class VNAdventureIOManager {
             const file = e.target.files?.[0];
             if (!file) return;
             e.target.value = '';
+            if (file.size > VNAdventureIOManager.MAX_IMPORT_BYTES) {
+                ui.notifications.error(game.i18n.format('vn.dialog.fileTooLarge', { mb: VNAdventureIOManager.MAX_IMPORT_BYTES / 1048576 }));
+                return;
+            }
             try {
                 const text = await file.text();
                 const data = JSON.parse(text);
@@ -488,6 +544,7 @@ export class VNAdventureIOManager {
                 if (Array.isArray(data.presets)) presets = data.presets;
                 else if (data.presets && typeof data.presets === 'object') presets = Object.values(data.presets);
                 else if (Array.isArray(data)) presets = data;
+                presets = VNPresets.sanitizeImport(presets);
                 if (!presets.length) { ui.notifications.warn(game.i18n.localize('vn.dialog.noPresetsInFile')); return; }
 
                 const { fresh, dupes } = await VNAdventureIO.classifyImport(presets);
@@ -522,9 +579,8 @@ export class VNAdventureIOManager {
 
                 let added = 0;
                 if (choice === 'replace') {
-                    await game.settings.set(MODULE_ID, VNPresets.SETTING_KEY, {});
-                    VNPresets.invalidateCache();
-                    added = await VNAdventureIO.mergeImport(presets, true, folderOpts);
+                    // The library is cleared inside the same write that adds the new presets: nothing is lost if the data is bad
+                    added = await VNAdventureIO.mergeImport(presets, true, folderOpts, { replace: true });
                 } else if (choice === 'overwrite') {
                     added = await VNAdventureIO.mergeImport(fresh, false, folderOpts);
                     added += await VNAdventureIO.mergeImport(dupes, true, folderOpts);
@@ -603,7 +659,7 @@ export class VNAdventureIOManager {
                 ${notesHtml ? `<ul style="margin:4px 0 8px;padding-left:1.4em;font-size:0.85em">${notesHtml}</ul>` : ''}
                 <p>${game.i18n.localize('vn.dialog.addToModuleJson')}</p>
                 <div class="vn-io-snippet-wrapper">
-                    <pre class="vn-io-snippet" id="vn-io-snippet-text">${snippet}</pre>
+                    <pre class="vn-io-snippet" id="vn-io-snippet-text">${esc(snippet)}</pre>
                     <button type="button" class="vn-btn vn-btn-xs vn-io-copy-btn" id="vn-io-copy-snippet">
                         <i class="fas fa-copy"></i> ${game.i18n.localize('vn.dialog.btnCopySnippet')}
                     </button>

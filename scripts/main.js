@@ -7,6 +7,7 @@ import { SoundTestApp } from './sound-test.js';
 import { registerSettings, applyNameplateImage } from './settings.js';
 import { VisualNovelScene } from './visual-dialog/visual-novel-scene.js';
 import { VNPresets } from './visual-dialog/vn-state.js';
+import { escapeHtml } from './visual-dialog/vn-id-utils.js';
 
 // ============================================================
 // Scene Control Buttons
@@ -89,8 +90,9 @@ Hooks.once('socketlib.ready', () => {
             ?? { ok: false, reason: 'not-ready' };
     });
 
-    socket.register('vnScene', (data) => {
-        window.visualNovelScene?.handleSocketEvent(data);
+    // The sender comes from the server (socketdata), never from the message body
+    socket.register('vnScene', function (data) {
+        window.visualNovelScene?.handleSocketEvent(data, this?.socketdata?.userId);
     });
 
     // Store socket reference for VN scene (will be consumed in 'ready')
@@ -201,15 +203,20 @@ window.openScenePresets = async () => {
     } else {
         const cards = scenePresets.map(p => {
             const img = p.thumbnailData
-                ? `<img class="vn-preset-card-img" src="${p.thumbnailData}" loading="lazy" alt="">`
+                ? `<img class="vn-preset-card-img" src="${escapeHtml(p.thumbnailData)}" loading="lazy" alt="">`
                 : `<div class="vn-preset-card-placeholder"><i class="fas fa-film"></i></div>`;
             const name = p.name ?? unnamedLabel;
+            const isSeq = VNPresets.isSequence(p);
+            const seqBadge = isSeq
+                ? `<div class="vn-preset-card-seq" title="${game.i18n.format('vn.sequence.badgeTitle', { count: p.steps?.length ?? 0 })}"><i class="fas fa-film"></i> ${p.steps?.length ?? 0}</div>`
+                : '';
             return `
-                <div class="vn-preset-card vn-sp-card" data-preset-id="${p.id}">
+                <div class="vn-preset-card vn-sp-card${isSeq ? ' vn-preset-card--seq' : ''}" data-preset-id="${escapeHtml(p.id)}">
                     <div class="vn-preset-card-poster">
                         ${img}
+                        ${seqBadge}
                         <div class="vn-preset-card-footer">
-                            <div class="vn-preset-card-name" title="${name.replace(/"/g, '&quot;')}">${name}</div>
+                            <div class="vn-preset-card-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
                         </div>
                         <div class="vn-preset-card-overlay">
                             <button type="button" class="vn-preset-card-launch" tabindex="-1">
@@ -226,7 +233,7 @@ window.openScenePresets = async () => {
         <div class="vn-scene-dialog">
             <div style="display:flex;align-items:center;padding:10px 12px 8px;border-bottom:1px solid var(--vn-border);gap:8px;flex-shrink:0">
                 <i class="fas fa-map" style="color:var(--vn-text-dim);flex-shrink:0"></i>
-                <span style="font-weight:600;color:var(--vn-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${currentScene.name}</span>
+                <span style="font-weight:600;color:var(--vn-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${escapeHtml(currentScene.name)}</span>
                 <label class="vn-gm-only-toggle" title="${gmOnlyTitle}">
                     <input type="checkbox" id="vn-sp-gm-only">
                     <span class="vn-toggle-track"></span>
@@ -254,8 +261,9 @@ window.openScenePresets = async () => {
                 const gmOnly = dialog.element.querySelector('#vn-sp-gm-only')?.checked ?? false;
                 const preset = await VNPresets.load(presetId);
                 if (!preset) { ui.notifications.error(game.i18n.localize('vn.scenePresets.notFound')); return; }
-                try { dialog.close(); } catch {}
-                vnScene.createScene({ ...preset, gmOnly });
+                if (await vnScene.launchPreset(preset, { gmOnly })) {
+                    try { dialog.close(); } catch {}
+                }
             });
         });
     });
@@ -263,10 +271,10 @@ window.openScenePresets = async () => {
     dialog.render({ force: true });
 };
 
-window.launchVNPreset = async (presetId) => {
+window.launchVNPreset = async (presetId, stepIndex = null) => {
     const scene = window.visualNovelScene;
     if (!scene) { ui.notifications.warn('Visual Novel Scene is not initialized'); return; }
     const preset = await VNPresets.load(presetId);
     if (!preset) { ui.notifications.error(`VN Preset "${presetId}" not found`); return; }
-    scene.createScene(preset);
+    await scene.launchPreset(preset, { stepIndex });
 };

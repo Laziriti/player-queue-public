@@ -5,7 +5,10 @@
 import { QueueBridge } from './vn-queue-bridge.js';
 import { VNSceneState, PARTICLE_LAYER_ICONS } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
-import { FALLBACK_AVATAR } from './vn-id-utils.js';
+import { VNCharFx } from './visual-effects/character-fx/vn-character-fx.js';
+import { FALLBACK_AVATAR, stripEmoji, escapeHtml } from './vn-id-utils.js';
+
+const esc = escapeHtml;
 
 class VNSceneHTML {
     constructor(scene, rowConfig) {
@@ -74,14 +77,16 @@ class VNSceneHTML {
 
         // Inline transform vars so element starts at correct values — prevents transition flash on insertion
         const charScale = state.portraitScales[tokenId];
-        const charStyle = (pd ? `--queue-color: ${pd.color};` : '')
-            + (charScale !== undefined ? `--char-scale: ${charScale};` : '');
         const flipX = state.flipped[tokenId] ? '-1' : '1';
+        const charStyle = (pd ? `--queue-color: ${pd.color};` : '')
+            + (charScale !== undefined ? `--char-scale: ${charScale};` : '')
+            + `--flip-x: ${flipX};`;
+        const imgHTML = `<img class="vn-character-img" src="${esc(imgSrc)}" alt="${esc(token.name)}" loading="lazy" style="--flip-x: ${flipX}">`;
 
-        return `<div class="vn-character ${priorityClass} ${rowClass} ${hiddenClass}" data-token-id="${tokenId}" data-name="${token.name}" style="${charStyle}">
+        return `<div class="vn-character ${priorityClass} ${rowClass} ${hiddenClass}" data-token-id="${esc(tokenId)}" data-name="${esc(token.name)}" style="${charStyle}">
             <div class="vn-speaking-indicator"><span></span><span></span><span></span></div>
-            <img class="vn-character-img" src="${imgSrc}" alt="${token.name}" loading="lazy" style="--flip-x: ${flipX}">
-            <div class="vn-character-nameplate"><span class="vn-nameplate-text">${displayName}</span></div>
+            ${VNCharFx.wrapHTML(imgHTML, state.charFx?.[tokenId], imgSrc)}
+            <div class="vn-character-nameplate"><span class="vn-nameplate-text">${esc(displayName)}</span></div>
             <div class="vn-character-glow"></div>${this.queueMark(pd?.priority)}</div>`;
     }
 
@@ -105,8 +110,8 @@ class VNSceneHTML {
             <div class="vn-queue-items">${queueData.map((player, i) => {
             const pd = QueueBridge.getPriorityData(player.priority);
             const hint = isGM ? `&#10;${game.i18n.localize('vn.queue.itemHint')}` : '';
-            return `<div class="vn-queue-item${isGM ? ' gm-clickable' : ''}" title="${player.name} — ${game.i18n.localize(pd.name)}${hint}" data-user-id="${player.id}" style="border-color: ${pd.color};">
-                    <img class="vn-queue-portrait" src="${player.avatar}" alt="${player.name}" onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}'" loading="lazy" draggable="false">
+            return `<div class="vn-queue-item${isGM ? ' gm-clickable' : ''}" title="${esc(player.name)} — ${game.i18n.localize(pd.name)}${hint}" data-user-id="${esc(player.id)}" style="border-color: ${pd.color};">
+                    <img class="vn-queue-portrait" src="${esc(player.avatar)}" alt="${esc(player.name)}" onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}'" loading="lazy" draggable="false">
                     <img class="vn-queue-flag" src="${QueueBridge.getPriorityIcon(player.priority)}" alt="" draggable="false">
                     <span class="vn-queue-number">${i + 1}</span></div>`;
         }).join('')}</div>${hand}</div>`;
@@ -184,7 +189,7 @@ class VNSceneHTML {
         const particlePickerItems = VNAtmosphere.PARTICLE_GROUPS.map(group =>
             `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
             + group.types.map(t => {
-                const label = game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[t]);
+                const label = stripEmoji(game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[t]));
                 const active = t === particleType;
                 const variants = VNAtmosphere.PARTICLE_VARIANTS[t];
                 const activeVariant = active ? particleVariant : 'all';
@@ -204,7 +209,7 @@ class VNSceneHTML {
         const visualPickerItems = VNAtmosphere.VISUAL_GROUPS.map(group =>
             `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
             + group.types.map(t => {
-                const label = game.i18n.localize(VNAtmosphere.VISUAL_LABELS[t]);
+                const label = stripEmoji(game.i18n.localize(VNAtmosphere.VISUAL_LABELS[t]));
                 return `<button type="button" class="vn-atmo-item${t === visualEffect ? ' active' : ''}" data-visual="${t}" title="${label}"><i class="fas ${VNAtmosphere.VISUAL_ICONS[t]}"></i><span>${label}</span></button>`;
             }).join('')
         ).join('');
@@ -254,7 +259,7 @@ class VNSceneHTML {
             <div class="vn-fx-bloom"></div>
             ${controls}
             <div class="vn-queue-display">${this.queueDisplay(qd)}</div>
-            ${sides}<div class="vn-fx-grain"></div>${toolbar}
+            ${sides}<div class="vn-caption" hidden><div class="vn-caption-text"></div></div><div class="vn-fx-grain"></div>${toolbar}
             <div class="vn-maximized-bar"><span class="vn-scene-title"><i class="fas fa-theater-masks"></i> ${game.i18n.localize('vn.scene.title')}</span>${maxBar}</div>
             <div class="vn-chat-panel" hidden>
                 <div class="vn-chat-panel-header"><i class="fas fa-comments"></i> ${game.i18n.localize('vn.chat.header')}</div>

@@ -71,34 +71,21 @@ export class VNAdventureIO {
     // overwrite=false: skip duplicates; overwrite=true: replace existing by id
     // folderOpts: null = keep folderIds as-is; { importFolders: true, folders: [] } = recreate structure;
     //             { importFolders: false } = set all folderIds to null
-    static async mergeImport(presets, overwrite = false, folderOpts = null) {
+    static async mergeImport(presets, overwrite = false, folderOpts = null, { replace = false } = {}) {
         const { VNPresets } = await import('./vn-state.js');
-        const existing = await VNPresets.getAll();
 
         let folderIdMap = new Map();
         if (folderOpts?.importFolders && folderOpts.folders?.length) {
             folderIdMap = await VNAdventureIO._importFolders(folderOpts.folders);
         }
 
-        let added = 0;
-        for (const p of presets) {
-            const id = p.id || foundry.utils.randomID();
-            if (!existing[id] || overwrite) {
-                let migrated = applyMigrations({ ...p, id });
-                if (folderOpts === null) {
-                    // keep folderId as-is
-                } else if (!folderOpts.importFolders) {
-                    migrated = { ...migrated, folderId: null };
-                } else if (migrated.folderId) {
-                    migrated = { ...migrated, folderId: folderIdMap.get(migrated.folderId) ?? null };
-                }
-                existing[id] = migrated;
-                added++;
-            }
-        }
-        await game.settings.set(MODULE_ID, VNPresets.SETTING_KEY, existing);
-        VNPresets.invalidateCache();
-        return added;
+        // folderOpts === null: keep folderIds as they are
+        const transform = folderOpts === null ? null : (p) => {
+            if (!folderOpts.importFolders) return { ...p, folderId: null };
+            if (p.folderId) return { ...p, folderId: folderIdMap.get(p.folderId) ?? null };
+            return p;
+        };
+        return VNPresets.importMany(presets, { overwrite, replace, transform });
     }
 
     // Create/map folders from an imported folders array; returns Map<incomingId, localId>

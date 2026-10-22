@@ -5,13 +5,19 @@
 // and get the result back through the world setting `queueState` (onChange).
 // ============================================================
 
-import { MODULE_ID, ACTION_COOLDOWN_MS, MIN_REMOTE_INTERVAL_MS, VALID_PRIORITIES } from './queue-constants.js';
+import { MODULE_ID, ACTION_COOLDOWN_MS, MIN_REMOTE_INTERVAL_MS, VALID_PRIORITIES, setting } from './queue-constants.js';
 import { QueueModel } from './queue-model.js';
 
 const DEBUG = false;
 function log(...args) {
     if (DEBUG) console.log('[PlayerQueue]', ...args);
 }
+
+/** Thrown by the host when a committed state could not be saved (the local state is rolled back first). */
+class PersistError extends Error {}
+
+/** Failures worth telling the player about: the click did nothing and trying again may help. */
+const RETRYABLE_REASONS = new Set(['not-host', 'not-ready', 'error']);
 
 class QueueNetwork {
     /** socketlib module socket; assigned from main.js on `socketlib.ready`. */
@@ -40,12 +46,25 @@ class QueueNetwork {
         return false;
     }
 
-    /** Sends a request to the host (or handles it directly when this client is the host). */
+    /**
+     * Sends a request to the host (or handles it directly when this client is the host).
+     * `not-host` means the active GM changed while the request was in flight: it is sent once more to the current one.
+     */
     async request(action, payload = {}) {
+        let result = await this.#send(action, payload);
+        if (result.reason === 'not-host') result = await this.#send(action, payload);
+
+        if (!result.ok && !result.notified && RETRYABLE_REASONS.has(result.reason)) {
+            ui.notifications.warn(game.i18n.localize('playerQueue.notify.retry'));
+        }
+        return result;
+    }
+
+    async #send(action, payload) {
         const host = game.users.activeGM;
         if (!host) {
             ui.notifications.warn(game.i18n.localize('playerQueue.notify.noGM'));
-            return { ok: false, reason: 'no-gm' };
+            return { ok: false, reason: 'no-gm', notified: true };
         }
 
         const req = { ...payload, action };
@@ -58,7 +77,7 @@ class QueueNetwork {
         } catch (error) {
             console.error('[PlayerQueue] request failed:', action, error);
             ui.notifications.warn(game.i18n.localize('playerQueue.notify.requestFailed'));
-            return { ok: false, reason: 'error' };
+            return { ok: false, reason: 'error', notified: true };
         }
     }
 
@@ -74,6 +93,15 @@ class QueueNetwork {
 
         log('request:', req, 'from', sender);
 
+        try {
+            return await this.#dispatch(req, user, sender);
+        } catch (error) {
+            if (error instanceof PersistError) return { ok: false, reason: 'error' };
+            throw error;
+        }
+    }
+
+    async #dispatch(req, user, sender) {
         switch (req.action) {
             case 'join':
             case 'change': {
@@ -130,7 +158,11 @@ class QueueNetwork {
 
             const state = model.nextState(draft, last);
             this.#controller.applyState(state);
-            await this.#persist(state);
+            if (!await this.#persist(state)) {
+                // Nobody else ever saw this state: go back to what is saved so this client does not diverge from the rest
+                this.#controller.applyState(QueueModel.normalize(setting('queueState')));
+                throw new PersistError('queue state was not saved');
+            }
             return true;
         };
 
@@ -139,11 +171,14 @@ class QueueNetwork {
         return result;
     }
 
+    /** @returns {Promise<boolean>} whether the state was saved */
     async #persist(state) {
         try {
             await game.settings.set(MODULE_ID, 'queueState', structuredClone(state));
+            return true;
         } catch (error) {
             console.error('[PlayerQueue] Error saving queue state:', error);
+            return false;
         }
     }
 }

@@ -84,7 +84,7 @@ export const PARTICLE_ICONS = {
     snow: 'fa-snowflake',
     rain: 'fa-cloud-rain',
     embers: 'fa-fire',
-    fireflies: 'fa-star',
+    fireflies: 'fa-bug',
     sparks: 'fa-bolt',
     bubbles: 'fa-water',
     ash: 'fa-smog',

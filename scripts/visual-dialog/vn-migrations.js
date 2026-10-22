@@ -57,5 +57,12 @@ export function applyMigrations(preset) {
             result = m.migrate(result) ?? result;
         }
     }
+    // Sequence steps are scene-shaped payloads and follow the preset's version
+    if (Array.isArray(result.steps)) {
+        result.steps = result.steps.map(step => {
+            const { version, ...migrated } = applyMigrations({ ...step, version: presetVersion });
+            return migrated;
+        });
+    }
     return result;
 }
