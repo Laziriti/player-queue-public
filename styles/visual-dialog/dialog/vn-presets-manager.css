@@ -2,26 +2,35 @@
    Presets Tab (VNPresetsManager)
    ══════════════════════════════════════════════════════════ */
 
-.vn-presets-content { display: flex; flex-direction: column; gap: 8px; padding: 4px; }
+/* The tab fills the window: the list and the detail panel stretch to the free height and scroll inside
+   (they used to be 450 px / 675 px, which cut the list short while the window had empty space below). */
+.vn-tab-panel[data-tab="presets"].active { display: flex; flex-direction: column; }
+
+.vn-presets-content { display: flex; flex-direction: column; gap: 8px; padding: 4px; flex: 1 1 auto; min-height: 0; }
 
 .vn-presets-split {
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 
 .vn-presets-list-pane {
+    container-type: inline-size;
     display: flex;
     flex-direction: column;
     gap: 8px;
     flex: 1;
     min-width: 0;
+    min-height: 0;
 }
 
 /* ── Detail panel ──────────────────────────────────── */
 
 .vn-preset-detail-panel {
-    width: 420px;
+    /* one width for every preset kind: a panel that resizes when you click between presets makes the list jump */
+    width: clamp(340px, 36%, 500px);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -29,10 +38,11 @@
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
     overflow: hidden;
-    height: 675px;
-    align-self: flex-start;
+    min-height: 260px;
+    align-self: stretch;
     font-size: 0.95em;
 }
+
 
 .vn-panel-empty-hint {
     display: flex;
@@ -93,12 +103,12 @@
 }
 
 .vn-panel-label {
-    font-size: 0.62em;
+    font-size: max(11px, 0.62em);
     font-weight: 700;
     color: var(--vn-text-dim);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    opacity: 0.7;
+    opacity: 0.85;
 }
 
 .vn-panel-name-input {
@@ -119,7 +129,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 4px;
 }
-.vn-panel-action--delete { grid-column: span 2; }
 .vn-panel-action {
     display: flex;
     align-items: center;
@@ -140,7 +149,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 0.68em;
+    font-size: max(11px, 0.68em);
     color: var(--vn-text-dim);
     overflow: hidden;
     white-space: nowrap;
@@ -158,7 +167,7 @@
 }
 .vn-panel-tags-chips:empty::before {
     content: '—';
-    font-size: 0.7em;
+    font-size: max(11px, 0.7em);
     color: var(--vn-text-dim);
     opacity: 0.4;
 }
@@ -175,7 +184,7 @@
     transition: border-color 0.15s;
 }
 .vn-panel-tag-input-wrap:focus-within { border-color: var(--vn-accent-dim); }
-.vn-panel-tag-input-wrap i { font-size: 0.7em; color: var(--vn-text-dim); opacity: 0.5; flex-shrink: 0; }
+.vn-panel-tag-input-wrap i { font-size: max(11px, 0.7em); color: var(--vn-text-dim); opacity: 0.5; flex-shrink: 0; }
 
 .vn-panel-tag-input {
     flex: 1;
@@ -189,11 +198,19 @@
 }
 .vn-panel-tag-input::placeholder { color: var(--vn-text-dim); opacity: 0.45; }
 
+.vn-panel-sublabel {
+    margin-top: 8px;
+    font-size: max(11px, 0.62em);
+    color: var(--vn-text-dim);
+    opacity: 0.6;
+}
+.vn-panel-sublabel:has(+ .vn-panel-tag-dropdown:empty) { display: none; }
+
 .vn-panel-tag-dropdown {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    margin-top: 6px;
+    margin-top: 4px;
     min-height: 0;
 }
 .vn-panel-tag-dropdown:empty { display: none; }
@@ -203,7 +220,7 @@
     align-items: center;
     padding: 2px 9px;
     line-height: 1;
-    font-size: 0.67em;
+    font-size: max(11px, 0.67em);
     font-weight: 500;
     background: rgba(136, 192, 208, 0.07);
     border: 1px solid rgba(136, 192, 208, 0.18);
@@ -258,6 +275,24 @@
 
 .vn-preset-regen-all { margin-left: auto; }
 
+/* Name prompt of the "new composite preset" / "new folder" dialogs */
+.vn-folder-name-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 14px;
+}
+.vn-folder-name-input:focus {
+    outline: none;
+    border-color: var(--vn-accent);
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: none;
+}
+
 .vn-preset-controls {
     display: flex; gap: 6px; align-items: center;
 }
@@ -295,7 +330,7 @@
 .vn-preset-sort:focus { border-color: var(--vn-accent); outline: none; box-shadow: 0 0 0 2px var(--vn-accent-dim); }
 .vn-preset-sort option { background: var(--vn-bg-option); }
 
-.vn-preset-list { display: flex; flex-direction: column; gap: 4px; height: 450px; overflow-y: auto; }
+.vn-preset-list { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-height: 220px; overflow-y: auto; }
 
 .vn-preset-item {
     position: relative;
@@ -324,18 +359,18 @@
 
 .vn-preset-scene-tag {
     display: flex; align-items: center; gap: 3px;
-    font-size: 0.72em; color: var(--vn-text-dim);
+    font-size: max(11px, 0.72em); color: var(--vn-text-dim);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .vn-preset-scene-tag i { font-size: 0.85em; flex-shrink: 0; color: var(--vn-accent-dim); }
 
 .vn-preset-dates {
-    font-size: 0.7em; color: var(--vn-text-dim);
+    font-size: max(11px, 0.7em); color: var(--vn-text-dim);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 .vn-preset-version {
-    font-size: 0.65em; color: var(--vn-accent); opacity: 0.7;
+    font-size: max(11px, 0.65em); color: var(--vn-accent); opacity: 0.7;
     background: rgba(136, 192, 208, 0.1);
     border: 1px solid rgba(136, 192, 208, 0.25);
     border-radius: 3px; padding: 0 4px; flex-shrink: 0;
@@ -343,7 +378,7 @@
 }
 
 .vn-preset-migration-badge {
-    font-size: 0.65em; color: var(--vn-gold); opacity: 0.9;
+    font-size: max(11px, 0.65em); color: var(--vn-gold); opacity: 0.9;
     background: rgba(235, 203, 139, 0.12);
     border: 1px solid rgba(235, 203, 139, 0.35);
     border-radius: 3px; padding: 0 4px; flex-shrink: 0;
@@ -363,7 +398,7 @@
     display: inline-flex; align-items: center; gap: 3px;
     padding: 1px 6px;
     line-height: 1;
-    font-size: 0.65em; font-weight: 600;
+    font-size: max(11px, 0.65em); font-weight: 600;
     background: rgba(136,192,208,0.12);
     border: 1px solid rgba(136,192,208,0.25);
     border-radius: 20px;
@@ -379,7 +414,7 @@
 .vn-preset-tags-more {
     display: inline-flex; align-items: center;
     padding: 1px 5px;
-    font-size: 0.6em; font-weight: 600; line-height: 1;
+    font-size: max(11px, 0.6em); font-weight: 600; line-height: 1;
     color: var(--vn-text-dim);
     background: rgba(255,255,255,0.05);
     border: 1px solid var(--vn-border);
@@ -412,7 +447,7 @@
     flex-shrink: 0;
     width: 88px;
     padding: 3px 8px;
-    font-size: 0.75em;
+    font-size: max(11px, 0.75em);
     background: rgba(0,0,0,0.25);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
@@ -437,7 +472,7 @@
     display: inline-flex; align-items: center;
     padding: 2px 8px;
     line-height: 1;
-    font-size: 0.7em; font-weight: 600;
+    font-size: max(11px, 0.7em); font-weight: 600;
     background: rgba(136,192,208,0.08);
     border: 1px solid rgba(136,192,208,0.2);
     border-radius: 20px;
@@ -666,7 +701,7 @@
 }
 
 .vn-preset-card-name {
-    font-size: 0.74em;
+    font-size: max(11px, 0.74em);
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
@@ -699,7 +734,7 @@
     border-radius: 50%;
     background: rgba(0,0,0,0.65);
     border: 1.5px solid rgba(255,255,255,0.2);
-    font-size: 0.55em; font-weight: 700;
+    font-size: max(11px, 0.55em); font-weight: 700;
     color: #fff;
     margin-right: 0; margin-left: 5px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.7);
@@ -709,7 +744,7 @@
     position: absolute;
     top: 4px; right: 4px;
     display: flex; align-items: center; gap: 3px;
-    font-size: 0.58em; font-weight: 600;
+    font-size: max(11px, 0.58em); font-weight: 600;
     color: var(--vn-accent);
     background: rgba(0,0,0,0.65);
     padding: 1px 5px;
@@ -794,6 +829,9 @@
     padding: 1px 4px;
     border-radius: 3px;
     white-space: nowrap;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: background 0.15s, color 0.15s;
 }
 .vn-folder-breadcrumb-seg:hover {
@@ -826,6 +864,7 @@
 /* ── Folder item ── */
 
 .vn-folder-item {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -849,6 +888,7 @@
     border-color: var(--vn-accent);
     outline: 1px dashed var(--vn-accent);
 }
+.vn-folder-item.--favorite > .fas { color: #d4a020; }
 .vn-folder-item > .fas {
     color: var(--vn-accent, #b49050);
     flex-shrink: 0;
@@ -864,28 +904,29 @@
     font-size: 0.85em;
 }
 .vn-folder-child-count {
-    font-size: 0.75em;
+    font-size: max(11px, 0.75em);
     padding: 1px 5px;
     border-radius: 8px;
     background: rgba(255 255 255 / 0.1);
     color: var(--vn-text-muted, #aaa);
     flex-shrink: 0;
 }
-.vn-folder-item button {
-    opacity: 0;
-    transition: opacity 0.15s;
-    flex-shrink: 0;
+/* Rename / favourite / delete float over the right edge on hover; at rest they take no room, so the name gets the whole tile */
+.vn-folder-actions {
+    display: none;
+    position: absolute;
+    top: 50%;
+    right: 3px;
+    transform: translateY(-50%);
+    gap: 2px;
+    padding: 2px 2px 2px 16px;
+    background: linear-gradient(90deg, transparent, var(--vn-bg-panel) 16px);
 }
-.vn-folder-item:hover button {
-    opacity: 1;
-}
-.vn-folder-fav-btn {
-    color: var(--vn-text-muted, #888) !important;
-}
-.vn-folder-fav-btn.--active {
-    color: #d4a020 !important;
-    opacity: 1 !important;
-}
+.vn-folder-item:hover .vn-folder-actions,
+.vn-folder-item:focus-within .vn-folder-actions { display: flex; }
+.vn-folder-item:has(.vn-folder-rename-input) .vn-folder-actions { display: none; }
+.vn-folder-fav-btn { color: var(--vn-text-muted, #888) !important; }
+.vn-folder-fav-btn.--active { color: #d4a020 !important; }
 
 /* ── Folder items: card layout ── */
 
@@ -924,9 +965,6 @@
     line-height: 1.3;
 }
 
-.vn-folder-item.--card .vn-folder-fav-btn { position: absolute; top: 3px; left: 3px; }
-.vn-folder-item.--card .vn-folder-rename-btn { position: absolute; top: 3px; right: 3px; }
-.vn-folder-item.--card .vn-folder-delete-btn { position: absolute; bottom: 3px; right: 3px; }
 
 /* ── Favorites quick-access strip ── */
 
@@ -948,7 +986,8 @@
     transition: color 0.15s;
 }
 
-.vn-folder-fav-shortcut .fas { color: #d4a020; font-size: 0.85em; }
+.vn-folder-fav-shortcut .fas { color: #d4a020; font-size: 0.85em; flex-shrink: 0; }
+.vn-folder-fav-shortcut > span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vn-folder-fav-shortcut.--active,
 .vn-folder-fav-shortcut:hover { color: var(--vn-text, #ddd); }
 
@@ -966,3 +1005,100 @@
     padding: 0;
 }
 
+
+/* ══════════════════════════════════════════════════════════
+   Presets tab: compact chrome (one control row, one folder bar, "⋯" menu)
+   ══════════════════════════════════════════════════════════ */
+
+.vn-preset-count { flex: 0 0 auto; }
+
+/* "⋯" menu with the rare bulk actions (regenerate all / delete all) */
+.vn-menu { position: relative; flex: 0 0 auto; }
+.vn-menu > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; }
+.vn-menu > summary::-webkit-details-marker { display: none; }
+
+.vn-menu-body {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 20;
+    min-width: 210px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    background: var(--vn-bg-panel);
+    border: 1px solid var(--vn-border-hover);
+    border-radius: var(--vn-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+.vn-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: transparent;
+    border: none;
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.vn-menu-item:hover { background: rgba(255, 255, 255, 0.08); }
+.vn-menu-item--danger { color: var(--vn-danger); }
+.vn-menu-item--danger:hover { background: var(--vn-danger-dim); }
+
+/* Breadcrumb, favourites and "new folder" share one row instead of three */
+.vn-folder-bar {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-bottom: 6px;
+    padding: 2px 0 4px;
+    background: var(--vn-bg-panel);
+}
+.vn-folder-bar .vn-folder-breadcrumb { margin-bottom: 0; flex: 0 1 auto; }
+.vn-folder-bar .vn-folder-favorites-strip { padding: 0; margin: 0; border: none; flex: 1 1 auto; }
+.vn-folder-bar .vn-folder-toolbar { padding: 0; margin-left: auto; }
+
+/* Folder tiles in card mode become compact chips (they were 80+ px tall tiles) */
+.vn-folder-items-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 6px; margin-bottom: 6px; }
+.vn-folder-item.--card {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 6px 10px;
+    min-height: 0;
+    text-align: left;
+}
+.vn-folder-item.--card > .fas { font-size: 1.1em; width: 14px; }
+.vn-folder-item.--card .vn-folder-item-name { text-align: left; white-space: nowrap; display: block; -webkit-line-clamp: unset; }
+
+/* Banner shown above the tabs while a step of a composite preset is being edited in the form */
+.vn-edit-banner {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    background: var(--vn-gold-dim);
+    border: 1px solid rgba(235, 203, 139, 0.4);
+    border-radius: var(--vn-radius);
+    color: var(--vn-gold);
+    font-size: 13px;
+}
+.vn-edit-banner[hidden] { display: none; }
+.vn-edit-banner-text { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+
+/* Group / view toggles: icon only in a narrow list, icon + word when there is room */
+.vn-btn-label { display: none; }
+@container (min-width: 860px) {
+    .vn-presets-mode-toggle .vn-btn-label,
+    .vn-preset-view-toggle .vn-btn-label { display: inline; }
+}

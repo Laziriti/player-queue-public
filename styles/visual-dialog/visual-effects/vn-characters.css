@@ -131,16 +131,28 @@
    РАСФОКУС НЕАКТИВНЫХ
    ══════════════════════════════════════════════════════════ */
 
-.vn-character:not(.active):not(.vn-entering):not(.vn-exiting) .vn-character-img {
+/* «Положение покоя» персонажа. У неактивного оно на 4px ниже и с приглушённой плашкой.
+   Входные анимации заканчиваются ровно в нём (см. ВХОДЫ), иначе после снятия .vn-entering
+   персонаж на секунду выглядел бы активным и «откатывался» в приглушённое состояние. */
+.vn-character { --vn-rest-y: 0px; --vn-name-op: 1; }
+.vn-character:not(.active) { --vn-rest-y: 4px; --vn-name-op: 0.4; }
+
+/* Вид неактивного действует и во время входа/выхода: раньше эти состояния были исключены,
+   поэтому персонаж появлялся ярким, затем затухал, а уходя — наоборот вспыхивал.
+   Пауза дыхания ниже по-прежнему только вне входа/выхода, чтобы не убить их анимацию. */
+.vn-character:not(.active) .vn-character-img {
     scale: calc(var(--flip-x, 1) * 0.97) 0.97;
-    translate: 0 4px;
+    translate: 0 var(--vn-rest-y);
     filter: brightness(0.45) saturate(0.25) blur(1px)
     drop-shadow(0 5px 15px rgba(0, 0, 0, 0.8)) !important;
+}
+
+.vn-character:not(.active):not(.vn-entering):not(.vn-exiting) .vn-character-img {
     animation: none !important;
 }
 
 /* Depth of Field — усиленное размытие при активной камере */
-#vn-scene-overlay.vn-camera-dof .vn-character:not(.active):not(.vn-entering):not(.vn-exiting):not(.vn-character-hidden) .vn-character-img {
+#vn-scene-overlay.vn-camera-dof .vn-character:not(.active):not(.vn-character-hidden) .vn-character-img {
     filter: brightness(0.38) saturate(0.18) blur(2.5px)
         drop-shadow(0 5px 15px rgba(0, 0, 0, 0.85)) !important;
 }
@@ -157,7 +169,7 @@
 
 /* Nameplate неактивных — полупрозрачная */
 .vn-character:not(.active) .vn-character-nameplate {
-    opacity: 0.4;
+    opacity: var(--vn-name-op);
     transition: opacity 0.8s ease;
 }
 
@@ -184,12 +196,12 @@
 
 @keyframes vnCharEnterLeft {
     from { translate: -60px 0; opacity: 0; }
-    to   { translate: 0 0;     opacity: 1; }
+    to   { translate: 0 var(--vn-rest-y); opacity: 1; }
 }
 
 @keyframes vnCharEnterRight {
     from { translate: 60px 0; opacity: 0; }
-    to   { translate: 0 0;    opacity: 1; }
+    to   { translate: 0 var(--vn-rest-y); opacity: 1; }
 }
 
 /* ── Драматичный ── */
@@ -201,7 +213,7 @@
     0%   { translate: 0 0; opacity: 0; }
     50%  { opacity: 1; }
     75%  { translate: 0 2px; }
-    100% { translate: 0 0; }
+    100% { translate: 0 var(--vn-rest-y); }
 }
 
 /* ── Из тени ── */
@@ -222,7 +234,7 @@
 
 @keyframes vnCharEnterRise {
     from { translate: 0 80px; opacity: 0; }
-    to   { translate: 0 0;    opacity: 1; }
+    to   { translate: 0 var(--vn-rest-y); opacity: 1; }
 }
 
 
@@ -262,9 +274,10 @@
     animation: vnNameAppear 0.6s ease 0.4s both;
 }
 
+/* Плашка проявляется сразу до своей «покойной» прозрачности (у неактивных 0.4), без вспышки до 1 */
 @keyframes vnNameAppear {
     from { opacity: 0; translate: 0 8px; }
-    to   { opacity: 1; translate: 0 0; }
+    to   { opacity: var(--vn-name-op); translate: 0 0; }
 }
 
 .vn-exiting .vn-character-glow {
@@ -281,6 +294,41 @@
 
 @keyframes vnNameExit {
     to { opacity: 0; translate: 0 8px; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ТАЙМИРОВАННЫЕ ВХОДЫ/ВЫХОДЫ (смена шага составного пресета)
+
+   VNTransitions.enterCharacter/exitCharacter(el, …, ms) ставят класс
+   .vn-tr-timed и --vn-tr-ms; длительность всех слоёв персонажа
+   подстраивается под выбранную скорость.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-character.vn-tr-timed.vn-entering .vn-character-img,
+.vn-character.vn-tr-timed.vn-exiting .vn-character-img {
+    animation-duration: var(--vn-tr-ms) !important;
+}
+
+.vn-character.vn-tr-timed.vn-entering .vn-character-glow {
+    animation-duration: var(--vn-tr-ms);
+}
+
+.vn-character.vn-tr-timed.vn-entering .vn-character-nameplate {
+    animation-duration: calc(var(--vn-tr-ms) * 0.6);
+    animation-delay: calc(var(--vn-tr-ms) * 0.3);
+}
+
+.vn-character.vn-tr-timed.vn-exiting .vn-character-glow,
+.vn-character.vn-tr-timed.vn-exiting .vn-character-nameplate {
+    animation-duration: calc(var(--vn-tr-ms) * 0.7);
+}
+
+/* Подсветка говорящего / расфокус при смене шага не должны тянуться 0.8 с */
+#vn-scene-overlay.vn-tr-live .vn-character-img,
+#vn-scene-overlay.vn-tr-live .vn-character-glow,
+#vn-scene-overlay.vn-tr-live .vn-character-nameplate {
+    transition-duration: var(--vn-tr-live) !important;
 }
 
 
@@ -366,6 +414,11 @@
    entering, exiting states and suppresses glow that would reveal position. */
 #vn-scene-overlay .vn-character.vn-character-hidden .vn-character-img {
     filter: brightness(0) !important;
+}
+
+/* Силуэт входит/уходит теми же translate+opacity анимациями (они ничего не раскрывают);
+   отключаем только «дыхание» активного, иначе силуэт появлялся/исчезал рывком */
+#vn-scene-overlay .vn-character.vn-character-hidden:not(.vn-entering):not(.vn-exiting) .vn-character-img {
     animation: none !important;
 }
 

@@ -92,6 +92,31 @@ class VNAtmosphere {
     }
 
     /**
+     * Сменить только визуальный эффект. Частицы, параллакс и камера продолжают работать как есть
+     * (полный destroy()+init() перезапустил бы падение частиц и дрейф фона).
+     */
+    setVisual(visual) {
+        if (!this._active || !this._overlayEl) return;
+        this._visual = visual;
+        const lite = game.settings.get('player-queue', 'liteMode');
+        this._visualFX.apply(this._overlayEl, lite ? 'none' : visual);
+    }
+
+    /**
+     * Сменить только частицы (тип, интенсивность или слой 'mix'); визуальный эффект, параллакс и камера не трогаются.
+     */
+    setParticles(particle, particleIntensity = 1, particlesLayer = 'back') {
+        if (!this._active || !this._overlayEl) return;
+        this._particle = particle;
+        const container = this._overlayEl.querySelector('.vn-particles');
+        if (!container) return;
+        this._particles.clear();
+        if (game.settings.get('player-queue', 'liteMode')) return;
+        const upper = particlesLayer === 'mix' ? this._overlayEl.querySelector('.vn-particles-upper') : null;
+        this._particles.fill(container, particle, particleIntensity, upper);
+    }
+
+    /**
      * Полная очистка и остановка
      */
     destroy() {
@@ -103,6 +128,14 @@ class VNAtmosphere {
         this._camera.reset();
 
         this._overlayEl = null;
+    }
+
+    /**
+     * Отложенная очистка при закрытии сцены: гасит атмосферу, только если она всё ещё привязана к этому оверлею
+     * (за время затухания могла открыться новая сцена, её трогать нельзя).
+     */
+    destroyFor(overlayEl) {
+        if (this._overlayEl === overlayEl) this.destroy();
     }
 
     /**

@@ -4,13 +4,14 @@
 // ============================================================
 
 import { VNAtmosphere } from '../visual-effects/atmosphere/index.js';
+import { stripEmoji } from '../vn-id-utils.js';
 
 export class VNEffectsManager {
     _renderGrid(groups, labelsMap, iconsMap, current, axis, variantsMap = null, currentVariant = 'all') {
         return groups.map(group =>
             `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
             + group.types.map(t => {
-                const label = game.i18n.localize(labelsMap[t]);
+                const label = stripEmoji(game.i18n.localize(labelsMap[t]));
                 const active = t === current;
                 const variants = variantsMap?.[t];
                 const activeVariant = active ? currentVariant : 'all';
@@ -32,7 +33,7 @@ export class VNEffectsManager {
         return VNAtmosphere.EFFECT_GROUPS.map(group =>
             group.effects.map(id => {
                 const preset = VNAtmosphere.PRESETS[id];
-                const label = game.i18n.localize(VNAtmosphere.EFFECT_LABELS[id]);
+                const label = stripEmoji(game.i18n.localize(VNAtmosphere.EFFECT_LABELS[id]));
                 const active = preset.particles === currentParticle && preset.visual === currentVisual;
                 return `<button type="button" class="vn-effects-preset-item${active ? ' active' : ''}" data-preset="${id}" title="${label}"><i class="fas ${VNAtmosphere.EFFECT_ICONS[id]}"></i><span>${label}</span></button>`;
             }).join('')
@@ -54,6 +55,46 @@ export class VNEffectsManager {
         </div>`;
     }
 
+    /** "Snow" or "Feathers · Black": what is selected on an axis, shown in the column title so it stays visible while the list scrolls. */
+    _currentLabel(axis, value) {
+        const [type, variant = 'all'] = String(value || 'none').split(':');
+        const labels = axis === 'particle' ? VNAtmosphere.PARTICLE_LABELS : VNAtmosphere.VISUAL_LABELS;
+        if (!labels[type]) return '';
+        let text = stripEmoji(game.i18n.localize(labels[type]));
+        if (axis === 'particle' && variant !== 'all') {
+            const v = VNAtmosphere.PARTICLE_VARIANTS[type]?.find(x => x.id === variant);
+            if (v) text += ` · ${game.i18n.localize(v.label)}`;
+        }
+        return text;
+    }
+
+    _updateCurrent(root) {
+        for (const axis of ['particle', 'visual']) {
+            const el = root.querySelector(`.vn-effects-current[data-axis="${axis}"]`);
+            if (el) el.textContent = this._currentLabel(axis, root.querySelector(`#${axis}-effect`)?.value);
+        }
+    }
+
+    _applySearch(root, query) {
+        const q = query.trim().toLowerCase();
+        root.querySelectorAll('.vn-effects-inline-grid').forEach(grid => {
+            let header = null, shown = 0;
+            const flush = () => { if (header) header.style.display = shown ? '' : 'none'; };
+            for (const el of grid.children) {
+                if (el.classList.contains('vn-atmo-group-header')) {
+                    flush();
+                    header = el; shown = 0;
+                    continue;
+                }
+                const btn = el.matches('.vn-atmo-item') ? el : el.querySelector('.vn-atmo-item');
+                const hit = !q || (btn?.title || '').toLowerCase().includes(q);
+                el.style.display = hit ? '' : 'none';
+                if (hit) shown++;
+            }
+            flush();
+        });
+    }
+
     generateTab(currentParticle = 'particles', currentVisual = 'none', currentParticlesLayer = 'back', currentParticleIntensity = 1) {
         const [particleType, particleVariant = 'all'] = currentParticle.split(':');
         const particleGrid = this._renderGrid(VNAtmosphere.PARTICLE_GROUPS, VNAtmosphere.PARTICLE_LABELS, VNAtmosphere.PARTICLE_ICONS, particleType, 'particle', VNAtmosphere.PARTICLE_VARIANTS, particleVariant);
@@ -64,24 +105,32 @@ export class VNEffectsManager {
             <input type="hidden" id="particle-effect" value="${currentParticle}">
             <input type="hidden" id="visual-effect" value="${currentVisual}">
 
-            <div class="vn-effects-presets-row">${presets}</div>
+            <details class="vn-collapsible vn-effects-combos">
+                <summary class="vn-collapsible-header"><i class="fas fa-swatchbook"></i> ${game.i18n.localize('vn.atmosphere.combosHeader')}<i class="fas fa-chevron-down vn-chevron"></i></summary>
+                <div class="vn-collapsible-body"><div class="vn-effects-presets-row">${presets}</div></div>
+            </details>
 
             <div class="vn-effects-controls-row">
                 ${this._renderLayerSwitch(currentParticlesLayer)}
                 <label class="vn-overlay-toggle vn-particle-intensity-ctrl" title="${game.i18n.localize('vn.bg.particleIntensity')}">
                     <i class="fas fa-snowflake"></i>
+                    <span class="vn-particle-intensity-label">${game.i18n.localize('vn.bg.particleIntensity')}</span>
                     <input type="range" id="particle-intensity" min="1" max="20" step="1" value="${currentParticleIntensity}">
                     <span class="vn-particle-intensity-val">${currentParticleIntensity}</span>
                 </label>
+                <div class="vn-effects-search">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="text" class="vn-effects-search-input" placeholder="${game.i18n.localize('vn.atmosphere.searchPlaceholder')}" autocomplete="off" spellcheck="false">
+                </div>
             </div>
 
             <div class="vn-effects-grids">
                 <div class="vn-effects-grid-col">
-                    <div class="vn-effects-grid-title"><i class="fas fa-star"></i> ${game.i18n.localize('vn.atmosphere.particlesHeader')}</div>
+                    <div class="vn-effects-grid-title"><i class="fas fa-star"></i> ${game.i18n.localize('vn.atmosphere.particlesHeader')}<span class="vn-effects-current" data-axis="particle">${this._currentLabel('particle', currentParticle)}</span></div>
                     <div class="vn-effects-inline-grid" data-axis="particle">${particleGrid}</div>
                 </div>
                 <div class="vn-effects-grid-col">
-                    <div class="vn-effects-grid-title"><i class="fas fa-wand-sparkles"></i> ${game.i18n.localize('vn.atmosphere.visualHeader')}</div>
+                    <div class="vn-effects-grid-title"><i class="fas fa-wand-sparkles"></i> ${game.i18n.localize('vn.atmosphere.visualHeader')}<span class="vn-effects-current" data-axis="visual">${this._currentLabel('visual', currentVisual)}</span></div>
                     <div class="vn-effects-inline-grid" data-axis="visual">${visualGrid}</div>
                 </div>
             </div>
@@ -121,6 +170,15 @@ export class VNEffectsManager {
                 if (group) {
                     root.querySelectorAll('.vn-effects-inline-grid[data-axis="particle"] .vn-atmo-item-group.vn-variant-open')
                         .forEach(g => { if (g !== group) this._closeVariantGroup(g); });
+                    // A first click on an inactive type selects it (all variants) and opens the variant list; later clicks only fold/unfold it
+                    const base = group.dataset.variantBase;
+                    const current = root.querySelector('#particle-effect')?.value.split(':')[0];
+                    if (current !== base) {
+                        this._applyAxisValue(root, 'particle', base);
+                        this._syncPresetHighlight(root);
+                        this._openVariantGroup(group);
+                        return;
+                    }
                     this._toggleVariantGroup(group);
                     return;
                 }
@@ -151,7 +209,11 @@ export class VNEffectsManager {
             }
         });
 
+        // Registered after the handler above, so it sees the already updated hidden inputs
+        root.addEventListener('click', () => this._updateCurrent(root));
+
         root.addEventListener('input', (e) => {
+            if (e.target.classList.contains('vn-effects-search-input')) this._applySearch(root, e.target.value);
             const intensitySlider = e.target.closest('#particle-intensity');
             if (intensitySlider) {
                 const valEl = intensitySlider.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val');

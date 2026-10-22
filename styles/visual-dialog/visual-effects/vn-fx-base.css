@@ -16,6 +16,21 @@
     transition: opacity 1.5s ease;
 }
 
+/* Смена шага составного пресета (.vn-tr-live ставит VisualNovelScene._beginQuickTransition):
+   слои эффекта проявляются быстрее, чем растворяется фон, а фильтр фона плавно переходит —
+   новая картинка не бывает ярче, чем задумано эффектом */
+#vn-scene-overlay.vn-tr-live .vn-fx-tint,
+#vn-scene-overlay.vn-tr-live .vn-fx-rays,
+#vn-scene-overlay.vn-tr-live .vn-fx-edges,
+#vn-scene-overlay.vn-tr-live .vn-fx-flash,
+#vn-scene-overlay.vn-tr-live .vn-fx-scan {
+    transition-duration: var(--vn-tr-fx) !important;
+}
+
+#vn-scene-overlay.vn-tr-live .vn-bg-layer {
+    transition: background-image 0.8s ease, filter var(--vn-tr-fx) ease;
+}
+
 .vn-fx-tint  { z-index: 1; mix-blend-mode: overlay; }
 .vn-fx-rays  { z-index: 2; mix-blend-mode: screen; }
 .vn-fx-edges { z-index: 2; }
@@ -61,52 +76,104 @@
    ПЕРЕХОДЫ ФОНОВ
    ══════════════════════════════════════════════════════════ */
 
-.vn-bg-transition-dissolve { animation: vnBgDissolve 1s ease both; }
+/* Переходы заданы через #vn-scene-overlay и !important: визуальные эффекты вешают на .vn-bg-layer свои
+   animation (!important), и без этого новый слой появлялся бы мгновенно, минуя переход.
+   Длительность приходит из --vn-bg-ms (VNTransitions.switchBackground).
+
+   Ключевые кадры с filter собираются поверх --vn-bg-rest — фильтра, который этому слою даёт активный эффект.
+   Иначе filter переходов затирал бы фильтр эффекта, и эффект «защёлкивался» только в самом конце перехода. */
+
+#vn-scene-overlay .vn-bg-layer.vn-bg-transition-dissolve { animation: vnBgDissolve var(--vn-bg-ms, 1s) ease both !important; }
 
 @keyframes vnBgDissolve {
     from { opacity: 0; }
     to   { opacity: 1; }
 }
 
-.vn-bg-transition-zoom { animation: vnBgZoom 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) both; }
+#vn-scene-overlay .vn-bg-layer.vn-bg-transition-zoom { animation: vnBgZoom var(--vn-bg-ms, 1.2s) cubic-bezier(0.25, 0.1, 0.25, 1) both !important; }
 
+/* Заканчивается на scale 1: после перехода класс снимается, и любое иное значение дало бы скачок */
 @keyframes vnBgZoom {
-    from { opacity: 0; scale: 1.15; filter: blur(6px); }
-    to   { opacity: 1; scale: 1.03; filter: blur(0); }
+    from { opacity: 0; scale: 1.15; filter: var(--vn-bg-rest, brightness(1)) blur(6px); }
+    to   { opacity: 1; scale: 1;    filter: var(--vn-bg-rest, brightness(1)) blur(0); }
 }
 
-.vn-bg-transition-blur { animation: vnBgBlur 1.4s ease both; }
+#vn-scene-overlay .vn-bg-layer.vn-bg-transition-blur { animation: vnBgBlur var(--vn-bg-ms, 1.4s) ease both !important; }
 
 @keyframes vnBgBlur {
-    0%   { opacity: 0; filter: blur(25px) brightness(1.3); }
-    40%  { opacity: 1; filter: blur(8px) brightness(1.1); }
-    100% { opacity: 1; filter: blur(0) brightness(1); }
+    0%   { opacity: 0; filter: var(--vn-bg-rest, brightness(1)) blur(25px) brightness(1.3); }
+    40%  { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) blur(8px) brightness(1.1); }
+    100% { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) blur(0) brightness(1); }
 }
 
-.vn-bg-transition-flash { animation: vnBgFlash 1s ease both; }
+#vn-scene-overlay .vn-bg-layer.vn-bg-transition-flash { animation: vnBgFlash var(--vn-bg-ms, 1s) ease both !important; }
 
 @keyframes vnBgFlash {
-    0%   { opacity: 1; filter: brightness(4) saturate(0); }
-    40%  { opacity: 1; filter: brightness(2) saturate(0.5); }
-    100% { opacity: 1; filter: brightness(1) saturate(1); }
+    0%   { opacity: 0; filter: var(--vn-bg-rest, brightness(1)) brightness(4) saturate(0); }
+    18%  { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(3) saturate(0.2); }
+    100% { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(1) saturate(1); }
 }
 
-.vn-bg-transition-black { animation: vnBgBlack 1.8s ease both; }
+#vn-scene-overlay .vn-bg-layer.vn-bg-transition-black { animation: vnBgBlack var(--vn-bg-ms, 1.8s) ease both !important; }
 
+/* Через чёрный: сначала старый фон плавно уходит в чёрное, затем новый проявляется из него */
 @keyframes vnBgBlack {
-    0%   { opacity: 1; filter: brightness(0); }
-    45%  { opacity: 1; filter: brightness(0); }
-    100% { opacity: 1; filter: brightness(1); }
+    0%   { opacity: 0; filter: var(--vn-bg-rest, brightness(1)) brightness(0); }
+    40%  { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(0); }
+    100% { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(1); }
 }
 
-.vn-bg-transition-sweep {
-    animation: vnBgSweep 1s cubic-bezier(0.65, 0, 0.35, 1) both;
+#vn-scene-overlay .vn-bg-layer.vn-bg-transition-sweep {
+    animation: vnBgSweep var(--vn-bg-ms, 1s) cubic-bezier(0.65, 0, 0.35, 1) both !important;
 }
 
 @keyframes vnBgSweep {
     from { clip-path: inset(0 100% 0 0); }
     to   { clip-path: inset(0 0 0 0); }
 }
+
+
+/* ── Занавес поверх всей сцены (VNTransitions.cover) ──
+   flash / black / sweep, когда вместе с фоном меняются и персонажи: сцена закрывается, под занавесом
+   всё меняется мгновенно, занавес открывается. Выше персонажей и подписи, ниже тулбара ведущего. */
+
+.vn-tr-cover {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.vn-tr-cover--black { background: #000; }
+.vn-tr-cover--flash { background: #f6f8ff; }
+
+.vn-tr-cover--in  { animation: vnCoverIn  var(--vn-cover-ms, 0.4s) ease-in  both; }
+.vn-tr-cover--out { animation: vnCoverOut var(--vn-cover-ms, 0.6s) ease-out both; }
+
+@keyframes vnCoverIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vnCoverOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* Шторка: панель с мягкими краями проезжает слева направо.
+   Она шире экрана на 12% с каждой стороны, а мягкие края (по 12% экрана) лежат ровно в этих запасах:
+   в закрытом положении (translateX(0)) вся сцена закрыта полностью, и ни одна полоса не просвечивает.
+   translate в процентах считается от ширины самой панели, поэтому ±100% = панель целиком за экраном. */
+.vn-tr-cover--sweep {
+    opacity: 1;
+    left: -12%;
+    right: -12%;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg,
+        rgba(5, 6, 12, 0) 0%, #05060c 9.7%, #05060c 90.3%, rgba(5, 6, 12, 0) 100%);
+    box-shadow: 0 0 80px 30px rgba(136, 192, 208, 0.18);
+}
+.vn-tr-cover--sweep.vn-tr-cover--in  { animation-name: vnCoverSweepIn;  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+.vn-tr-cover--sweep.vn-tr-cover--out { animation-name: vnCoverSweepOut; animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+
+@keyframes vnCoverSweepIn  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes vnCoverSweepOut { from { transform: translateX(0); }     to { transform: translateX(100%); } }
+
+#vn-scene-overlay.minimized .vn-tr-cover { display: none; }
 
 
 /* ══════════════════════════════════════════════════════════

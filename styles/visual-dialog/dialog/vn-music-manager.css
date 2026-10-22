@@ -110,7 +110,7 @@
 
 .vn-cues-hint {
     margin: 0;
-    font-size: 0.75em;
+    font-size: max(11px, 0.75em);
     color: var(--vn-text-dim);
     font-style: italic;
     line-height: 1.4;
@@ -163,6 +163,7 @@
     min-width: 0;
     background: none;
     border: 1px solid transparent;
+    border-bottom: 1px dashed var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
     font-size: 0.82em;
@@ -173,3 +174,93 @@
 .vn-cue-label-input:hover { border-color: var(--vn-border); }
 .vn-cue-label-input:focus { border-color: var(--vn-accent); background: rgba(0,0,0,0.2); }
 .vn-cue-label-input::placeholder { color: var(--vn-text-dim); opacity: 0.5; }
+
+.vn-music-pick { margin-left: 6px; font-style: normal; }
+.vn-music-drop-zone:hover .vn-music-pick,
+.vn-cue-drop-zone:hover .vn-music-pick { color: var(--vn-text); }
+
+/* ── Track picker window ── */
+.vn-pick-sound { display: flex; flex-direction: column; gap: 10px; }
+
+.vn-pick-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.vn-pick-search > .fas {
+    position: absolute;
+    left: 10px;
+    color: var(--vn-text-dim);
+    pointer-events: none;
+}
+.vn-pick-search-input {
+    width: 100%;
+    height: 34px;
+    padding: 0 64px 0 32px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 14px;
+}
+.vn-pick-search-input:focus { border-color: var(--vn-accent); outline: none; }
+.vn-pick-count {
+    position: absolute;
+    right: 10px;
+    font-size: 12px;
+    color: var(--vn-text-dim);
+}
+
+.vn-pick-list {
+    height: min(440px, 60vh);
+    overflow-y: auto;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius);
+    scrollbar-width: thin;
+    scrollbar-color: var(--vn-accent-dim) transparent;
+}
+
+.vn-pick-group[hidden], .vn-pick-item[hidden], .vn-pick-empty[hidden] { display: none; }
+
+.vn-pick-group-hdr {
+    position: sticky;
+    top: -4px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--vn-gold);
+    background: #1b1b26;
+    border-bottom: 1px solid var(--vn-border);
+}
+.vn-pick-group-hdr > span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.vn-pick-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 12px 7px 22px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+.vn-pick-item > i { color: var(--vn-accent); opacity: 0.6; flex-shrink: 0; }
+.vn-pick-item > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-pick-item:hover { background: rgba(255, 255, 255, 0.07); }
+.vn-pick-item.selected { background: rgba(136, 192, 208, 0.15); border-color: var(--vn-accent); color: var(--vn-accent); }
+.vn-pick-item.selected > i { opacity: 1; }
+
+.vn-pick-empty { padding: 28px; text-align: center; color: var(--vn-text-dim); font-style: italic; }

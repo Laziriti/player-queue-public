@@ -3,6 +3,7 @@
 // ============================================================
 
 import { VNTransitions } from '../visual-effects/vn-transitions.js';
+import { VNPreloader } from '../vn-preload.js';
 
 const esc = (s) => String(s ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -396,32 +397,71 @@ export class VNBackgroundManager {
     }
 
     /**
-     * Animated background switch (dissolve transition)
+     * Animated background switch. `timing` comes from VNTransitions.timing (transition type + speed; 'cut' = instant).
+     * The background dimming is NOT handled here: the caller fades it at the start (fadeOverlay).
      */
-    async switchWithTransition($overlay, newBg, showOverlay, atmosphere) {
+    async switchWithTransition($overlay, newBg, showOverlay, atmosphere, timing) {
         const el = $overlay[0] ?? $overlay;
-        if (!el || !newBg || newBg === 'none' || VNBackgroundManager.isVideo(newBg)) {
+        if (!el || !newBg || newBg === 'none' || timing.type === 'cut') {
             this.applyBackground($overlay, newBg, showOverlay);
             return;
         }
 
+        // Nothing to transition from (first background): just show it. A video counts as content too.
         const oldBgLayer = el.querySelector('.vn-bg-layer');
-        if (!oldBgLayer?.style.backgroundImage) {
+        if (!oldBgLayer?.style.backgroundImage && !oldBgLayer?.querySelector('.vn-bg-video')) {
             this.applyBackground($overlay, newBg, showOverlay);
             return;
         }
 
         try {
-            await VNTransitions.switchBackground(el, newBg, 'dissolve');
+            // Start the dissolve only once the new image is decoded, otherwise it fades in from an empty layer
+            await VNPreloader.ready(newBg);
+            await VNTransitions.switchBackground(el, newBg, timing.type, timing.bg || null);
             atmosphere?.resetZoom?.();
-
-            const existing = el.querySelector('.vn-background-overlay');
-            if (showOverlay) {
-                if (!existing) oldBgLayer.insertAdjacentHTML('afterend', '<div class="vn-background-overlay"></div>');
-            } else existing?.remove();
         } catch (e) {
             console.error('VN: Background transition failed:', e);
             this.applyBackground($overlay, newBg, showOverlay);
+        }
+    }
+
+    /**
+     * applyBackground without the layer's own 0.8 s background-image cross-fade. Used while a curtain covers the
+     * scene (VNTransitions.cover), where the swap must be instant or it would keep fading after the curtain opens.
+     */
+    applyBackgroundInstant($overlay, background, showOverlay) {
+        const el = $overlay[0] ?? $overlay;
+        const layer = el?.querySelector('.vn-bg-layer');
+        if (layer) layer.style.transition = 'none';
+        this.applyBackground($overlay, background, showOverlay);
+        if (layer) {
+            void layer.offsetWidth; // commit the swap before the transition is switched back on
+            layer.style.transition = '';
+        }
+    }
+
+    /**
+     * Fades the background dimming (.vn-background-overlay) in or out over `--vn-tr-fx`. Used at the START of a
+     * step switch so the dimming changes together with the visual effect instead of after the dissolve.
+     * A leaving overlay is renamed (`vn-bo-leaving`) so applyBackground / setBackgroundOverlay never see it.
+     */
+    fadeOverlay($overlay, show, background) {
+        const el = $overlay[0] ?? $overlay;
+        if (!el) return;
+        const existing = el.querySelector('.vn-background-overlay');
+        const hasBackground = !!background && background !== 'none';
+
+        if (show && hasBackground && !existing) {
+            const layers = el.querySelectorAll('.vn-bg-layer');
+            const dimming = document.createElement('div');
+            dimming.className = 'vn-background-overlay vn-bo-in';
+            dimming.addEventListener('animationend', () => dimming.classList.remove('vn-bo-in'), { once: true });
+            layers[layers.length - 1]?.insertAdjacentElement('afterend', dimming);
+        } else if ((!show || !hasBackground) && existing) {
+            existing.classList.remove('vn-background-overlay', 'vn-bo-in');
+            existing.classList.add('vn-bo-leaving', 'vn-bo-out');
+            existing.addEventListener('animationend', () => existing.remove(), { once: true });
+            setTimeout(() => existing.remove(), 1000);
         }
     }
 
@@ -446,6 +486,7 @@ export class VNBackgroundManager {
             <summary class="vn-collapsible-header"><i class="fas fa-image"></i> ${loc('vn.bg.header')} <i class="fas fa-chevron-down vn-chevron"></i></summary>
             <div class="vn-collapsible-body">
                 <div class="vn-bg-toolbar">
+                  <div class="vn-bg-toolbar-row">
                     <label class="vn-overlay-toggle">
                         <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${loc('vn.bg.overlay')}</span>
                     </label>
@@ -453,9 +494,9 @@ export class VNBackgroundManager {
                     <div class="vn-custom-path">
                         <input type="text" id="custom-background-path" placeholder="${loc('vn.bg.pathPlaceholder')}"
                                value="${currentBg && !currentBg.startsWith('modules/') ? esc(currentBg) : ''}">
-                        <button type="button" class="vn-btn vn-btn-sm vn-apply-path-btn"><i class="fas fa-check"></i></button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-apply-path-btn" title="${loc('vn.bg.applyPathTitle')}"><i class="fas fa-check"></i></button>
                     </div>
-                </div>
+                  </div>
                 <div class="vn-folder-row">
                     <i class="fas fa-folder-open"></i>
                     <span class="vn-folder-row-label" title="${esc(customFolder || this._defaultPath)}">${esc(folderLabel)}</span>
@@ -466,7 +507,8 @@ export class VNBackgroundManager {
                         <input type="text" class="vn-bg-search-input" placeholder="${loc('vn.bg.searchPlaceholder')}" autocomplete="off" spellcheck="false">
                         <button type="button" class="vn-bg-search-clear" title="${loc('vn.bg.searchClear')}" hidden><i class="fas fa-xmark"></i></button>
                     </div>
-                    <label class="vn-bg-size-ctrl" title="Card size"><i class="fas fa-th-large"></i><input type="range" class="vn-bg-size-slider" min="72" max="240" step="8" value="${thumbSize}"></label>
+                    <label class="vn-bg-size-ctrl" title="${loc('vn.bg.cardSizeTitle')}"><i class="fas fa-th-large"></i><span class="vn-bg-size-label">${loc('vn.bg.cardSizeLabel')}</span><input type="range" class="vn-bg-size-slider" min="72" max="240" step="8" value="${thumbSize}"></label>
+                </div>
                 </div>
                 <div class="vn-bg-crumbs">${this._crumbsHtml()}</div>
                 <div class="vn-bg-current">${holder}<div class="vn-bg-current-body">${this._currentBarHtml(currentBg, inGallery ? '' : VNBackgroundManager._fileLabel(currentBg))}</div></div>

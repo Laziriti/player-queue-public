@@ -260,6 +260,13 @@ function registerSettings() {
         scope: 'world', config: false, type: String, default: ''
     });
 
+    // Where preset thumbnails are written. Empty = a per-world default; any folder in Data works (including one inside a module).
+    S('thumbnailFolder', {
+        name: 'settings.thumbnailFolder.name',
+        hint: 'settings.thumbnailFolder.hint',
+        scope: 'world', config: true, restricted: true, type: String, default: '', filePicker: 'folder',
+    });
+
     S('liteMode', {
         name: 'settings.liteMode.name',
         hint: 'settings.liteMode.hint',

@@ -22,6 +22,7 @@ export class VNSocketHandler {
         setVisualEffect:      { gmOnly: true,  required: ['visual'] },
         setParticlesLayer: { gmOnly: true, required: ['layer'] },
         setVisibility:        { gmOnly: true,  required: ['tokenId', 'visibility'] },
+        preload:              { gmOnly: true,  required: ['urls'] },
     };
 
     /**
@@ -50,26 +51,42 @@ export class VNSocketHandler {
     // Receive & Validate
     // ══════════════════════════════════════════════════════════
 
-    handle(data) {
-        if (data.sender === game.user.id) return;
+    /**
+     * @param {object} data - message body
+     * @param {string} senderId - user id supplied by the server (socketlib `socketdata.userId`).
+     *   The `sender` field inside `data` is client-controlled and is never trusted.
+     */
+    handle(data, senderId) {
+        if (!senderId || !data || typeof data !== 'object') return;
+        if (senderId === game.user.id) return;
 
         const schema = VNSocketHandler.SCHEMA[data.action];
         if (!schema) { console.warn(`[VN] Unknown socket action: ${data.action}`); return; }
 
         // Permission check
-        if (schema.gmOnly && !game.users.get(data.sender)?.isGM) {
+        if (schema.gmOnly && !game.users.get(senderId)?.isGM) {
             console.warn(`[VN] Non-GM user tried to send: ${data.action}`);
             return;
         }
 
+        const p = data.payload ?? {};
+        if (typeof p !== 'object' || Array.isArray(p)) {
+            console.warn(`[VN] Invalid payload for ${data.action}`);
+            return;
+        }
+
         // Required fields validation
-        const p = data.payload || {};
         if (schema.required?.length) {
             const missing = schema.required.filter(key => p[key] === undefined);
             if (missing.length) {
                 console.warn(`[VN] Missing fields for ${data.action}:`, missing);
                 return;
             }
+        }
+
+        if (data.action === 'preload') {
+            if (!Array.isArray(p.urls)) return;
+            p.urls = p.urls.filter(u => typeof u === 'string').slice(0, 200);
         }
 
         vnLog('received:', data.action);
@@ -109,10 +126,14 @@ export class VNSocketHandler {
                     particlesForeground: p.particlesForeground ?? null,
                     flipped: p.flipped ?? null,
                     visibility: p.visibility ?? null,
+                    charFx: p.charFx ?? null,
                     portraitImages: p.portraitImages ?? null,
                     portraitNames: p.portraitNames ?? null,
                     portraitScales: p.portraitScales ?? null,
                     soundCues: p.soundCues ?? null,
+                    caption: p.caption ?? null,
+                    speakers: p.speakers ?? null,
+                    transition: p.transition ?? null,
                 }, false);
                 if (p.portraitScale != null) s.setPortraitScale(Number(p.portraitScale), false);
                 break;
@@ -127,6 +148,7 @@ export class VNSocketHandler {
             case 'setVisualEffect':      s.setVisualEffect(p.visual, false); break;
             case 'setParticlesLayer':    s.setParticlesLayer(p.layer, false); break;
             case 'setVisibility':        s.applyVisibility(p.tokenId, p.visibility, false); break;
+            case 'preload':              s.preloadImages(p.urls); break;
             default: console.warn(`[VN] No handler for action: ${action}`);
         }
     }

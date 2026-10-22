@@ -11,12 +11,13 @@
     cursor: default;
 }
 .vn-particle-intensity-ctrl:hover { opacity: 1; }
-.vn-particle-intensity-ctrl > .fas { font-size: 0.75em; color: var(--vn-text-dim); }
+.vn-particle-intensity-ctrl > .fas { font-size: max(11px, 0.75em); color: var(--vn-text-dim); }
 .vn-particle-intensity-ctrl input[type="range"] {
-    width: 72px;
+    width: 120px;
     accent-color: var(--vn-accent);
     cursor: pointer;
 }
+.vn-particle-intensity-label { font-size: 12px; color: var(--vn-text-dim); white-space: nowrap; }
 .vn-particle-intensity-val {
     min-width: 1.5em;
     text-align: center;
@@ -24,7 +25,12 @@
     color: var(--vn-text-dim);
 }
 
-.vn-effects-tab { display: flex; flex-direction: column; gap: 12px; }
+/* The tab fills the window: the two effect lists take the free height and scroll inside */
+.vn-tab-panel[data-tab="effects"].active { display: flex; flex-direction: column; }
+
+.vn-effects-tab { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 0; container-type: inline-size; }
+
+.vn-effects-combos { margin-bottom: 0; flex: 0 0 auto; }
 
 .vn-effects-presets-row {
     display: flex;
@@ -34,10 +40,6 @@
     background: rgba(0,0,0,0.15);
     border-radius: var(--vn-radius);
     border: 1px solid var(--vn-border);
-    max-height: 108px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--vn-accent-dim) transparent;
 }
 
 .vn-effects-preset-item {
@@ -94,24 +96,35 @@
 .vn-particles-layer-opt:hover { color: var(--vn-text); background: rgba(255,255,255,0.07); }
 .vn-particles-layer-opt.active { color: var(--vn-accent); border-color: var(--vn-accent-dim); background: rgba(136,192,208,0.1); }
 
+/* A grid (not a wrapping flex row): wrapped flex lines size to their content, so the columns grew past the tab,
+   the whole tab scrolled and the controls above the lists scrolled away. Here the row is exactly the free height
+   and each list scrolls on its own. */
 .vn-effects-grids {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
     gap: 12px;
+    flex: 1 1 auto;
+    min-height: 260px;
+}
+@container (max-width: 680px) {
+    .vn-effects-grids { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-rows: minmax(260px, 420px); }
 }
 
 .vn-effects-grid-col {
-    flex: 1 1 350px;
-    min-width: 310px;
+    min-width: 0;
     background: rgba(0,0,0,0.15);
     border-radius: var(--vn-radius);
     border: 1px solid var(--vn-border);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .vn-effects-grid-title {
     padding: 8px 12px 7px;
-    font-size: 0.7em;
+    font-size: max(11px, 0.7em);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -127,7 +140,9 @@
     grid-template-columns: 1fr 1fr;
     gap: 2px;
     padding: 4px;
-    max-height: 360px;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-content: start;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.12) transparent;
@@ -135,3 +150,43 @@
 .vn-effects-inline-grid::-webkit-scrollbar { width: 4px; }
 .vn-effects-inline-grid::-webkit-scrollbar-track { background: transparent; }
 .vn-effects-inline-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+/* Search over both lists */
+.vn-effects-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    flex: 0 1 220px;
+    min-width: 150px;
+}
+.vn-effects-search > .fas {
+    position: absolute;
+    left: 8px;
+    font-size: max(11px, 0.75em);
+    color: var(--vn-text-dim);
+    pointer-events: none;
+}
+.vn-effects-search-input {
+    width: 100%;
+    padding: 4px 8px 4px 26px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 0.8em;
+}
+.vn-effects-search-input:focus { border-color: var(--vn-accent); outline: none; }
+
+/* What is selected on this axis, kept in the column title (which never scrolls away) */
+.vn-effects-current {
+    margin-left: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    color: var(--vn-accent);
+}

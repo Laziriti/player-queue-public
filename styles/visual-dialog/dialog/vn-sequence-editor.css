@@ -1,0 +1,260 @@
+/* ============================================================
+   vn-sequence-editor.css — composite presets in the Presets tab:
+   list badges and the step editor in the detail panel
+   ============================================================ */
+
+/* ── Badges in the preset list / cards ── */
+
+.vn-preset-seq-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: max(11px, 0.65em);
+    font-weight: 700;
+    color: var(--vn-gold);
+    background: var(--vn-gold-dim);
+    border: 1px solid rgba(235, 203, 139, 0.3);
+    border-radius: 3px;
+    padding: 0 5px;
+    flex-shrink: 0;
+}
+
+.vn-preset-card-seq {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: max(11px, 0.58em);
+    font-weight: 700;
+    color: var(--vn-gold);
+    background: rgba(0, 0, 0, 0.65);
+    padding: 1px 5px;
+    border-radius: 10px;
+    line-height: 1.6;
+    pointer-events: none;
+}
+.vn-preset-card-seq ~ .vn-preset-card-ver { top: 22px; }
+
+.vn-preset-new-seq-btn { white-space: nowrap; }
+
+/* A composite preset stands out from single scenes: a gold edge on list rows, a "stack of slides" look on cards */
+
+.vn-preset-item--seq {
+    border-left: 3px solid var(--vn-gold);
+    background: linear-gradient(90deg, rgba(235, 203, 139, 0.09), rgba(0, 0, 0, 0.15) 60%);
+}
+.vn-preset-item--seq:hover {
+    background: linear-gradient(90deg, rgba(235, 203, 139, 0.15), rgba(0, 0, 0, 0.25) 60%);
+}
+
+.vn-preset-card--seq .vn-preset-card-poster {
+    border-color: rgba(235, 203, 139, 0.5);
+    box-shadow:
+        3px 3px 0 0 rgba(24, 24, 34, 1),
+        3px 3px 0 1px rgba(235, 203, 139, 0.4),
+        6px 6px 0 0 rgba(24, 24, 34, 1),
+        6px 6px 0 1px rgba(235, 203, 139, 0.22);
+}
+
+/* Step chooser shown when a composite preset is launched */
+
+.vn-seq-start-hint { margin: 0 0 8px; font-size: 0.85em; color: var(--vn-text-dim); }
+.vn-seq-start {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: min(62vh, 560px);
+    overflow-y: auto;
+    padding: 6px;
+    background: rgba(8, 8, 16, 0.6);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* ── Step editor ── */
+
+.vn-seqed-add { display: flex; gap: 6px; flex-wrap: wrap; }
+.vn-seqed-add .vn-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.vn-seqed-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.vn-seqed-step {
+    position: relative;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    transition: border-color var(--vn-transition), background var(--vn-transition), opacity var(--vn-transition);
+}
+.vn-seqed-step:hover { border-color: var(--vn-border-hover); }
+.vn-seqed-step.--loaded { border-color: var(--vn-accent); box-shadow: 0 0 0 1px var(--vn-accent-dim); }
+.vn-seqed-step.--dragging { opacity: 0.4; }
+
+.vn-seqed-step.--drop-before::before,
+.vn-seqed-step.--drop-after::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--vn-accent);
+    box-shadow: 0 0 6px var(--vn-accent-glow);
+    pointer-events: none;
+}
+.vn-seqed-step.--drop-before::before { top: -5px; }
+.vn-seqed-step.--drop-after::after { bottom: -5px; }
+
+/* One row per step: number, thumbnail, title, and the actions as a 3x2 block on the right
+   (they used to sit in a second row, which made a step 100 px tall and showed only ~1.5 steps) */
+.vn-seqed-step-main {
+    display: grid;
+    grid-template-columns: 20px 84px minmax(0, 1fr) auto;
+    grid-template-areas: "n thumb info actions";
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    cursor: grab;
+}
+
+.vn-seqed-step-n {
+    grid-area: n;
+    text-align: center;
+    font-size: 0.85em;
+    font-weight: 700;
+    color: var(--vn-accent);
+}
+
+.vn-seqed-thumb {
+    grid-area: thumb;
+    position: relative;
+    width: 84px;
+    aspect-ratio: 8 / 5;
+    border-radius: var(--vn-radius-sm);
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--vn-border);
+}
+.vn-seqed-thumb > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vn-seqed-thumb-empty {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--vn-text-dim);
+    opacity: 0.5;
+}
+
+.vn-seqed-step-info {
+    grid-area: info;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vn-seqed-step-title {
+    font-size: 0.82em;
+    line-height: 1.3;
+    color: var(--vn-text);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.vn-seqed-step-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    font-size: max(11px, 0.7em);
+    color: var(--vn-text-dim);
+}
+.vn-seqed-step-meta i { color: var(--vn-accent); opacity: 0.7; margin-right: 2px; }
+
+.vn-seqed-step-actions {
+    grid-area: actions;
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 4px;
+    cursor: default;
+}
+
+.vn-seqed-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    border-top: 1px dashed var(--vn-border);
+}
+.vn-seqed-settings[hidden] { display: none; }
+
+.vn-seqed-field { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.vn-seqed-field > span {
+    font-size: max(11px, 0.62em);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--vn-text-dim);
+    opacity: 0.8;
+}
+.vn-seqed-field-row { display: flex; gap: 8px; }
+
+.vn-seqed-field textarea,
+.vn-seqed-field input,
+.vn-seqed-field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 0.82em;
+    font-family: inherit;
+}
+.vn-seqed-field textarea { resize: vertical; min-height: 44px; }
+.vn-seqed-field select option { background: var(--vn-bg-option); }
+.vn-seqed-field textarea:focus,
+.vn-seqed-field input:focus,
+.vn-seqed-field select:focus { border-color: var(--vn-accent); outline: none; }
+
+.vn-seqed-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 0.78em;
+    color: var(--vn-text);
+    cursor: pointer;
+}
+.vn-seqed-check input { margin: 0; }
+.vn-seqed-check--row { align-self: flex-end; flex: 0 0 auto; padding-bottom: 6px; white-space: nowrap; }
+
+/* Composite preset actions: a compact wrapping row instead of a two-column grid of full-width buttons */
+.vn-panel-actions--compact { display: flex; flex-wrap: wrap; gap: 4px; }
+.vn-panel-actions--compact .vn-panel-action { padding: 4px 9px; }
+.vn-panel-actions--compact .vn-panel-action--delete { margin-left: auto; }
+
+.vn-seqed-hint { margin: 0; font-size: max(11px, 0.68em); line-height: 1.4; color: var(--vn-text-dim); }
+.vn-seqed-hint i { color: var(--vn-accent); opacity: 0.7; margin-right: 3px; }
+
+.vn-seqed-drop-hint {
+    padding: 10px;
+    border: 1px dashed var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    text-align: center;
+    font-size: max(11px, 0.72em);
+    color: var(--vn-text-dim);
+    transition: border-color var(--vn-transition), color var(--vn-transition);
+}
+.vn-seqed-steps.--drop-empty .vn-seqed-drop-hint { border-color: var(--vn-accent); color: var(--vn-accent); }

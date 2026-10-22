@@ -4,6 +4,15 @@
 
 export const FALLBACK_AVATAR = 'icons/svg/mystery-man.svg';
 
+/** Drops leading emoji from a label: effect names carry one, and the pickers already show a Font Awesome icon next to them. */
+export function stripEmoji(text) {
+    return String(text ?? '').replace(/^(?:\p{Extended_Pictographic}|️|‍|\s)+/u, '');
+}
+
+export function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
 export function stripDupSuffix(id) {
     const h = id.indexOf('#');
     return h === -1 ? id : id.slice(0, h);
