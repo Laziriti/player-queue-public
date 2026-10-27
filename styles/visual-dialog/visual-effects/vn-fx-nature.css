@@ -289,8 +289,248 @@
 
 
 /* ══════════════════════════════════════════════════════════
+   FROST (Мороз)
+   Иней, наползающий с краёв кадра за ~14 секунд, ледяной туман у пола и редкие искры.
+   В отличие от «Холода» (только оттенок и лёгкая кайма) это текстура инея.
+   ══════════════════════════════════════════════════════════ */
+
+@property --vn-frost {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 112%;
+}
+
+.vn-vfx-frost .vn-bg-layer {
+    filter: saturate(0.6) sepia(0.3) hue-rotate(165deg) brightness(0.98) contrast(1.06);
+}
+
+.vn-vfx-frost .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(190, 225, 255, 0.10) 0%,
+        rgba(120, 175, 235, 0.16) 55%,
+        rgba(60, 110, 190, 0.22) 100%
+    );
+}
+
+/* Текстура инея, проявляющаяся от краёв к центру: маска растёт анимацией зарегистрированного свойства --vn-frost */
+.vn-vfx-frost .vn-fx-edges {
+    opacity: 1;
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520'%3E%3Cfilter id='f' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.03 0.075' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.86  0 0 0 0 0.95  0 0 0 0 1  6 0 0 0 -1.9'/%3E%3C/filter%3E%3Crect width='520' height='520' filter='url(%23f)'/%3E%3C/svg%3E") 0 0 / 520px 520px,
+        radial-gradient(ellipse at center, transparent 40%, rgba(215, 240, 255, 0.45) 100%);
+    -webkit-mask-image: radial-gradient(ellipse at center, transparent calc(var(--vn-frost) - 34%), #000 var(--vn-frost));
+    mask-image: radial-gradient(ellipse at center, transparent calc(var(--vn-frost) - 34%), #000 var(--vn-frost));
+    animation: vnFrostGrow 14s ease-out forwards;
+}
+
+@keyframes vnFrostGrow {
+    from { --vn-frost: 112%; }
+    to   { --vn-frost: 82%; }
+}
+
+/* Искры на льду: два набора точек с разной фазой */
+.vn-vfx-frost .vn-fx-rays {
+    opacity: 0;
+    background:
+        radial-gradient(circle at 16% 24%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 44% 12%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 78% 30%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 90% 72%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 8% 78%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px);
+    animation: vnFrostTwinkle 4.2s ease-in-out infinite;
+}
+
+.vn-vfx-frost .vn-fx-flash {
+    opacity: 0;
+    background:
+        radial-gradient(circle at 30% 14%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 62% 20%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 86% 50%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 20% 60%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px),
+        radial-gradient(circle at 54% 84%, #fff 0 1.5px, rgba(190, 235, 255, 0.5) 2px, transparent 7px);
+    animation: vnFrostTwinkle 4.2s ease-in-out infinite -2.1s;
+}
+
+@keyframes vnFrostTwinkle {
+    0%, 100% { opacity: 0; }
+    10%      { opacity: 1; }
+    20%      { opacity: 0; }
+    60%      { opacity: 0; }
+    68%      { opacity: 0.9; }
+    76%      { opacity: 0; }
+}
+
+.vn-vfx-frost .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 42%,
+        rgba(30, 60, 110, 0.35) 75%,
+        rgba(10, 20, 50, 0.62) 100%
+    );
+}
+
+.vn-vfx-frost .vn-ground-fog {
+    background: linear-gradient(
+        to top,
+        rgba(205, 232, 255, 0.55) 0%,
+        rgba(170, 210, 245, 0.25) 14%,
+        transparent 40%
+    );
+}
+
+.vn-vfx-frost .vn-character.active .vn-character-img {
+    filter: saturate(0.75) brightness(1.02) contrast(1.05)
+        drop-shadow(0 0 22px rgba(150, 220, 255, 0.5))
+        drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6)) !important;
+}
+
+.vn-vfx-frost .vn-character-glow {
+    background: radial-gradient(ellipse at center, rgba(170, 225, 255, 0.45) 0%, transparent 68%) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   EARTHQUAKE (Землетрясение)
+   Серии толчков (.vn-quake-active ставит JS): трясётся фон и персонажи, сыплются пыль и обломки.
+   Между толчками — тусклый пыльный кадр.
+   Трясём через translate: параллакс владеет transform фона, а translate с ним не конфликтует.
+   --qa — сила толчка, ослабляется на излёте (.vn-quake-soft).
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-earthquake { --qa: 1; }
+.vn-vfx-earthquake.vn-quake-soft { --qa: 0.4; }
+
+.vn-vfx-earthquake .vn-bg-layer {
+    filter: saturate(0.85) sepia(0.25) brightness(0.84) contrast(1.1);
+}
+
+.vn-vfx-earthquake .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+        ellipse at 50% 100%,
+        rgba(150, 115, 70, 0.18) 0%,
+        rgba(90, 65, 40, 0.28) 100%
+    );
+}
+
+/* Пыль сверху, тёмные стены и пол */
+.vn-vfx-earthquake .vn-fx-edges {
+    opacity: 1;
+    background:
+        linear-gradient(to bottom, rgba(125, 105, 78, 0.5) 0%, transparent 26%),
+        linear-gradient(to top,    rgba(35, 25, 15, 0.55) 0%, transparent 22%),
+        linear-gradient(to right,  rgba(20, 14, 8, 0.4) 0%, transparent 14%),
+        linear-gradient(to left,   rgba(20, 14, 8, 0.4) 0%, transparent 14%);
+}
+
+/* Пыль, сыплющаяся с потолка во время толчка: мутная завеса сверху (сами обломки — .vn-quake-debris) */
+.vn-vfx-earthquake .vn-fx-rays {
+    mix-blend-mode: normal;
+    background: linear-gradient(to bottom, rgba(170, 145, 110, 0.4) 0%, rgba(150, 125, 95, 0.12) 35%, transparent 60%);
+    transition: opacity 0.6s ease;
+}
+
+.vn-vfx-earthquake.vn-quake-active .vn-fx-rays {
+    opacity: 1;
+}
+
+/* Пыль в воздухе: проявляется с толчком и медленно оседает после него (без стробоскопа) */
+.vn-vfx-earthquake .vn-fx-flash {
+    background: rgba(185, 155, 115, 0.12);
+    transition: opacity 2.5s ease;
+}
+
+.vn-vfx-earthquake.vn-quake-active .vn-fx-flash {
+    opacity: 1;
+    transition-duration: 0.4s;
+}
+
+/* Обломки и крошка (VisualFXSystem._spawnQuakeDebris): падают с ускорением через WAAPI.
+   Ниже персонажей (z-index 2, как у трещин и слоёв эффекта), чтобы не закрывать лица */
+.vn-quake-debris {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(circle at 35% 30%, rgb(176, 156, 128) 0%, rgb(118, 100, 78) 55%, rgb(70, 58, 44) 100%);
+    box-shadow: inset -1px -1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.vn-quake-debris.vn-quake-dust {
+    border-radius: 50%;
+    background: rgba(190, 168, 135, 0.85);
+    box-shadow: none;
+    filter: blur(0.5px);
+}
+
+.vn-vfx-earthquake .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 40%,
+        rgba(35, 25, 12, 0.4) 78%,
+        rgba(15, 10, 4, 0.7) 100%
+    );
+}
+
+.vn-vfx-earthquake .vn-ground-fog {
+    background: linear-gradient(
+        to top,
+        rgba(165, 140, 105, 0.5) 0%,
+        rgba(140, 115, 85, 0.22) 16%,
+        transparent 44%
+    );
+}
+
+/* Толчок — резкий рывок и затухающее раскачивание, а не ровная вибрация. За серию (3–5.5 с) цикл
+   повторяется 2–4 раза: читается как несколько ударов подряд. Персонажи — с небольшим отставанием (инерция) */
+.vn-vfx-earthquake.vn-quake-active .vn-bg-layer {
+    animation: vnQuakeBg 1.25s linear infinite;
+}
+
+.vn-vfx-earthquake.vn-quake-active .vn-side {
+    animation: vnQuakeSide 1.25s linear 0.06s infinite;
+}
+
+@keyframes vnQuakeBg {
+    0%, 100% { translate: 0 0; }
+    3%       { translate: calc(13px * var(--qa)) calc(-6px * var(--qa)); }
+    7%       { translate: calc(-11px * var(--qa)) calc(7px * var(--qa)); }
+    12%      { translate: calc(9px * var(--qa)) calc(-4px * var(--qa)); }
+    18%      { translate: calc(-7px * var(--qa)) calc(4px * var(--qa)); }
+    25%      { translate: calc(5px * var(--qa)) calc(-2px * var(--qa)); }
+    34%      { translate: calc(-4px * var(--qa)) calc(2px * var(--qa)); }
+    45%      { translate: calc(3px * var(--qa)) calc(-1px * var(--qa)); }
+    58%      { translate: calc(-2px * var(--qa)) calc(1px * var(--qa)); }
+    74%      { translate: calc(1px * var(--qa)) 0; }
+}
+
+@keyframes vnQuakeSide {
+    0%, 100% { translate: 0 0; }
+    4%       { translate: calc(-9px * var(--qa)) calc(4px * var(--qa)); }
+    9%       { translate: calc(8px * var(--qa)) calc(-5px * var(--qa)); }
+    15%      { translate: calc(-6px * var(--qa)) calc(3px * var(--qa)); }
+    22%      { translate: calc(5px * var(--qa)) calc(-2px * var(--qa)); }
+    31%      { translate: calc(-3px * var(--qa)) calc(1px * var(--qa)); }
+    43%      { translate: calc(2px * var(--qa)) calc(-1px * var(--qa)); }
+    58%      { translate: calc(-1px * var(--qa)) 0; }
+}
+
+.vn-vfx-earthquake .vn-character.active .vn-character-img {
+    filter: brightness(0.88) sepia(0.2) saturate(0.85) contrast(1.05)
+        drop-shadow(0 0 20px rgba(150, 115, 70, 0.3))
+        drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6)) !important;
+}
+
+.vn-vfx-earthquake .vn-character-glow {
+    background: radial-gradient(ellipse at center, rgba(160, 125, 85, 0.35) 0%, transparent 68%) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
    FILM GRAIN overrides — природная группа
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-storm        .vn-fx-grain { opacity: 0.11; }
 .vn-vfx-moonlight    .vn-fx-grain { opacity: 0.10; }
+.vn-vfx-earthquake   .vn-fx-grain { opacity: 0.10; }

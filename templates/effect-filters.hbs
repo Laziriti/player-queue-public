@@ -1,0 +1,64 @@
+<section class="pq-fx-win">
+    <p class="pq-fx-hint">{{localize "fxFilters.hint"}}</p>
+
+    <label class="pq-fx-master pq-fx-master-all">
+        <input type="checkbox" data-master="all">
+        <strong>{{localize "fxFilters.disableAll"}}</strong>
+    </label>
+
+    <nav class="pq-fx-tabs">
+        {{#each kinds}}
+            <button type="button" data-action="showPanel" data-kind="{{id}}" class="pq-fx-tab{{#if active}} active{{/if}}">
+                <i class="fas {{icon}}" aria-hidden="true"></i>
+                <span>{{label}}</span>
+                <small data-count="{{id}}"></small>
+            </button>
+        {{/each}}
+    </nav>
+
+    <div class="pq-fx-panels">
+        {{#each kinds}}
+            <div class="pq-fx-panel" data-panel="{{id}}"{{#unless active}} hidden{{/unless}}>
+                <label class="pq-fx-master">
+                    <input type="checkbox" data-master="{{id}}">
+                    <span>{{localize "fxFilters.disableSection"}}</span>
+                </label>
+
+                {{#if isParticle}}
+                    <div class="pq-fx-cap">
+                        <div class="pq-fx-cap-row">
+                            <label for="pq-fx-particle-max">{{localize "fxFilters.particleMax"}}</label>
+                            <input id="pq-fx-particle-max" type="range" name="particleIntensityMax" min="1" max="20" step="1" value="{{particleIntensityMax}}">
+                            <output data-cap-output></output>
+                        </div>
+                        <p class="pq-fx-cap-hint">{{localize "fxFilters.particleMaxHint"}}</p>
+                    </div>
+                {{/if}}
+
+                {{#each groups}}
+                    <fieldset class="pq-fx-group" data-tier="{{tier}}">
+                        <label class="pq-fx-group-head">
+                            <input type="checkbox" data-group>
+                            <span class="pq-fx-tier">{{title}}</span>
+                            <small>{{hint}}</small>
+                        </label>
+                        <div class="pq-fx-items">
+                            {{#each items}}
+                                <label class="pq-fx-item">
+                                    <input type="checkbox" name="off" value="{{key}}"{{#if off}} checked{{/if}}>
+                                    <i class="fas {{icon}}" aria-hidden="true"></i>
+                                    <span>{{label}}</span>
+                                </label>
+                            {{/each}}
+                        </div>
+                    </fieldset>
+                {{/each}}
+            </div>
+        {{/each}}
+    </div>
+
+    <footer class="pq-fx-footer">
+        <button type="button" data-action="close"><i class="fas fa-times"></i> {{localize "fxFilters.cancel"}}</button>
+        <button type="submit"><i class="fas fa-save"></i> {{localize "fxFilters.save"}}</button>
+    </footer>
+</section>

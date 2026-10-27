@@ -2378,7 +2378,9 @@ body.vn-dragging .vn-token-option { transition: none; }
     inset: auto;
     margin: 0;
     padding: 4px;
-    min-width: 150px;
+    min-width: 300px;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
     border: 1px solid var(--vn-border-hover);
     border-radius: var(--vn-radius-sm);
     background: var(--vn-bg-option);
@@ -2387,9 +2389,33 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 
 .vn-fx-menu:popover-open {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2px;
+}
+
+/* Заголовок группы на всю ширину; липкий, чтобы при прокрутке было видно, из какой группы выбираешь */
+.vn-fx-menu-group {
+    grid-column: 1 / -1;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 -4px;
+    padding: 5px 12px 4px;
+    background: var(--vn-bg-option);
+    border-bottom: 1px solid var(--vn-border-hover);
+    color: var(--vn-text-dim);
+    font-size: 0.7em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.vn-fx-menu-group[data-group="svg"] {
+    margin-top: 4px;
+    color: var(--vn-accent);
 }
 
 .vn-fx-menu-item {
@@ -2426,6 +2452,16 @@ body.vn-dragging .vn-token-option { transition: none; }
     color: var(--vn-accent);
 }
 
+/* Тип с подвариантами (CHAR_FX_VARIANTS): стрелка и бейдж — те же, что у тайлов атмосферы; список вариантов —
+   на всю ширину меню под пунктом (.vn-variant-list / .vn-variant-option — общие стили подтем) */
+.vn-fx-menu-expandable .vn-atmo-item-caret { margin-left: auto; }
+.vn-fx-menu-expandable.vn-variant-open .vn-atmo-item-caret { transform: rotate(180deg); }
+.vn-fx-menu-expandable .vn-atmo-item-variant-tag:empty { display: none; }
+
+.vn-fx-menu-variants {
+    grid-column: 1 / -1;
+}
+
 /* Rough preview of the effect on the card portrait */
 .vn-token-option[data-char-fx="hologram"] .vn-token-preview img {
     filter: sepia(1) hue-rotate(155deg) saturate(2.6) brightness(1.1);
@@ -2439,6 +2475,58 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 .vn-token-option[data-char-fx="glitch"] .vn-token-preview img {
     filter: drop-shadow(2px 0 0 rgba(255, 0, 70, 0.8)) drop-shadow(-2px 0 0 rgba(0, 240, 255, 0.8));
+}
+.vn-token-option[data-char-fx="fire"] .vn-token-preview img {
+    filter: sepia(0.5) saturate(1.8) hue-rotate(-14deg) brightness(1.1) drop-shadow(0 0 4px rgba(255, 120, 20, 0.9));
+}
+.vn-token-option[data-char-fx="ice"] .vn-token-preview img {
+    filter: grayscale(0.3) sepia(0.35) hue-rotate(165deg) saturate(1.5) brightness(1.12) drop-shadow(0 0 4px rgba(150, 220, 255, 0.9));
+}
+.vn-token-option[data-char-fx="gold"] .vn-token-preview img {
+    filter: sepia(1) saturate(2.6) hue-rotate(-8deg) brightness(1.05) contrast(1.25);
+}
+.vn-token-option[data-char-fx="stone"] .vn-token-preview img {
+    filter: grayscale(1) contrast(1.4) brightness(0.82);
+}
+.vn-token-option[data-char-fx="xray"] .vn-token-preview img {
+    filter: invert(1) grayscale(1) contrast(1.35) sepia(1) hue-rotate(165deg);
+}
+.vn-token-option[data-char-fx="memory"] .vn-token-preview img {
+    filter: sepia(0.9) saturate(0.85) contrast(0.9) brightness(1.1);
+}
+.vn-token-option[data-char-fx="dream"] .vn-token-preview img {
+    filter: sepia(0.5) hue-rotate(170deg) saturate(1.1) brightness(1.12);
+}
+.vn-token-option[data-char-fx="noir"] .vn-token-preview img {
+    filter: grayscale(1) contrast(1.65) brightness(0.9);
+}
+.vn-token-option[data-char-fx="neon"] .vn-token-preview img {
+    filter: brightness(0.18) drop-shadow(0 0 3px #ff4fd8) drop-shadow(0 0 6px #3cc8ff);
+}
+.vn-token-option[data-char-fx="invisible"] .vn-token-preview img {
+    filter: brightness(0.7) drop-shadow(0 0 3px rgba(210, 235, 255, 0.95));
+    opacity: 0.35;
+}
+.vn-token-option[data-char-fx="rage"] .vn-token-preview img {
+    filter: saturate(1.6) contrast(1.2) drop-shadow(0 0 5px rgba(255, 25, 25, 0.9));
+}
+.vn-token-option[data-char-fx="possessed"] .vn-token-preview img {
+    filter: brightness(0.55) contrast(1.35) saturate(0.55) drop-shadow(0 0 4px rgba(200, 10, 20, 0.9));
+}
+.vn-token-option[data-char-fx="drunk"] .vn-token-preview img {
+    filter: saturate(1.15) sepia(0.15) blur(0.6px);
+}
+.vn-token-option:is([data-char-fx="holy"], [data-char-fx="holy_radiant"]) .vn-token-preview img {
+    filter: brightness(1.12) drop-shadow(0 0 5px rgba(255, 214, 90, 0.95));
+}
+.vn-token-option[data-char-fx="cracked"] .vn-token-preview img {
+    filter: grayscale(1) contrast(1.4) brightness(0.82) drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+}
+.vn-token-option[data-char-fx="glass"] .vn-token-preview img {
+    filter: saturate(0.85) brightness(1.15) contrast(1.05) drop-shadow(0 0 4px rgba(200, 235, 255, 0.95));
+}
+.vn-token-option[data-char-fx="vhs"] .vn-token-preview img {
+    filter: saturate(1.3) contrast(1.15) drop-shadow(2px 0 0 rgba(255, 0, 70, 0.7)) drop-shadow(-2px 0 0 rgba(0, 240, 255, 0.7));
 }
 .vn-token-option[data-char-fx][data-visibility="hidden"] .vn-token-preview img {
     filter: brightness(0.2);

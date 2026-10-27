@@ -5,10 +5,12 @@
 import { VNSceneState, VNPresets, resolveParticlesLayer } from '../vn-state.js';
 import { VNAtmosphere } from '../visual-effects/atmosphere/index.js';
 import { stripDupSuffix, parseActorId, toActorTokenId, FALLBACK_AVATAR, escapeHtml } from '../vn-id-utils.js';
-import { CHAR_FX, CHAR_FX_ICONS, VNCharFx } from '../visual-effects/character-fx/vn-character-fx.js';
+import { CHAR_FX, CHAR_FX_GROUPS, CHAR_FX_ICONS, CHAR_FX_VARIANTS, charFxBase, VNCharFx } from '../visual-effects/character-fx/vn-character-fx.js';
 
 const VIS_ICON  = { visible: 'fa-eye', hidden: 'fa-eye-slash', 'name-hidden': 'fa-user-secret' };
 const VIS_TITLE = { visible: 'vn.dialog.vis.visible', hidden: 'vn.dialog.vis.hidden', 'name-hidden': 'vn.dialog.vis.nameHidden' };
+
+const CHAR_FX_GROUP_ICONS = { css: 'fa-palette', svg: 'fa-wave-square' };
 
 function charFxButton() {
     return `<button type="button" class="vn-token-fx-btn" title="${game.i18n.format('vn.dialog.charFxTitle', { name: game.i18n.localize('vn.charFx.none') })}" draggable="false"><i class="fas ${CHAR_FX_ICONS.none}"></i></button>`;
@@ -304,9 +306,29 @@ export class VNDialogBuilder {
         const menu = document.createElement('div');
         menu.className = 'vn-fx-menu';
         menu.popover = 'auto';
-        menu.innerHTML = CHAR_FX.map(id => `<button type="button" class="vn-fx-menu-item" data-fx="${id}">
-            <i class="fas ${CHAR_FX_ICONS[id]}"></i><span>${game.i18n.localize(`vn.charFx.${id}`)}</span></button>`).join('');
+        // Группы с липкими заголовками: видно, что выбираешь — лёгкие CSS-эффекты или тяжёлые SVG-фильтры.
+        // Тип с подвариантами (CHAR_FX_VARIANTS) — пункт со стрелкой: клик раскрывает под ним список вариантов
+        // на всю ширину меню (как у подтем частиц), выбор — по варианту
+        const item = id => {
+            const variants = CHAR_FX_VARIANTS[id];
+            const btn = `<button type="button" class="vn-fx-menu-item${variants ? ' vn-fx-menu-expandable' : ''}" data-fx="${id}">
+            <i class="fas ${CHAR_FX_ICONS[id]}"></i><span>${game.i18n.localize(`vn.charFx.${id}`)}</span>`
+                + (variants ? '<small class="vn-atmo-item-variant-tag"></small><i class="fas fa-chevron-down vn-atmo-item-caret"></i>' : '')
+                + '</button>';
+            if (!variants) return btn;
+            return btn + `<div class="vn-variant-list vn-fx-menu-variants" data-variant-base="${id}" hidden>`
+                + variants.map(v => `<button type="button" class="vn-variant-option" data-fx="${v.id}"><i class="fas fa-check"></i><span>${game.i18n.localize(v.label)}</span></button>`).join('')
+                + '</div>';
+        };
+        menu.innerHTML = CHAR_FX_GROUPS.map(group => `<div class="vn-fx-menu-group" data-group="${group.id}">
+            <i class="fas ${CHAR_FX_GROUP_ICONS[group.id]}"></i><span>${game.i18n.localize(`vn.charFx.groups.${group.id}`)}</span></div>`
+            + group.fx.map(item).join('')).join('');
         host.append(menu);
+
+        const setVariantsOpen = (list, open) => {
+            list.hidden = !open;
+            list.previousElementSibling?.classList.toggle('vn-variant-open', open);
+        };
 
         let target = null;
         root.addEventListener('click', (e) => {
@@ -318,7 +340,17 @@ export class VNDialogBuilder {
             if (!tokenOpt || !tokenOpt.closest('.vn-token-selector')) return;
             target = tokenOpt;
             const current = tokenOpt.dataset.charFx ?? 'none';
-            menu.querySelectorAll('.vn-fx-menu-item').forEach(item => item.classList.toggle('current', item.dataset.fx === current));
+            const currentBase = charFxBase(current);
+            menu.querySelectorAll('.vn-fx-menu-item').forEach(item => item.classList.toggle('current', item.dataset.fx === currentBase));
+            // Списки вариантов свёрнуты; у типа выбранного варианта — подсвечен вариант и бейдж на пункте (кроме базового)
+            menu.querySelectorAll('.vn-fx-menu-variants').forEach(list => {
+                setVariantsOpen(list, false);
+                const own = list.dataset.variantBase === currentBase;
+                list.querySelectorAll('.vn-variant-option').forEach(o => o.classList.toggle('active', own && o.dataset.fx === current));
+                const tag = list.previousElementSibling?.querySelector('.vn-atmo-item-variant-tag');
+                const v = own && current !== currentBase ? CHAR_FX_VARIANTS[currentBase].find(x => x.id === current) : null;
+                if (tag) tag.textContent = v ? game.i18n.localize(v.label) : '';
+            });
 
             const r = btn.getBoundingClientRect();
             menu.showPopover();
@@ -330,7 +362,15 @@ export class VNDialogBuilder {
         });
 
         menu.addEventListener('click', (e) => {
-            const item = e.target.closest('.vn-fx-menu-item');
+            const expandable = e.target.closest('.vn-fx-menu-expandable');
+            if (expandable) {
+                const list = expandable.nextElementSibling;
+                const open = list.hidden;
+                menu.querySelectorAll('.vn-fx-menu-variants').forEach(l => setVariantsOpen(l, false));
+                setVariantsOpen(list, open);
+                return;
+            }
+            const item = e.target.closest('.vn-fx-menu-item, .vn-fx-menu-variants .vn-variant-option');
             if (!item || !target) return;
             this._applyCharFxIcon(target, item.dataset.fx);
             target = null;

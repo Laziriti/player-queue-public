@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════
    VN-FX-SPECIAL — Особые и уникальные эффекты атмосферы
-   Группа: carnival, ghosts
+   Группа: carnival, ghosts, hologram, kaleidoscope
    ══════════════════════════════════════════════════════════ */
 
 
@@ -242,6 +242,249 @@
 @keyframes vnGhostsCharGlow {
     0%   { opacity: 0.50; }
     100% { opacity: 0.85; }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HOLOGRAM (Голограмма)
+   Вся сцена — проекция: циановый дуотон фона, строчная развёртка
+   с бегущим лучом, сетка-пол, конус света проектора, редкие сбои
+   (JS добавляет .vn-glitch-active — см. visual-fx.js).
+   Не анимируем filter у .vn-bg-layer: его читают переходы фонов (--vn-bg-rest),
+   мерцание сделано отдельным слоем .vn-fx-flash.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-hologram .vn-bg-layer {
+    filter: grayscale(0.55) sepia(0.85) hue-rotate(150deg) saturate(2.2) brightness(0.6) contrast(1.2);
+}
+
+.vn-vfx-hologram .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(
+        ellipse at 50% 100%,
+        rgba(60, 220, 255, 0.30) 0%,
+        rgba(20, 110, 170, 0.22) 45%,
+        rgba(5,   30,  70, 0.38) 100%
+    );
+    animation: vnHoloTint 6s ease-in-out infinite alternate;
+}
+
+@keyframes vnHoloTint {
+    0%   { opacity: 0.80; }
+    100% { opacity: 1.00; }
+}
+
+/* Конус света от проектора снизу */
+.vn-vfx-hologram .vn-fx-rays {
+    opacity: 0.55;
+    background:
+        conic-gradient(from -32deg at 50% 105%, transparent 0deg, rgba(90, 235, 255, 0.26) 32deg, transparent 64deg),
+        radial-gradient(ellipse at 50% 100%, rgba(90, 235, 255, 0.35) 0%, transparent 38%);
+    mask-image: linear-gradient(to top, #000 0%, transparent 90%);
+    filter: blur(8px);
+    animation: vnHoloProjector 5s ease-in-out infinite;
+}
+
+@keyframes vnHoloProjector {
+    0%, 100% { opacity: 0.42; }
+    50%      { opacity: 0.66; }
+}
+
+/* Циановая кайма по бокам + сетка-пол, уходящая в перспективу */
+.vn-vfx-hologram .vn-fx-edges {
+    opacity: 1;
+    overflow: hidden;
+    background:
+        linear-gradient(to right,  rgba(40, 200, 255, 0.22) 0%, transparent 10%),
+        linear-gradient(to left,   rgba(40, 200, 255, 0.22) 0%, transparent 10%),
+        linear-gradient(to bottom, rgba(5, 20, 50, 0.50) 0%, transparent 22%);
+}
+
+.vn-vfx-hologram .vn-fx-edges::before {
+    content: '';
+    position: absolute;
+    left: -30%;
+    right: -30%;
+    bottom: 0;
+    height: 42%;
+    background:
+        repeating-linear-gradient(to right,  rgba(110, 240, 255, 0.5) 0 1px, transparent 1px 64px),
+        repeating-linear-gradient(to bottom, rgba(110, 240, 255, 0.5) 0 1px, transparent 1px 48px);
+    mask-image: linear-gradient(to top, #000 0%, transparent 100%);
+    transform-origin: 50% 100%;
+    transform: perspective(420px) rotateX(58deg);
+    animation: vnHoloGrid 2.4s linear infinite;
+}
+
+@keyframes vnHoloGrid {
+    from { background-position: 0 0, 0 0; }
+    to   { background-position: 0 0, 0 48px; }
+}
+
+/* Строчная развёртка + бегущий по экрану яркий луч */
+.vn-vfx-hologram .vn-fx-scan {
+    opacity: 0.6;
+    overflow: hidden;
+    background: repeating-linear-gradient(to bottom, rgba(0, 18, 34, 0.55) 0 1px, transparent 1px 3px);
+}
+
+.vn-vfx-hologram .vn-fx-scan::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 22%;
+    background: linear-gradient(to bottom, transparent 0%, rgba(150, 250, 255, 0.35) 50%, transparent 100%);
+    animation: vnHoloRoll 5s linear infinite;
+}
+
+@keyframes vnHoloRoll {
+    from { transform: translateY(-100%); }
+    to   { transform: translateY(520%); }
+}
+
+/* Мерцание проекции — редкие короткие вспышки всего кадра */
+.vn-vfx-hologram .vn-fx-flash {
+    background: rgba(90, 235, 255, 0.12);
+    animation: vnHoloFlicker 9s linear infinite;
+}
+
+@keyframes vnHoloFlicker {
+    0%, 31%, 34%, 62%, 64%, 100% { opacity: 0; }
+    32%                          { opacity: 1; }
+    33%                          { opacity: 0.2; }
+    63%                          { opacity: 0.8; }
+}
+
+.vn-vfx-hologram .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 35%,
+        rgba(0, 18, 40, 0.35) 65%,
+        rgba(0,  6, 20, 0.78) 100%
+    );
+}
+
+.vn-vfx-hologram .vn-ambient-light {
+    opacity: 0.20 !important;
+    background: radial-gradient(ellipse at 50% 100%, rgba(80, 230, 255, 0.50) 0%, transparent 55%) !important;
+    animation: vnHoloAmbient 7s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnHoloAmbient {
+    0%   { opacity: 0.15; }
+    100% { opacity: 0.25; }
+}
+
+.vn-vfx-hologram .vn-ground-fog {
+    background: linear-gradient(
+        to top,
+        rgba(60, 200, 240, 0.34) 0%,
+        rgba(40, 150, 210, 0.16) 14%,
+        transparent 40%
+    );
+}
+
+/* Персонажи: циановое свечение у активного говорящего (расфокус неактивных не трогаем) */
+.vn-vfx-hologram .vn-character.active .vn-character-img {
+    filter: brightness(1.05) saturate(1.1)
+        drop-shadow(0 0 18px rgba(60, 220, 255, 0.50))
+        drop-shadow(0 6px 14px rgba(0, 0, 0, 0.60)) !important;
+}
+
+.vn-vfx-hologram .vn-character-glow {
+    background: radial-gradient(
+        ellipse at center,
+        rgba(60, 220, 255, 0.48) 0%,
+        rgba(30, 140, 210, 0.18) 40%,
+        transparent 70%
+    ) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   KALEIDOSCOPE (Калейдоскоп)
+   Фон раскладывается на зеркальные клинья (.vn-kd-seg, строит visual-fx.js
+   внутри .vn-kd-wheel каждого .vn-bg-layer): колесо вращается целиком, картинка в клиньях слегка качается.
+   Только фон: персонажи лежат отдельными DOM-слоями выше.
+   ══════════════════════════════════════════════════════════ */
+
+/* Намеренно без filter на .vn-bg-layer: фильтр над шестью крупными анимируемыми клиньями заставляет
+   рисовать их через промежуточную поверхность, и при каждом шаге параллакса куски слоя перерисовываются
+   (на экране мелькали тёмные многоугольники) */
+
+/* Клинья полностью закрывают слой; собственный фон слоя прячем, чтобы он не просвечивал по швам */
+.vn-vfx-kaleidoscope .vn-bg-layer:has(> .vn-kd-wheel) {
+    overflow: hidden;
+    background-size: 0 0;
+}
+
+/* «Колесо» из клиньев целиком вращается в одну сторону; поворот — единственная анимация на этом уровне */
+.vn-vfx-kaleidoscope .vn-kd-wheel {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: inherit;
+    background-size: 0 0;
+    will-change: transform;
+    animation: vnKdSpin 60s linear infinite;
+}
+
+@keyframes vnKdSpin {
+    from { rotate: 0deg; }
+    to   { rotate: 360deg; }
+}
+
+/* Клин того же размера, что и слой: центр поворота = центр кадра. Форму клина (clip-path) и --kd-zoom
+   выставляет visual-fx.js по размеру слоя */
+.vn-vfx-kaleidoscope .vn-kd-seg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Сам клин ничего не рисует (размер 0): inherit лишь передаёт url картинки слоя вниз, в .vn-kd-img */
+    background-image: inherit;
+    background-size: 0 0;
+}
+
+/* Зум задан размером бокса, а не transform: scale — анимируется только rotate, растр слоя не меняется.
+   inset в процентах считается по своей оси, поэтому бокс растёт симметрично от центра */
+.vn-vfx-kaleidoscope .vn-kd-img {
+    position: absolute;
+    inset: calc(50% * (1 - var(--kd-zoom, 1.3)));
+    background-image: inherit;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    will-change: transform;
+    animation: vnKdSway 32s ease-in-out infinite;
+}
+
+@keyframes vnKdSway {
+    0%, 100% { rotate: calc(var(--kd-sway, 6deg) * -1); }
+    50%      { rotate: var(--kd-sway, 6deg); }
+}
+
+/* Радужная вуаль, медленно вращающаяся (scale убирает углы при повороте) */
+.vn-vfx-kaleidoscope .vn-fx-tint {
+    opacity: 0.35;
+    scale: 1.5;
+    background: conic-gradient(from 0deg at 50% 50%, #ff4d8d, #ffd24d, #4dff9e, #4dd2ff, #9d4dff, #ff4d8d);
+    animation: vnKdHue 40s linear infinite;
+}
+
+@keyframes vnKdHue {
+    from { rotate: 0deg; }
+    to   { rotate: 360deg; }
+}
+
+.vn-vfx-kaleidoscope .vn-vignette {
+    background: radial-gradient(
+        ellipse at center,
+        transparent 45%,
+        rgba(8, 4, 24, 0.30) 75%,
+        rgba(4, 2, 14, 0.62) 100%
+    );
 }
 
 

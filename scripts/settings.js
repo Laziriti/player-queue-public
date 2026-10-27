@@ -4,6 +4,7 @@
 
 import { PlayerQueue } from './queue/player-queue.js';
 import { SoundTestApp } from './sound-test.js';
+import { EffectFiltersApp } from './effect-filters.js';
 
 // Per-nameplate display parameters. Add an entry here for each new nameplate image.
 // ratio:     width / height aspect ratio of the frame image
@@ -272,6 +273,20 @@ function registerSettings() {
         hint: 'settings.liteMode.hint',
         scope: 'client', config: true, type: Boolean, default: false,
         onChange: () => window.visualNovelScene?.applyLiteMode()
+    });
+
+    // Fine-grained alternative to the lite mode: which effects this client does not draw, and a ceiling for the particle intensity.
+    // Edited in the EffectFiltersApp menu, so the two settings themselves are hidden.
+    S('fxDisabled', { scope: 'client', config: false, type: Array, default: [] });
+    S('particleIntensityMax', { scope: 'client', config: false, type: Number, default: 20 });
+
+    game.settings.registerMenu(PlayerQueue.ID, 'effectFilters', {
+        name: 'settings.effectFilters.name',
+        label: 'settings.effectFilters.label',
+        hint: 'settings.effectFilters.hint',
+        icon: 'fas fa-gauge-high',
+        type: EffectFiltersApp,
+        restricted: false
     });
 
     S('parallaxEnabled', {

@@ -226,6 +226,20 @@ class VisualNovelScene {
         this._atmosphere.onSpeakerChange(overlay.querySelector('.vn-character.active'));
     }
 
+    /**
+     * Applies changed effect filters (client settings `fxDisabled` / `particleIntensityMax`, edited in the "effectFilters"
+     * settings menu) to a scene that is already open on this client: background and particle effects are rebuilt,
+     * portrait effects are re-evaluated.
+     */
+    applyEffectFilters() {
+        const overlay = this.$overlay?.[0];
+        if (!overlay) return;
+        this._reinitAtmosphere();
+        this._applyAllCharFx();
+        this._reapplyCameraDof();
+        this._atmosphere.onSpeakerChange(overlay.querySelector('.vn-character.active'));
+    }
+
     // ══════════════════════════════════════════════════════════
     // Token Resolution
     // ══════════════════════════════════════════════════════════
@@ -507,7 +521,8 @@ class VisualNovelScene {
 
     setVisualEffect(visual, emit = true) {
         if (emit && !game.user.isGM) return;
-        if (!VNAtmosphere.VISUAL_TYPES.includes(visual)) return;
+        const [visualType] = String(visual).split(':');
+        if (!VNAtmosphere.VISUAL_TYPES.includes(visualType)) return;
         this.state.visualEffect = visual;
         this._reinitAtmosphere();
         if (emit) { this.emitSocketEvent('setVisualEffect', { visual }); this._persistState(); }
@@ -556,7 +571,7 @@ class VisualNovelScene {
         const overlay = this.$overlay?.[0];
         if (!overlay) return;
         const [particleType, particleVariant = 'all'] = (this.state.particleEffect || 'particles').split(':');
-        const visual = this.state.visualEffect || 'none';
+        const [visual, visualVariant = 'all'] = (this.state.visualEffect || 'none').split(':');
 
         const particleBtn = overlay.querySelector('.vn-particle-cycle-btn');
         if (particleBtn) {
@@ -565,7 +580,7 @@ class VisualNovelScene {
         }
         overlay.querySelectorAll('.vn-atmo-item[data-particle]').forEach(item =>
             item.classList.toggle('active', item.dataset.particle === particleType));
-        this._syncParticleVariantUI(overlay, particleType, particleVariant);
+        this._syncVariantUI(overlay, 'particle', particleType, particleVariant);
 
         const visualBtn = overlay.querySelector('.vn-visual-cycle-btn');
         if (visualBtn) {
@@ -574,17 +589,17 @@ class VisualNovelScene {
         }
         overlay.querySelectorAll('.vn-atmo-item[data-visual]').forEach(item =>
             item.classList.toggle('active', item.dataset.visual === visual));
+        this._syncVariantUI(overlay, 'visual', visual, visualVariant);
     }
 
     /**
-     * Синхронизирует раскрывающиеся группы подвариантов частиц (напр.
-     * чёрные/белые перья), выросшие прямо из своего тайла, с текущим
-     * типом+вариантом: сворачивает все, подсвечивает активный вариант
+     * Синхронизирует раскрывающиеся группы подвариантов одной оси (напр. чёрные/белые перья, нуар с жалюзи),
+     * выросшие прямо из своего тайла, с текущим типом+вариантом: сворачивает все, подсвечивает активный вариант
      * и обновляет бейдж варианта на кнопке тайла.
      */
-    _syncParticleVariantUI(overlay, particleType, particleVariant = 'all') {
-        overlay.querySelectorAll('.vn-atmo-item-group').forEach(group => {
-            const variant = group.dataset.variantBase === particleType ? particleVariant : 'all';
+    _syncVariantUI(overlay, axis, type, currentVariant = 'all') {
+        overlay.querySelectorAll(`.vn-atmo-item-group[data-variant-axis="${axis}"]`).forEach(group => {
+            const variant = group.dataset.variantBase === type ? currentVariant : 'all';
             this._closeVariantGroup(group);
             group.querySelectorAll('.vn-variant-option').forEach(o => o.classList.toggle('active', o.dataset.variant === variant));
             this._setVariantTag(group, variant);
@@ -596,7 +611,8 @@ class VisualNovelScene {
         if (!btn) return;
         let tag = btn.querySelector('.vn-atmo-item-variant-tag');
         if (variant === 'all') { tag?.remove(); return; }
-        const v = VNAtmosphere.PARTICLE_VARIANTS[group.dataset.variantBase]?.find(v => v.id === variant);
+        const variants = group.dataset.variantAxis === 'visual' ? VNAtmosphere.VISUAL_VARIANTS : VNAtmosphere.PARTICLE_VARIANTS;
+        const v = variants[group.dataset.variantBase]?.find(v => v.id === variant);
         if (!v) { tag?.remove(); return; }
         if (!tag) {
             tag = document.createElement('small');
@@ -917,6 +933,7 @@ class VisualNovelScene {
             this._applyParticlesLayerUI();
             this._animateInitialCharacters();
             this._restoreSpeakers(speakersSnapshot);
+            this._applyAllCharFx();
             this._applyCaption();
             if (game.user.isGM) this._updateGmOnlyUI();
         }, VisualNovelScene.DEFAULTS.ANIMATION_DELAY);
@@ -1497,13 +1514,25 @@ class VisualNovelScene {
             const base = group?.dataset.variantBase;
             const variant = e.currentTarget.dataset.variant;
             if (!base || !variant) return;
-            this.setParticleEffect(variant === 'all' ? base : `${base}:${variant}`);
+            const value = variant === 'all' ? base : `${base}:${variant}`;
+            if (group.dataset.variantAxis === 'visual') this.setVisualEffect(value);
+            else this.setParticleEffect(value);
             e.currentTarget.closest('.vn-atmosphere-picker')?.setAttribute('hidden', '');
         });
 
         $(document).on(`click${ns}`, '#vn-scene-overlay .vn-atmo-item[data-visual]', (e) => {
             const visual = e.currentTarget.dataset.visual;
             if (!visual) return;
+            const group = e.currentTarget.closest('.vn-atmo-item-group');
+
+            // Тайл с вариантами (как у частиц) — только открыть/закрыть список, выбор — по .vn-variant-option
+            if (group) {
+                e.currentTarget.closest('.vn-atmosphere-picker-grid')?.querySelectorAll('.vn-atmo-item-group.vn-variant-open')
+                    .forEach(g => { if (g !== group) this._closeVariantGroup(g); });
+                this._toggleVariantGroup(group);
+                return;
+            }
+
             this.setVisualEffect(visual);
             e.currentTarget.closest('.vn-atmosphere-picker')?.setAttribute('hidden', '');
         });

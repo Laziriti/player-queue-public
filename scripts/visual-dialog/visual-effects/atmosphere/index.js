@@ -4,7 +4,8 @@
 
 import { EFFECTS, EFFECT_LABELS, EFFECT_ICONS, PRESETS, EFFECT_GROUPS } from './config/effects.js';
 import { PARTICLE_TYPES, PARTICLE_LABELS, PARTICLE_ICONS, PARTICLE_GROUPS, PARTICLE_VARIANTS } from './config/particle-types.js';
-import { VISUAL_TYPES, VISUAL_LABELS, VISUAL_ICONS, VISUAL_GROUPS } from './config/visual-types.js';
+import { VISUAL_TYPES, VISUAL_LABELS, VISUAL_ICONS, VISUAL_GROUPS, VISUAL_VARIANTS } from './config/visual-types.js';
+import { isFxDisabled } from '../fx-performance.js';
 import { ParticleSystem } from './systems/particle-system.js';
 import { VisualFXSystem } from './systems/visual-fx.js';
 import { ParallaxSystem } from './systems/parallax.js';
@@ -29,6 +30,7 @@ class VNAtmosphere {
     static VISUAL_TYPES = VISUAL_TYPES;
     static VISUAL_LABELS = VISUAL_LABELS;
     static VISUAL_ICONS = VISUAL_ICONS;
+    static VISUAL_VARIANTS = VISUAL_VARIANTS;
     static VISUAL_GROUPS = VISUAL_GROUPS;
 
     constructor() {
@@ -69,12 +71,12 @@ class VNAtmosphere {
 
         // Запуск подсистем — полностью независимо друг от друга
         const particleContainer = overlayEl.querySelector('.vn-particles');
-        if (particleContainer && !lite) {
+        if (particleContainer && !lite && !isFxDisabled('particle', particle)) {
             const upper = particlesLayer === 'mix' ? overlayEl.querySelector('.vn-particles-upper') : null;
             this._particles.fill(particleContainer, particle, particleIntensity, upper);
         }
 
-        this._visualFX.apply(overlayEl, lite ? 'none' : visual);
+        this._visualFX.apply(overlayEl, lite || isFxDisabled('visual', visual) ? 'none' : visual);
 
         const parallaxEnabled = game.settings.get('player-queue', 'parallaxEnabled');
         const parallaxDepth = game.settings.get('player-queue', 'parallaxDepth');
@@ -99,7 +101,7 @@ class VNAtmosphere {
         if (!this._active || !this._overlayEl) return;
         this._visual = visual;
         const lite = game.settings.get('player-queue', 'liteMode');
-        this._visualFX.apply(this._overlayEl, lite ? 'none' : visual);
+        this._visualFX.apply(this._overlayEl, lite || isFxDisabled('visual', visual) ? 'none' : visual);
     }
 
     /**
@@ -111,7 +113,7 @@ class VNAtmosphere {
         const container = this._overlayEl.querySelector('.vn-particles');
         if (!container) return;
         this._particles.clear();
-        if (game.settings.get('player-queue', 'liteMode')) return;
+        if (game.settings.get('player-queue', 'liteMode') || isFxDisabled('particle', particle)) return;
         const upper = particlesLayer === 'mix' ? this._overlayEl.querySelector('.vn-particles-upper') : null;
         this._particles.fill(container, particle, particleIntensity, upper);
     }
