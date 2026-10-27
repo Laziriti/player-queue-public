@@ -185,34 +185,34 @@ class VNSceneHTML {
         const particleEffect = state.particleEffect || 'particles';
         const [particleType, particleVariant = 'all'] = particleEffect.split(':');
         const visualEffect = state.visualEffect || 'none';
+        const [visualType, visualVariant = 'all'] = visualEffect.split(':');
 
-        const particlePickerItems = VNAtmosphere.PARTICLE_GROUPS.map(group =>
+        // Тайлы пикера одной оси. Тип с подвариантами (PARTICLE_VARIANTS / VISUAL_VARIANTS) — группа:
+        // кнопка тайла раскрывает список вариантов, data-variant-axis говорит, к какой оси он относится
+        const pickerItems = (axis, groups, labels, icons, variantsMap, currentType, currentVariant) => groups.map(group =>
             `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
             + group.types.map(t => {
-                const label = stripEmoji(game.i18n.localize(VNAtmosphere.PARTICLE_LABELS[t]));
-                const active = t === particleType;
-                const variants = VNAtmosphere.PARTICLE_VARIANTS[t];
-                const activeVariant = active ? particleVariant : 'all';
+                const label = stripEmoji(game.i18n.localize(labels[t]));
+                const active = t === currentType;
+                const variants = variantsMap[t];
+                const activeVariant = active ? currentVariant : 'all';
                 const tag = variants && activeVariant !== 'all'
                     ? `<small class="vn-atmo-item-variant-tag">${game.i18n.localize((variants.find(v => v.id === activeVariant) || variants[0]).label)}</small>`
                     : '';
                 const caret = variants ? '<i class="fas fa-chevron-down vn-atmo-item-caret"></i>' : '';
-                const btn = `<button type="button" class="vn-atmo-item${active ? ' active' : ''}${variants ? ' vn-atmo-item-expandable' : ''}" data-particle="${t}" title="${label}"><i class="fas ${VNAtmosphere.PARTICLE_ICONS[t]}"></i><span>${label}</span>${tag}${caret}</button>`;
+                const btn = `<button type="button" class="vn-atmo-item${active ? ' active' : ''}${variants ? ' vn-atmo-item-expandable' : ''}" data-${axis}="${t}" title="${label}"><i class="fas ${icons[t]}"></i><span>${label}</span>${tag}${caret}</button>`;
                 if (!variants) return btn;
                 const list = variants.map(v =>
                     `<button type="button" class="vn-variant-option${v.id === activeVariant ? ' active' : ''}" data-variant="${v.id}"><i class="fas fa-check"></i><span>${game.i18n.localize(v.label)}</span></button>`
                 ).join('');
-                return `<div class="vn-atmo-item-group" data-variant-base="${t}">${btn}<div class="vn-variant-list" hidden>${list}</div></div>`;
+                return `<div class="vn-atmo-item-group" data-variant-axis="${axis}" data-variant-base="${t}">${btn}<div class="vn-variant-list" hidden>${list}</div></div>`;
             }).join('')
         ).join('');
 
-        const visualPickerItems = VNAtmosphere.VISUAL_GROUPS.map(group =>
-            `<div class="vn-atmo-group-header">${game.i18n.localize(group.label)}</div>`
-            + group.types.map(t => {
-                const label = stripEmoji(game.i18n.localize(VNAtmosphere.VISUAL_LABELS[t]));
-                return `<button type="button" class="vn-atmo-item${t === visualEffect ? ' active' : ''}" data-visual="${t}" title="${label}"><i class="fas ${VNAtmosphere.VISUAL_ICONS[t]}"></i><span>${label}</span></button>`;
-            }).join('')
-        ).join('');
+        const particlePickerItems = pickerItems('particle', VNAtmosphere.PARTICLE_GROUPS, VNAtmosphere.PARTICLE_LABELS,
+            VNAtmosphere.PARTICLE_ICONS, VNAtmosphere.PARTICLE_VARIANTS, particleType, particleVariant);
+        const visualPickerItems = pickerItems('visual', VNAtmosphere.VISUAL_GROUPS, VNAtmosphere.VISUAL_LABELS,
+            VNAtmosphere.VISUAL_ICONS, VNAtmosphere.VISUAL_VARIANTS, visualType, visualVariant);
 
         const btn = (cls, icon, title) => `<button type="button" class="vn-toolbar-btn ${cls}" title="${title}"><i class="fas ${icon}"></i></button>`;
 
@@ -227,7 +227,7 @@ class VNSceneHTML {
                     </div>
                 </div>
                 <div class="vn-atmo-wrap">
-                    ${btn('vn-visual-cycle-btn', VNAtmosphere.VISUAL_ICONS[visualEffect], game.i18n.format('vn.atmosphere.visualButtonTitle', { effect: game.i18n.localize(VNAtmosphere.VISUAL_LABELS[visualEffect]) }))}
+                    ${btn('vn-visual-cycle-btn', VNAtmosphere.VISUAL_ICONS[visualType], game.i18n.format('vn.atmosphere.visualButtonTitle', { effect: game.i18n.localize(VNAtmosphere.VISUAL_LABELS[visualType]) }))}
                     <div class="vn-atmosphere-picker" hidden>
                         <div class="vn-atmosphere-picker-header"><i class="fas fa-wand-sparkles"></i> ${game.i18n.localize('vn.atmosphere.visualHeader')}</div>
                         <div class="vn-atmosphere-picker-grid">${visualPickerItems}</div>

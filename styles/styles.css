@@ -897,3 +897,217 @@ body.player-queue-dark-theme .vn-character img {
 body.player-queue-dark-theme .vn-character.active img {
     filter: brightness(1) contrast(1) drop-shadow(0 0 30px rgba(136, 192, 208, 0.8));
 }
+
+
+/* ══════════════════════════════════════════════════════════
+   Тонкая настройка эффектов (EffectFiltersApp, templates/effect-filters.hbs)
+   Как и тест звуков: только переменные Foundry, поэтому окно следует светлой/тёмной схеме само.
+   Отмеченный флажок = «не рисовать»: такой эффект зачёркнут и приглушён.
+   ══════════════════════════════════════════════════════════ */
+.pq-fx-filters .window-content {
+    padding: 0;
+}
+
+.pq-fx-win {
+    --pq-fg: var(--color-text-primary);
+    --pq-fg-dim: var(--color-text-secondary);
+    --pq-surface: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+    --pq-line: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
+    --pq-heavy: #e5534b;
+    --pq-medium: #d9a441;
+    --pq-light: #4cae6b;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    color: var(--pq-fg);
+}
+
+.pq-fx-hint {
+    margin: 0;
+    font-size: 0.88em;
+    color: var(--pq-fg-dim);
+}
+
+.pq-fx-master {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--pq-line);
+    border-radius: 8px;
+    background: var(--pq-surface);
+    cursor: pointer;
+}
+
+.pq-fx-master-all {
+    border-color: color-mix(in srgb, var(--pq-heavy) 55%, var(--pq-line));
+}
+
+.pq-fx-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--pq-line);
+}
+
+.pq-fx-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    background: transparent;
+    color: var(--pq-fg-dim);
+    cursor: pointer;
+}
+
+.pq-fx-tab small {
+    opacity: 0.8;
+}
+
+.pq-fx-tab.active {
+    border-color: var(--pq-line);
+    background: var(--pq-surface);
+    color: var(--pq-fg);
+}
+
+.pq-fx-panels {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.pq-fx-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+}
+
+.pq-fx-panel[hidden] {
+    display: none;
+}
+
+.pq-fx-cap {
+    padding: 8px 10px;
+    border: 1px solid var(--pq-line);
+    border-radius: 8px;
+}
+
+.pq-fx-cap-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pq-fx-cap-row input[type="range"] {
+    flex: 1 1 auto;
+}
+
+.pq-fx-cap-row output {
+    min-width: 7em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.pq-fx-cap-hint {
+    margin: 4px 0 0;
+    font-size: 0.82em;
+    color: var(--pq-fg-dim);
+}
+
+.pq-fx-group {
+    margin: 0;
+    padding: 0 0 8px;
+    border: 1px solid var(--pq-line);
+    border-left: 4px solid var(--pq-tier, var(--pq-line));
+    border-radius: 8px;
+}
+
+.pq-fx-group[data-tier="heavy"]  { --pq-tier: var(--pq-heavy); }
+.pq-fx-group[data-tier="medium"] { --pq-tier: var(--pq-medium); }
+.pq-fx-group[data-tier="light"]  { --pq-tier: var(--pq-light); }
+
+.pq-fx-group-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 10px;
+    background: color-mix(in srgb, var(--pq-tier) 12%, transparent);
+    border-radius: 4px 7px 0 0;
+    cursor: pointer;
+}
+
+.pq-fx-tier {
+    font-weight: 600;
+    color: var(--pq-tier);
+}
+
+.pq-fx-group-head small {
+    color: var(--pq-fg-dim);
+}
+
+.pq-fx-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 2px 8px;
+    padding: 6px 10px 0;
+}
+
+.pq-fx-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 3px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.pq-fx-item:hover {
+    background: var(--pq-surface);
+}
+
+.pq-fx-item i {
+    width: 1.2em;
+    text-align: center;
+    color: var(--pq-fg-dim);
+}
+
+.pq-fx-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pq-fx-item:has(input:checked) {
+    opacity: 0.6;
+}
+
+.pq-fx-item:has(input:checked) span {
+    text-decoration: line-through;
+}
+
+.pq-fx-filters input[type="checkbox"] {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.pq-fx-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.pq-fx-footer button {
+    width: auto;
+    margin: 0;
+}

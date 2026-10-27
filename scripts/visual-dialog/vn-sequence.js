@@ -168,6 +168,7 @@ export class VNSequence {
             autoAdvance: previous.autoAdvance,
             transition: previous.transition,
             inheritActors: previous.inheritActors,
+            title: previous.title,
             thumbnailData: previous.background === state.background ? previous.thumbnailData : undefined,
         });
         step.id = previous.id;
@@ -277,11 +278,14 @@ export class VNSequence {
             const ids = [...(step.leftIds ?? []), ...(step.centerIds ?? []), ...(step.rightIds ?? [])];
             const names = ids.map(id => step.portraitNames?.[id]).filter(Boolean).join(', ');
             const caption = (step.caption || '').trim();
-            // One line each, cut with an ellipsis; the full text is in the tooltip
-            const label = caption.split('\n')[0] || names || game.i18n.format('vn.sequence.stepTitle', { n: i + 1 });
-            const sub = caption ? names : '';
+            const title = (step.title || '').trim();
+            // One line each, cut with an ellipsis; the full text is in the tooltip. A GM-given title wins over the
+            // automatic one (first caption line, else the characters, else "Step N"), which then moves to the subtitle
+            const auto = caption.split('\n')[0] || names || game.i18n.format('vn.sequence.stepTitle', { n: i + 1 });
+            const label = title || auto;
+            const sub = title ? (caption.split('\n')[0] || names) : (caption ? names : '');
             const thumb = step.thumbnailData || (step.background && step.background !== 'none' ? step.background : null);
-            const tooltip = escapeHtml([caption, names].filter(Boolean).join('\n') || label);
+            const tooltip = escapeHtml([title, caption, names].filter(Boolean).join('\n') || label);
             return `<button type="button" class="vn-seq-pick${i === activeIndex ? ' active' : ''}" data-index="${i}" title="${tooltip}">
                 <span class="vn-seq-pick-n">${i + 1}</span>
                 <span class="vn-seq-pick-thumb">${thumb ? `<img src="${escapeHtml(thumb)}" alt="" loading="lazy" draggable="false">` : '<i class="fas fa-image"></i>'}</span>

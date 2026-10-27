@@ -542,29 +542,71 @@
 
 
 /* ══════════════════════════════════════════════════════════
-   VOID CRACK — SVG-трещины (v4)
+   РАЗЛОМ (.vn-crack) — трещины «Разрыва пустоты»
 
-   Создаются JS (_buildCrackSVG). Каждая трещина = один <svg>
-   с тремя <path> (glow / edge / core). Рост и закрытие —
-   WAAPI strokeDashoffset. Пульсация свечения — CSS animation.
+   Создаёт JS (VisualFXSystem._spawnVoidCrack, геометрия — crack-geometry.js). Один элемент = три слоя:
+   .vn-crack-glow (размытое свечение), .vn-crack-window (контур раскрытия через clip-path: path(), внутри
+   дрейфует .vn-crack-inner с фоном-«глубиной») и .vn-crack-rim (светлая кромка и волосяные трещинки).
+
+   Рост и закрытие — маска из двух радиальных градиентов с центром в точке удара (--cx / --cy).
+   --crack-grow открывает картинку наружу, --crack-heal «затягивает» её от корня; оба свойства анимирует WAAPI,
+   поэтому они зарегистрированы (иначе анимация была бы дискретной).
+   В установившемся состоянии движется только compositor-анимация внутри окна и пульс свечения.
    ══════════════════════════════════════════════════════════ */
 
-.vn-void-crack-svg {
-    animation: vnCrackSvgPulse 3.2s ease-in-out infinite;
+@property --crack-grow {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
 }
 
-@keyframes vnCrackSvgPulse {
-    0%, 100% {
-        filter:
-            drop-shadow(0 0 3px  rgba(160,  60, 255, 0.70))
-            drop-shadow(0 0 10px rgba(110,  15, 225, 0.40));
-    }
-    50% {
-        filter:
-            drop-shadow(0 0 5px  rgba(200, 120, 255, 0.90))
-            drop-shadow(0 0 16px rgba(140,  30, 245, 0.58))
-            drop-shadow(0 0 30px rgba( 90,   0, 200, 0.28));
-    }
+@property --crack-heal {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: -60px;
+}
+
+.vn-crack {
+    position: absolute;
+    pointer-events: none;
+    -webkit-mask-image:
+        radial-gradient(circle at var(--cx) var(--cy), #000 calc(var(--crack-grow) - 60px), transparent var(--crack-grow)),
+        radial-gradient(circle at var(--cx) var(--cy), transparent var(--crack-heal), #000 calc(var(--crack-heal) + 60px));
+    mask-image:
+        radial-gradient(circle at var(--cx) var(--cy), #000 calc(var(--crack-grow) - 60px), transparent var(--crack-grow)),
+        radial-gradient(circle at var(--cx) var(--cy), transparent var(--crack-heal), #000 calc(var(--crack-heal) + 60px));
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+}
+
+.vn-crack > svg,
+.vn-crack-window {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.vn-crack-glow {
+    filter: blur(6px);
+    animation: vnCrackGlowPulse 3.2s ease-in-out infinite;
+}
+
+@keyframes vnCrackGlowPulse {
+    0%, 100% { opacity: 0.6; }
+    50%      { opacity: 1; }
+}
+
+/* Содержимое окна шире самого окна, чтобы его дрейф не открывал края */
+.vn-crack-inner {
+    position: absolute;
+    inset: -30%;
+    animation: vnCrackInnerDrift 11s ease-in-out infinite alternate;
+}
+
+@keyframes vnCrackInnerDrift {
+    from { translate: -4% -3%; scale: 1; }
+    to   { translate: 4% 3%;   scale: 1.08; }
 }
 
 

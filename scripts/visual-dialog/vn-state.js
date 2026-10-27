@@ -299,6 +299,8 @@ class VNPresets {
             autoAdvance: Math.max(0, Number(source.autoAdvance) || 0),
             ...(typeof source.transition === 'string' && source.transition ? { transition: source.transition } : {}),
             ...(source.inheritActors === true ? { inheritActors: true } : {}),
+            // Named by the GM; `title`, not `name`, because a preset passed as `source` already has a `name`
+            ...(typeof source.title === 'string' && source.title.trim() ? { title: source.title.trim().slice(0, 80) } : {}),
             ...(thumbnailData ? { thumbnailData } : {}),
         };
     }

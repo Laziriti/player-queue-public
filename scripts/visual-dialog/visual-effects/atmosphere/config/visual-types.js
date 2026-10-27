@@ -7,11 +7,12 @@
  */
 export const VISUAL_GROUPS = [
     { id: 'basic',   label: 'vn.atmosphere.groups.basic',   types: ['none', 'warm', 'cold'] },
-    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['storm', 'underwater', 'moonlight', 'sandstorm'] },
+    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['storm', 'underwater', 'moonlight', 'sandstorm', 'frost', 'earthquake'] },
     { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine', 'sacred', 'dream', 'ethereal'] },
     { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['eldritch', 'dark', 'corruption', 'abyss', 'shadow_intrigue'] },
     { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['fire', 'apocalypse', 'blood_moon', 'cosmic_horror', 'void_breach', 'glass_shatter'] },
-    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['carnival', 'ghosts'] },
+    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['carnival', 'ghosts', 'hologram', 'kaleidoscope'] },
+    { id: 'cinema',  label: 'vn.atmosphere.groups.cinema',  types: ['noir', 'memory', 'neon', 'vhs'] },
 ];
 
 /**
@@ -47,6 +48,26 @@ export const VISUAL_LABELS = {
     sandstorm:       'vn.atmosphere.visual.sandstorm',
     carnival:        'vn.atmosphere.visual.carnival',
     ghosts:          'vn.atmosphere.visual.ghosts',
+    hologram:        'vn.atmosphere.visual.hologram',
+    kaleidoscope:    'vn.atmosphere.visual.kaleidoscope',
+    frost:           'vn.atmosphere.visual.frost',
+    earthquake:      'vn.atmosphere.visual.earthquake',
+    noir:            'vn.atmosphere.visual.noir',
+    memory:          'vn.atmosphere.visual.memory',
+    neon:            'vn.atmosphere.visual.neon',
+    vhs:             'vn.atmosphere.visual.vhs',
+};
+
+/**
+ * Подварианты визуальных эффектов — так же, как PARTICLE_VARIANTS у частиц: значение visualEffect
+ * кодируется как "type:variant" (например "noir:blinds"); отсутствие суффикса == 'all' — базовый вид эффекта
+ * (первый пункт списка). VisualFXSystem вешает на overlay и vn-vfx-<type>, и vn-vfx-<type>-<variant>.
+ */
+export const VISUAL_VARIANTS = {
+    noir: [
+        { id: 'all',    label: 'vn.atmosphere.visualVariants.classic' },
+        { id: 'blinds', label: 'vn.atmosphere.visualVariants.blinds' },
+    ],
 };
 
 /**
@@ -77,4 +98,12 @@ export const VISUAL_ICONS = {
     sandstorm: 'fa-wind',
     carnival: 'fa-champagne-glasses',
     ghosts: 'fa-ghost',
+    hologram: 'fa-cube',
+    kaleidoscope: 'fa-snowflake',
+    frost: 'fa-temperature-low',
+    earthquake: 'fa-house-crack',
+    noir: 'fa-film',
+    memory: 'fa-clock-rotate-left',
+    neon: 'fa-city',
+    vhs: 'fa-tape',
 };

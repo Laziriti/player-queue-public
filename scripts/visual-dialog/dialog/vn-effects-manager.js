@@ -24,7 +24,7 @@ export class VNEffectsManager {
                 const list = variants.map(v =>
                     `<button type="button" class="vn-variant-option${v.id === activeVariant ? ' active' : ''}" data-variant="${v.id}"><i class="fas fa-check"></i><span>${game.i18n.localize(v.label)}</span></button>`
                 ).join('');
-                return `<div class="vn-atmo-item-group" data-variant-base="${t}">${btn}<div class="vn-variant-list" hidden>${list}</div></div>`;
+                return `<div class="vn-atmo-item-group" data-variant-axis="${axis}" data-variant-base="${t}">${btn}<div class="vn-variant-list" hidden>${list}</div></div>`;
             }).join('')
         ).join('');
     }
@@ -55,14 +55,18 @@ export class VNEffectsManager {
         </div>`;
     }
 
-    /** "Snow" or "Feathers · Black": what is selected on an axis, shown in the column title so it stays visible while the list scrolls. */
+    _variantsOf(axis) {
+        return axis === 'particle' ? VNAtmosphere.PARTICLE_VARIANTS : VNAtmosphere.VISUAL_VARIANTS;
+    }
+
+    /** "Snow", "Feathers · Black" or "Noir · Blinds": what is selected on an axis, shown in the column title so it stays visible while the list scrolls. */
     _currentLabel(axis, value) {
         const [type, variant = 'all'] = String(value || 'none').split(':');
         const labels = axis === 'particle' ? VNAtmosphere.PARTICLE_LABELS : VNAtmosphere.VISUAL_LABELS;
         if (!labels[type]) return '';
         let text = stripEmoji(game.i18n.localize(labels[type]));
-        if (axis === 'particle' && variant !== 'all') {
-            const v = VNAtmosphere.PARTICLE_VARIANTS[type]?.find(x => x.id === variant);
+        if (variant !== 'all') {
+            const v = this._variantsOf(axis)[type]?.find(x => x.id === variant);
             if (v) text += ` · ${game.i18n.localize(v.label)}`;
         }
         return text;
@@ -98,7 +102,8 @@ export class VNEffectsManager {
     generateTab(currentParticle = 'particles', currentVisual = 'none', currentParticlesLayer = 'back', currentParticleIntensity = 1) {
         const [particleType, particleVariant = 'all'] = currentParticle.split(':');
         const particleGrid = this._renderGrid(VNAtmosphere.PARTICLE_GROUPS, VNAtmosphere.PARTICLE_LABELS, VNAtmosphere.PARTICLE_ICONS, particleType, 'particle', VNAtmosphere.PARTICLE_VARIANTS, particleVariant);
-        const visualGrid = this._renderGrid(VNAtmosphere.VISUAL_GROUPS, VNAtmosphere.VISUAL_LABELS, VNAtmosphere.VISUAL_ICONS, currentVisual, 'visual');
+        const [visualType, visualVariant = 'all'] = currentVisual.split(':');
+        const visualGrid = this._renderGrid(VNAtmosphere.VISUAL_GROUPS, VNAtmosphere.VISUAL_LABELS, VNAtmosphere.VISUAL_ICONS, visualType, 'visual', VNAtmosphere.VISUAL_VARIANTS, visualVariant);
         const presets = this._renderPresets(currentParticle, currentVisual);
 
         return `<div class="vn-effects-tab">
@@ -154,27 +159,28 @@ export class VNEffectsManager {
                 const base = group?.dataset.variantBase;
                 const variant = variantOption.dataset.variant;
                 if (base && variant) {
-                    this._applyAxisValue(root, 'particle', variant === 'all' ? base : `${base}:${variant}`);
+                    this._applyAxisValue(root, group.dataset.variantAxis || 'particle', variant === 'all' ? base : `${base}:${variant}`);
                     this._syncPresetHighlight(root);
                 }
                 return;
             }
 
-            const particleItem = e.target.closest('.vn-effects-inline-grid[data-axis="particle"] .vn-atmo-item');
-            if (particleItem) {
-                const group = particleItem.closest('.vn-atmo-item-group');
+            const axisItem = e.target.closest('.vn-effects-inline-grid[data-axis] .vn-atmo-item');
+            if (axisItem) {
+                const axis = axisItem.closest('.vn-effects-inline-grid').dataset.axis;
+                const group = axisItem.closest('.vn-atmo-item-group');
 
                 // Клик по тайлу с вариантами — только открыть/закрыть его список
                 // подвариантов, не применяя ничего; выбор происходит по клику
                 // на конкретный .vn-variant-option внутри.
                 if (group) {
-                    root.querySelectorAll('.vn-effects-inline-grid[data-axis="particle"] .vn-atmo-item-group.vn-variant-open')
+                    root.querySelectorAll(`.vn-effects-inline-grid[data-axis="${axis}"] .vn-atmo-item-group.vn-variant-open`)
                         .forEach(g => { if (g !== group) this._closeVariantGroup(g); });
-                    // A first click on an inactive type selects it (all variants) and opens the variant list; later clicks only fold/unfold it
+                    // A first click on an inactive type selects it (base variant) and opens the variant list; later clicks only fold/unfold it
                     const base = group.dataset.variantBase;
-                    const current = root.querySelector('#particle-effect')?.value.split(':')[0];
+                    const current = root.querySelector(`#${axis}-effect`)?.value.split(':')[0];
                     if (current !== base) {
-                        this._applyAxisValue(root, 'particle', base);
+                        this._applyAxisValue(root, axis, base);
                         this._syncPresetHighlight(root);
                         this._openVariantGroup(group);
                         return;
@@ -183,17 +189,7 @@ export class VNEffectsManager {
                     return;
                 }
 
-                this._applyAxisValue(root, 'particle', particleItem.dataset.particle);
-                this._syncPresetHighlight(root);
-                return;
-            }
-
-            const visualItem = e.target.closest('.vn-effects-inline-grid[data-axis="visual"] .vn-atmo-item');
-            if (visualItem) {
-                const visual = visualItem.dataset.visual;
-                const input = root.querySelector('#visual-effect');
-                if (input) input.value = visual;
-                visualItem.closest('.vn-effects-inline-grid').querySelectorAll('.vn-atmo-item').forEach(i => i.classList.toggle('active', i === visualItem));
+                this._applyAxisValue(root, axis, axisItem.dataset[axis]);
                 this._syncPresetHighlight(root);
                 return;
             }
@@ -231,19 +227,19 @@ export class VNEffectsManager {
     _applyAxisValue(root, axis, value) {
         const input = root.querySelector(`#${axis}-effect`);
         if (input) input.value = value;
-        const base = axis === 'particle' ? value.split(':')[0] : value;
+        const base = value.split(':')[0];
         root.querySelectorAll(`.vn-effects-inline-grid[data-axis="${axis}"] .vn-atmo-item`).forEach(i =>
             i.classList.toggle('active', i.dataset[axis] === base));
-        if (axis === 'particle') this._syncParticleVariantUI(root, value);
+        this._syncVariantUI(root, axis, value);
     }
 
     /**
-     * Синхронизирует все вложенные в тайлы списки вариантов частиц
-     * с полным значением particleEffect (может быть "type" или "type:variant").
+     * Синхронизирует все вложенные в тайлы списки вариантов одной оси
+     * с полным значением particleEffect / visualEffect (может быть "type" или "type:variant").
      */
-    _syncParticleVariantUI(root, particleValue) {
-        const [type, variant = 'all'] = particleValue.split(':');
-        root.querySelectorAll('.vn-effects-inline-grid[data-axis="particle"] .vn-atmo-item-group').forEach(group => {
+    _syncVariantUI(root, axis, axisValue) {
+        const [type, variant = 'all'] = axisValue.split(':');
+        root.querySelectorAll(`.vn-effects-inline-grid[data-axis="${axis}"] .vn-atmo-item-group`).forEach(group => {
             const v = group.dataset.variantBase === type ? variant : 'all';
             this._closeVariantGroup(group);
             group.querySelectorAll('.vn-variant-option').forEach(o => o.classList.toggle('active', o.dataset.variant === v));
@@ -256,7 +252,7 @@ export class VNEffectsManager {
         if (!btn) return;
         let tag = btn.querySelector('.vn-atmo-item-variant-tag');
         if (variant === 'all') { tag?.remove(); return; }
-        const v = VNAtmosphere.PARTICLE_VARIANTS[group.dataset.variantBase]?.find(v => v.id === variant);
+        const v = this._variantsOf(group.dataset.variantAxis || 'particle')[group.dataset.variantBase]?.find(v => v.id === variant);
         if (!v) { tag?.remove(); return; }
         if (!tag) {
             tag = document.createElement('small');

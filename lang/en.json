@@ -133,6 +133,11 @@
       "name": "🪶 Lite mode for dialog scenes",
       "hint": "For weak computers: on your screen no particles, visual effects, parallax or camera zoom are drawn, and blur behind panels is removed. Background and portraits stay. Other players and the GM still see the scene normally"
     },
+    "effectFilters": {
+      "name": "🎚️ Dialog scene effects: fine tuning",
+      "label": "Configure effects",
+      "hint": "Choose which background, particle and portrait effects this screen does not draw, and set a ceiling for the particle intensity. Effects are grouped by how heavy they are. Applies while \"Lite mode\" is off. Other players and the GM see the scene as usual"
+    },
     "parallaxEnabled": {
       "name": "🎥 Background parallax",
       "hint": "Smooth background shift as the mouse moves in the dialog scene"
@@ -161,6 +166,32 @@
       "name": "Preset thumbnail folder",
       "hint": "Where thumbnails of dialog scene presets are saved. Empty = a separate folder inside the world. Any folder in Data works, including one inside a module, so the thumbnails travel with it. Existing thumbnails keep working after a change; to rebuild them in the new place use \"Regenerate all\" in the Presets tab menu."
     }
+  },
+  "fxFilters": {
+    "title": "Scene effects: what to draw",
+    "hint": "Checked effects are not drawn on your screen. Other players and the GM see the scene as usual and the scene state does not change. The groups are an estimate based on the techniques used, not measurements.",
+    "disableAll": "Disable all effects",
+    "disableSection": "Disable everything in this section",
+    "tabs": {
+      "visual": "Background",
+      "particle": "Particles",
+      "charfx": "Characters"
+    },
+    "tiers": {
+      "heavy": "Heavy",
+      "medium": "Moderate",
+      "light": "Light"
+    },
+    "tierHints": {
+      "heavy": "SVG filters, cracks, shards, many large layers",
+      "medium": "several animated layers, blending, blurred copies",
+      "light": "static colour grading and a layer or two"
+    },
+    "particleMax": "Max particle intensity",
+    "particleMaxHint": "The same slider as the GM's \"Particle intensity\", but yours: if the GM sets more, your screen shows no more than this. Applies to every particle type. 20 means no limit.",
+    "unlimited": "unlimited",
+    "save": "Save",
+    "cancel": "Cancel"
   },
   "soundTest": {
     "title": "Priority Sound Test",
@@ -245,13 +276,18 @@
         "pages": "Pages",
         "parchment": "Parchment"
       },
+      "visualVariants": {
+        "classic": "Classic",
+        "blinds": "Blinds"
+      },
       "groups": {
         "basic": "Basic",
         "nature": "Nature",
         "magic": "Magic",
         "dark": "Dark",
         "chaos": "Chaos",
-        "special": "Special"
+        "special": "Special",
+        "cinema": "Cinema & style"
       },
       "particles": {
         "none": "Off",
@@ -309,7 +345,15 @@
         "void_breach": "🕳️ Void breach",
         "glass_shatter": "🪟 Shattered glass",
         "carnival": "🎉 Carnival",
-        "ghosts": "👻 Ghosts"
+        "ghosts": "👻 Ghosts",
+        "hologram": "💠 Hologram",
+        "kaleidoscope": "🌀 Kaleidoscope",
+        "frost": "🧊 Rime",
+        "earthquake": "🏚️ Earthquake",
+        "noir": "🎬 Noir",
+        "memory": "🕰️ Memory",
+        "neon": "🌃 Neon / cyberpunk",
+        "vhs": "📼 VHS"
       },
       "effects": {
         "none": "Off",
@@ -394,7 +438,33 @@
       "hologram": "Hologram",
       "shadow": "Shadow",
       "ghost": "Ghost",
-      "glitch": "Glitch"
+      "glitch": "Glitch",
+      "fire": "Fire",
+      "ice": "Ice",
+      "gold": "Gold",
+      "stone": "Stone",
+      "xray": "X-ray",
+      "memory": "Memory",
+      "dream": "Dream",
+      "noir": "Noir",
+      "neon": "Neon",
+      "invisible": "Invisible",
+      "rage": "Rage",
+      "possessed": "Possessed",
+      "drunk": "Drunk",
+      "holy": "Holy",
+      "holy_radiant": "Exalted",
+      "cracked": "Cracked stone",
+      "glass": "Glass",
+      "vhs": "VHS noise",
+      "variants": {
+        "normal": "Normal",
+        "exalted": "Exalted"
+      },
+      "groups": {
+        "css": "CSS effects · light",
+        "svg": "SVG filters · heavier"
+      }
     },
     "dialog": {
       "charFxTitle": "Portrait effect: {name}",
@@ -634,6 +704,8 @@
       "noLiveScene": "No scene is running",
       "dropHint": "Drag presets here from the list on the left, or add a step with the buttons above",
       "stepTitle": "Step {n}",
+      "stepName": "Step name",
+      "stepNameHint": "Shown in the GM's step list and in the editor, not to players. Empty — the name is built automatically: the first caption line, the characters' names or \"Step N\"",
       "stepLoad": "Edit this step in the form",
       "stepSave": "Save the form into this step",
       "stepSettings": "Caption, auto-advance, transition",

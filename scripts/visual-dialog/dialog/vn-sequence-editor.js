@@ -71,6 +71,11 @@ export class VNSequenceEditor {
     }
 
     _titleOf(step, index) {
+        return (step.title || '').trim() || this._autoTitleOf(step, index);
+    }
+
+    /** The title a step gets without a name of its own: first caption line, else the characters, else "Step N". */
+    _autoTitleOf(step, index) {
         const caption = (step.caption || '').trim();
         if (caption) return caption.split('\n')[0];
         const names = stepIds(step).map(id => step.portraitNames?.[id]).filter(Boolean);
@@ -115,15 +120,19 @@ export class VNSequenceEditor {
                     ${btn('delete', 'fa-trash', 'vn.sequence.stepDelete', 'vn-btn-danger')}
                 </div>
             </div>
-            <div class="vn-seqed-settings"${open ? '' : ' hidden'}>${this._settingsHtml(step, index)}</div>
+            <div class="vn-seqed-settings"${open ? '' : ' hidden'}>${this._settingsHtml(step, index, shown)}</div>
         </div>`;
     }
 
-    _settingsHtml(step, index) {
+    _settingsHtml(step, index, shown = step) {
         const transitionOptions = ['', ...VNTransitions.TRANSITION_TYPES]
             .map(v => `<option value="${v}"${v === (step.transition || '') ? ' selected' : ''}>${loc(v ? `vn.sequence.transitions.${v}` : 'vn.sequence.transitionDefault')}</option>`)
             .join('');
         return `<label class="vn-seqed-field">
+                <span>${loc('vn.sequence.stepName')}</span>
+                <input type="text" maxlength="80" data-field="title" value="${escapeHtml(step.title || '')}" placeholder="${escapeHtml(this._autoTitleOf(shown, index))}" title="${loc('vn.sequence.stepNameHint')}">
+            </label>
+            <label class="vn-seqed-field">
                 <span>${loc('vn.sequence.caption')}</span>
                 <textarea rows="2" maxlength="500" data-field="caption" placeholder="${loc('vn.sequence.captionPlaceholder')}">${escapeHtml(step.caption || '')}</textarea>
             </label>
@@ -243,7 +252,7 @@ export class VNSequenceEditor {
         const updated = await VNPresets.makeStep({
             ...payload, speakers,
             caption: step.caption, autoAdvance: step.autoAdvance, transition: step.transition,
-            inheritActors: step.inheritActors,
+            inheritActors: step.inheritActors, title: step.title,
             thumbnailData: payload.background === step.background ? step.thumbnailData : undefined,
         });
         updated.id = step.id;
@@ -379,6 +388,13 @@ export class VNSequenceEditor {
         const step = { ...steps[index] };
 
         switch (field.dataset.field) {
+            case 'title': {
+                const title = field.value.replace(/\s+/g, ' ').trim().slice(0, 80);
+                if (title) step.title = title;
+                else delete step.title;
+                field.value = title;
+                break;
+            }
             case 'caption':
                 step.caption = field.value.replace(/\r/g, '').trim().slice(0, 500);
                 break;

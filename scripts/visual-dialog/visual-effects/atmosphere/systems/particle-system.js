@@ -4,6 +4,7 @@
 
 import { R, RD } from '../utils.js';
 import { PARTICLE_CONFIGS } from '../config/particles.js';
+import { particleIntensityCap } from '../../fx-performance.js';
 
 /**
  * Раскладывает создаваемые элементы по двум контейнерам: основному (под
@@ -60,7 +61,8 @@ export class ParticleSystem {
         if (particleType === 'none') return;
 
         const [type, variant] = particleType.split(':');
-        const safeIntensity = Math.min(Math.max(intensity, 1), 20);
+        // Интенсивность ведущего (1–20) дополнительно ограничена клиентским потолком — настройка particleIntensityMax
+        const safeIntensity = Math.min(Math.max(intensity, 1), 20, particleIntensityCap());
         const sink = new ParticleSink(container, upperContainer);
 
         // Призраки — особая структура: souls + vapor, offset-path анимация

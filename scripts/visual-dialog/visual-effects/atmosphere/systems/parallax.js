@@ -154,13 +154,17 @@ export class ParallaxSystem {
             this._isAnimated = this._checkAnimatedBg();
         }
 
-        if (this._isAnimated || !this._enabled) {
+        // Под калейдоскопом слой фона не двигаем: его потомки (клинья с clip-path и анимацией) при покадровом
+        // transform родителя мерцают тёмными многоугольниками, а сам эффект и так в постоянном движении
+        const kaleido = this._overlayEl?.classList.contains('vn-vfx-kaleidoscope');
+
+        if (this._isAnimated || !this._enabled || kaleido) {
             this._currentX = 0.5;
             this._currentY = 0.5;
-            if (this._lastTransform !== '') {
-                this._bgLayer.style.transform = '';
-                this._lastTransform = '';
-            }
+            // Смотрим на реальный стиль, а не на _lastTransform: после stop()+start() счётчик обнуляется,
+            // а старый transform на слое остаётся
+            if (this._bgLayer.style.transform !== '') this._bgLayer.style.transform = '';
+            this._lastTransform = '';
         } else {
             const elapsed = (Date.now() - this._zoomStart) / 1000;
             const zoomProgress = Math.min(elapsed / ParallaxSystem.ZOOM_DURATION, 1);
