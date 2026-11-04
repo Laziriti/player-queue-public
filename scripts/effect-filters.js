@@ -7,9 +7,9 @@
 
 import { MODULE_ID, applyForcedTheme } from './queue/queue-constants.js';
 import { FX_TIERS, tierOf } from './visual-dialog/visual-effects/fx-performance.js';
-import { VISUAL_TYPES, VISUAL_LABELS, VISUAL_ICONS } from './visual-dialog/visual-effects/atmosphere/config/visual-types.js';
-import { PARTICLE_TYPES, PARTICLE_LABELS, PARTICLE_ICONS } from './visual-dialog/visual-effects/atmosphere/config/particle-types.js';
-import { CHAR_FX, CHAR_FX_ICONS } from './visual-dialog/visual-effects/character-fx/vn-character-fx.js';
+import { VISUAL_TYPES, VISUAL_LABELS, VISUAL_ICONS, VISUAL_VARIANTS } from './visual-dialog/visual-effects/atmosphere/config/visual-types.js';
+import { PARTICLE_TYPES, PARTICLE_LABELS, PARTICLE_ICONS, PARTICLE_VARIANTS } from './visual-dialog/visual-effects/atmosphere/config/particle-types.js';
+import { CHAR_FX_GROUPS, CHAR_FX_VARIANTS, CHAR_FX_ICONS } from './visual-dialog/visual-effects/character-fx/vn-character-fx.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -17,10 +17,24 @@ const loc = key => game.i18n.localize(key);
 // В подписях эффектов фона уже есть эмодзи: в списке рядом иконка FontAwesome, второй значок не нужен
 const stripEmoji = text => text.replace(/^[\p{Extended_Pictographic}\p{Emoji_Component}\s]+/u, '');
 
+// Варианты эффекта отдельными пунктами не показываем: отключается весь тип вместе с ними (isFxDisabled отбрасывает вариант),
+// поэтому в списке только базовые типы, а их вариации — подписью под названием. Первый пункт списка вариантов — сам базовый вид.
+const variantLabels = (map, id) => (map[id] ?? []).slice(1).map(v => loc(v.label));
+
 const KINDS = [
-    { id: 'visual', icon: 'fa-mountain-sun', ids: VISUAL_TYPES, label: id => stripEmoji(loc(VISUAL_LABELS[id])), iconOf: id => VISUAL_ICONS[id] },
-    { id: 'particle', icon: 'fa-snowflake', ids: PARTICLE_TYPES, label: id => loc(PARTICLE_LABELS[id]), iconOf: id => PARTICLE_ICONS[id] },
-    { id: 'charfx', icon: 'fa-user-astronaut', ids: CHAR_FX, label: id => loc(`vn.charFx.${id}`), iconOf: id => CHAR_FX_ICONS[id] },
+    {
+        id: 'visual', icon: 'fa-mountain-sun', ids: VISUAL_TYPES, iconOf: id => VISUAL_ICONS[id],
+        label: id => stripEmoji(loc(VISUAL_LABELS[id])), variants: id => variantLabels(VISUAL_VARIANTS, id)
+    },
+    {
+        id: 'particle', icon: 'fa-snowflake', ids: PARTICLE_TYPES, iconOf: id => PARTICLE_ICONS[id],
+        label: id => loc(PARTICLE_LABELS[id]), variants: id => variantLabels(PARTICLE_VARIANTS, id)
+    },
+    {
+        id: 'charfx', icon: 'fa-user-astronaut', iconOf: id => CHAR_FX_ICONS[id],
+        ids: CHAR_FX_GROUPS.flatMap(g => g.fx),
+        label: id => loc(`vn.charFx.${id}`), variants: id => variantLabels(CHAR_FX_VARIANTS, id)
+    },
 ];
 
 class EffectFiltersApp extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -57,12 +71,17 @@ class EffectFiltersApp extends HandlebarsApplicationMixin(ApplicationV2) {
                 tier,
                 title: loc(`fxFilters.tiers.${tier}`),
                 hint: loc(`fxFilters.tierHints.${tier}`),
-                items: ids.filter(id => tierOf(kind.id, id) === tier).map(id => ({
-                    key: `${kind.id}:${id}`,
-                    label: kind.label(id),
-                    icon: kind.iconOf(id),
-                    off: off.has(`${kind.id}:${id}`)
-                }))
+                items: ids.filter(id => tierOf(kind.id, id) === tier).map(id => {
+                    const variants = kind.variants(id);
+                    return {
+                        key: `${kind.id}:${id}`,
+                        label: kind.label(id),
+                        icon: kind.iconOf(id),
+                        off: off.has(`${kind.id}:${id}`),
+                        variants: variants.join(', '),
+                        variantsTitle: variants.length ? loc('fxFilters.variantsTitle').replace('{list}', variants.join(', ')) : ''
+                    };
+                })
             })).filter(group => group.items.length);
 
             return {

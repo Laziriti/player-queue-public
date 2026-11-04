@@ -11,7 +11,7 @@ import { VNCharFx } from './visual-effects/character-fx/vn-character-fx.js';
 export const MODULE_ID = 'player-queue';
 
 export const PARTICLE_LAYERS = ['back', 'front', 'mix'];
-export const PARTICLE_LAYER_ICONS = { back: 'fa-layer-group', front: 'fa-layer-group', mix: 'fa-shuffle' };
+export const PARTICLE_LAYER_ICONS = { back: 'fa-arrow-down', mix: 'fa-shuffle', front: 'fa-arrow-up' };
 
 // Старые данные хранили булев particlesForeground вместо particlesLayer
 export function resolveParticlesLayer(p) {
@@ -35,6 +35,8 @@ class VNSceneState {
         this.presetActors = [];
         this.background = null;
         this.backgroundOverlay = true;
+        this.vignette = true;
+        this.groundFog = true;
         this.portraitScale = 1.0;
         this.particleEffect = 'particles';
         this.visualEffect = 'none';
@@ -62,6 +64,8 @@ class VNSceneState {
             presetActors: [...this.presetActors],
             background: this.background,
             backgroundOverlay: this.backgroundOverlay,
+            vignette: this.vignette,
+            groundFog: this.groundFog,
             portraitScale: this.portraitScale,
             particleEffect: this.particleEffect,
             visualEffect: this.visualEffect,
@@ -87,6 +91,8 @@ class VNSceneState {
         this.presetActors = Array.isArray(p.presetActors) ? [...p.presetActors] : [];
         this.background = p.background ?? null;
         this.backgroundOverlay = p.backgroundOverlay ?? true;
+        this.vignette = p.vignette ?? true;
+        this.groundFog = p.groundFog ?? true;
         const { MIN, MAX } = VNSceneState.SCALE_LIMITS;
         this.portraitScale = Math.min(Math.max(p.portraitScale ?? 1.0, MIN), MAX);
         if (p.particleEffect != null || p.visualEffect != null) {

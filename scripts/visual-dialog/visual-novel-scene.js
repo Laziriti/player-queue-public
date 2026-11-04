@@ -2,7 +2,7 @@
 // visual-novel-scene.js — v4.0 (refactored core)
 // ============================================================
 
-import { VNSceneState, VNPresets, VNFolders, PARTICLE_LAYERS, PARTICLE_LAYER_ICONS, resolveParticlesLayer } from './vn-state.js';
+import { VNSceneState, VNPresets, VNFolders, PARTICLE_LAYERS, resolveParticlesLayer } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { QueueBridge } from './vn-queue-bridge.js';
 import { VNTransitions } from './visual-effects/vn-transitions.js';
@@ -133,6 +133,7 @@ class VisualNovelScene {
         this._removeParticleOutsideListener();
         this._removeVisualOutsideListener();
         this._removeSoundsOutsideListener();
+        this._removeFxSettingsOutsideListener();
         if (this._soundHookId != null) {
             Hooks.off('updatePlaylistSound', this._soundHookId);
             this._soundHookId = null;
@@ -158,6 +159,13 @@ class VisualNovelScene {
         if (this._soundsOutsideListener) {
             document.removeEventListener('click', this._soundsOutsideListener, true);
             this._soundsOutsideListener = null;
+        }
+    }
+
+    _removeFxSettingsOutsideListener() {
+        if (this._fxSettingsOutsideListener) {
+            document.removeEventListener('click', this._fxSettingsOutsideListener, true);
+            this._fxSettingsOutsideListener = null;
         }
     }
 
@@ -364,11 +372,28 @@ class VisualNovelScene {
         if (emit && !game.user.isGM) return;
         const { MIN, MAX } = VisualNovelScene.DEFAULTS.SCALE_LIMITS;
         scale = VisualNovelScene.clamp(Math.round(scale * 20) / 20, MIN, MAX);
+        // Колесо упёрлось в границу: масштаб не меняется, сообщение остальным не нужно
+        if (emit && this.state.portraitScales[tokenId] === scale) return;
         this.state.portraitScales[tokenId] = scale;
         const charEl = document.querySelector(`${VisualNovelScene.SEL.CHARACTER}[data-token-id="${tokenId}"]`);
         if (charEl) charEl.style.setProperty('--char-scale', scale);
-        if (emit) this.emitSocketEvent('setCharacterScale', { tokenId, scale });
+        if (emit) this._emitCharacterScale(tokenId, scale);
         this._persistStateDebounced();
+    }
+
+    /** Колесо мыши шлёт десятки тиков в секунду: первое значение уходит сразу, остальные склеиваются в одно раз в 60 мс. */
+    _emitCharacterScale(tokenId, scale) {
+        const slots = (this._scaleEmit ??= {});
+        if (slots[tokenId]) { slots[tokenId].pending = scale; return; }
+        this.emitSocketEvent('setCharacterScale', { tokenId, scale });
+        slots[tokenId] = {
+            pending: null,
+            timer: setTimeout(() => {
+                const { pending } = slots[tokenId];
+                delete slots[tokenId];
+                if (pending !== null) this._emitCharacterScale(tokenId, pending);
+            }, 60)
+        };
     }
 
     // Normalize portraitScales: for legacy presets where scales are stored under canvas token IDs
@@ -507,7 +532,39 @@ class VisualNovelScene {
         if (emit && !game.user.isGM) return;
         this.state.backgroundOverlay = enabled;
         this._bgManager.applyBackground(this.$overlay, this.state.background, enabled);
-        if (emit) this.emitSocketEvent('setBackgroundOverlay', { enabled });
+        this._syncFxSettingsUI();
+        if (emit) { this.emitSocketEvent('setBackgroundOverlay', { enabled }); this._persistState(); }
+    }
+
+    setVignette(enabled, emit = true) {
+        if (emit && !game.user.isGM) return;
+        this.state.vignette = enabled;
+        this._applyVignetteUI();
+        if (emit) { this.emitSocketEvent('setVignette', { enabled }); this._persistState(); }
+    }
+
+    setGroundFog(enabled, emit = true) {
+        if (emit && !game.user.isGM) return;
+        this.state.groundFog = enabled;
+        this._applyVignetteUI();
+        if (emit) { this.emitSocketEvent('setGroundFog', { enabled }); this._persistState(); }
+    }
+
+    /** The vignette and ground-fog layers stay in the DOM (every visual effect restyles them); the classes only hide them. */
+    _applyVignetteUI() {
+        const overlay = this.$overlay?.[0];
+        overlay?.classList.toggle('vn-no-vignette', this.state.vignette === false);
+        overlay?.classList.toggle('vn-no-fog', this.state.groundFog === false);
+        this._syncFxSettingsUI();
+    }
+
+    setParticleIntensity(intensity, emit = true) {
+        if (emit && !game.user.isGM) return;
+        if (!Number.isFinite(intensity)) return;
+        this.state.particleIntensity = Math.min(Math.max(Math.round(intensity), 1), 20);
+        this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, this.state.particlesLayer);
+        this._syncFxSettingsUI();
+        if (emit) { this.emitSocketEvent('setParticleIntensity', { intensity: this.state.particleIntensity }); this._persistState(); }
     }
 
     setParticleEffect(particle, emit = true) {
@@ -515,7 +572,9 @@ class VisualNovelScene {
         const [particleType] = particle.split(':');
         if (!VNAtmosphere.PARTICLE_TYPES.includes(particleType)) return;
         this.state.particleEffect = particle;
-        this._reinitAtmosphere();
+        // Только частицы: параллакс, камера и визуальный эффект продолжают работать (полный _reinitAtmosphere сбрасывал зум фона и фокус камеры)
+        this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, this.state.particlesLayer);
+        this._syncAtmosphereUI();
         if (emit) { this.emitSocketEvent('setParticleEffect', { particle }); this._persistState(); }
     }
 
@@ -524,7 +583,8 @@ class VisualNovelScene {
         const [visualType] = String(visual).split(':');
         if (!VNAtmosphere.VISUAL_TYPES.includes(visualType)) return;
         this.state.visualEffect = visual;
-        this._reinitAtmosphere();
+        this._atmosphere.setVisual(this.state.visualEffect);
+        this._syncAtmosphereUI();
         if (emit) { this.emitSocketEvent('setVisualEffect', { visual }); this._persistState(); }
     }
 
@@ -534,14 +594,11 @@ class VisualNovelScene {
         const prev = this.state.particlesLayer;
         this.state.particlesLayer = layer;
         // Вход/выход из 'mix' требует перераскладки частиц по контейнерам; back<->front — только CSS-класс
-        if ((prev === 'mix') !== (layer === 'mix')) this._reinitAtmosphere();
-        else this._applyParticlesLayerUI();
+        if ((prev === 'mix') !== (layer === 'mix')) {
+            this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, layer);
+            this._syncAtmosphereUI();
+        } else this._applyParticlesLayerUI();
         if (emit) { this.emitSocketEvent('setParticlesLayer', { layer }); this._persistState(); }
-    }
-
-    cycleParticlesLayer() {
-        const i = PARTICLE_LAYERS.indexOf(this.state.particlesLayer);
-        this.setParticlesLayer(PARTICLE_LAYERS[(i + 1) % PARTICLE_LAYERS.length], true);
     }
 
     _applyParticlesLayerUI() {
@@ -549,13 +606,27 @@ class VisualNovelScene {
         if (!overlay) return;
         const layer = this.state.particlesLayer;
         overlay.classList.toggle('vn-particles-fg', layer === 'front');
-        const btn = overlay.querySelector('.vn-particles-fg-btn');
-        if (btn) {
-            btn.classList.toggle('active', layer !== 'back');
-            btn.title = game.i18n.localize(`vn.toolbar.particlesLayer.${layer}`);
-            const icon = btn.querySelector('i');
-            if (icon) icon.className = `fas ${PARTICLE_LAYER_ICONS[layer]}`;
+        this._syncFxSettingsUI();
+    }
+
+    /** Brings the toolbar's "particles / dimming / vignette" dropdown in line with the scene state. */
+    _syncFxSettingsUI() {
+        const panel = this.$overlay?.[0]?.querySelector('.vn-fxset-picker');
+        if (!panel) return;
+        panel.querySelectorAll('.vn-fxset-layer').forEach(b =>
+            b.classList.toggle('active', b.dataset.layer === this.state.particlesLayer));
+        const slider = panel.querySelector('.vn-fxset-intensity');
+        // A slider that is being dragged keeps what the user is doing; the state catches up on release
+        if (slider && slider !== document.activeElement) {
+            slider.value = this.state.particleIntensity;
+            panel.querySelector('.vn-fxset-intensity-val').textContent = slider.value;
         }
+        const overlayToggle = panel.querySelector('.vn-fxset-dimming');
+        if (overlayToggle) overlayToggle.checked = this.state.backgroundOverlay !== false;
+        const vignetteToggle = panel.querySelector('.vn-fxset-vignette');
+        if (vignetteToggle) vignetteToggle.checked = this.state.vignette !== false;
+        const fogToggle = panel.querySelector('.vn-fxset-fog');
+        if (fogToggle) fogToggle.checked = this.state.groundFog !== false;
     }
 
     _reinitAtmosphere() {
@@ -563,6 +634,10 @@ class VisualNovelScene {
         if (!overlayEl) return;
         this._atmosphere.destroy();
         this._atmosphere.init(overlayEl, this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity, this.state.particlesLayer);
+        this._syncAtmosphereUI();
+    }
+
+    _syncAtmosphereUI() {
         this._updateAtmosphereButtons();
         this._applyParticlesLayerUI();
     }
@@ -870,6 +945,8 @@ class VisualNovelScene {
             presetActors: payload.presetActors || [],
             background: payload.background,
             backgroundOverlay: payload.backgroundOverlay ?? true,
+            vignette: payload.vignette ?? true,
+            groundFog: payload.groundFog ?? true,
             portraitScale: payload.portraitScale ?? VisualNovelScene.DEFAULTS.PORTRAIT_SCALE,
             particleEffect: payload.particleEffect ?? null,
             visualEffect: payload.visualEffect ?? null,
@@ -959,6 +1036,11 @@ class VisualNovelScene {
         if (payload.presetActors !== undefined) this.state.presetActors = [...(payload.presetActors || [])];
         if (payload.background != null) this.state.background = payload.background;
         if (payload.backgroundOverlay != null) this.state.backgroundOverlay = payload.backgroundOverlay;
+        if (payload.vignette != null || payload.groundFog != null) {
+            if (payload.vignette != null) this.state.vignette = !!payload.vignette;
+            if (payload.groundFog != null) this.state.groundFog = !!payload.groundFog;
+            this._applyVignetteUI();
+        }
         if (payload.flipped !== undefined && payload.flipped !== null) this.state.flipped = VisualNovelScene._normalizeFlipped({ ...payload.flipped });
         if (payload.visibility !== undefined && payload.visibility !== null) this.state.visibility = { ...payload.visibility };
         if (payload.charFx !== undefined && payload.charFx !== null) this.state.charFx = VNCharFx.normalize(payload.charFx);
@@ -1199,6 +1281,7 @@ class VisualNovelScene {
             setTimeout(() => {
                 $ov.addClass('vn-closing');
                 setTimeout(() => {
+                    VNTransitions.releaseVideos(overlayEl);
                     $ov.remove();
                     this._atmosphere.destroyFor(overlayEl);
                     this._closing = false;
@@ -1469,9 +1552,26 @@ class VisualNovelScene {
                 if (!picker) return;
                 this._setupPickerDismiss(wrap, picker, '_visualOutsideListener');
             },
-            '.vn-particles-fg-btn': () => this.cycleParticlesLayer()
+            '.vn-fxset-btn': (e) => {
+                e.stopPropagation();
+                const wrap = e.currentTarget.closest('.vn-atmo-wrap');
+                const picker = wrap?.querySelector('.vn-fxset-picker');
+                if (!picker) return;
+                this._setupPickerDismiss(wrap, picker, '_fxSettingsOutsideListener', () => this._syncFxSettingsUI());
+            }
         };
         for (const [sel, fn] of Object.entries(actions)) $(document).on(`click${ns}`, sel, fn);
+
+        // Dropdown "particles / dimming / vignette". The slider only previews the number while it moves
+        // (`input`) and rebuilds the particles once on release (`change`)
+        $(document).on(`click${ns}`, '#vn-scene-overlay .vn-fxset-layer', (e) => this.setParticlesLayer(e.currentTarget.dataset.layer, true));
+        $(document).on(`input${ns}`, '#vn-scene-overlay .vn-fxset-intensity', (e) => {
+            e.currentTarget.closest('.vn-fxset-intensity-row').querySelector('.vn-fxset-intensity-val').textContent = e.currentTarget.value;
+        });
+        $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-intensity', (e) => this.setParticleIntensity(Number(e.currentTarget.value), true));
+        $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-dimming', (e) => this.setBackgroundOverlay(e.currentTarget.checked, true));
+        $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-vignette', (e) => this.setVignette(e.currentTarget.checked, true));
+        $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-fog', (e) => this.setGroundFog(e.currentTarget.checked, true));
 
         $(document).on(`click${ns}`, '.vn-broadcast-button', () => this.broadcastToPlayers());
         this._sequence.attachListeners(ns);

@@ -3,7 +3,7 @@
 // ============================================================
 
 import { QueueBridge } from './vn-queue-bridge.js';
-import { VNSceneState, PARTICLE_LAYER_ICONS } from './vn-state.js';
+import { VNSceneState, PARTICLE_LAYERS, PARTICLE_LAYER_ICONS } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { VNCharFx } from './visual-effects/character-fx/vn-character-fx.js';
 import { FALLBACK_AVATAR, stripEmoji, escapeHtml } from './vn-id-utils.js';
@@ -216,6 +216,32 @@ class VNSceneHTML {
 
         const btn = (cls, icon, title) => `<button type="button" class="vn-toolbar-btn ${cls}" title="${title}"><i class="fas ${icon}"></i></button>`;
 
+        // Выпадающее окно «частицы / затенение / виньетка» вместо прежней кнопки слоя частиц. Состояние в нём
+        // держит VisualNovelScene._syncFxSettingsUI, поэтому здесь только исходная разметка
+        const loc = key => game.i18n.localize(key);
+        const layerOpts = PARTICLE_LAYERS.map(id => {
+            const title = loc(`vn.bg.particlesLayer${id[0].toUpperCase()}${id.slice(1)}`);
+            return `<button type="button" class="vn-fxset-layer${id === state.particlesLayer ? ' active' : ''}" data-layer="${id}" title="${title}"><i class="fas ${PARTICLE_LAYER_ICONS[id]}"></i><span>${title}</span></button>`;
+        }).join('');
+        const toggle = (cls, checked, label, icon) => `<label class="vn-overlay-toggle vn-fxset-toggle"><i class="fas ${icon}"></i><span>${label}</span><input type="checkbox" class="${cls}"${checked ? ' checked' : ''}><span class="vn-toggle-track"></span></label>`;
+        const fxSettings = `<div class="vn-atmo-wrap">
+                    ${btn('vn-fxset-btn', 'fa-sliders', loc('vn.toolbar.fxSettings'))}
+                    <div class="vn-atmosphere-picker vn-fxset-picker" hidden>
+                        <div class="vn-atmosphere-picker-header"><i class="fas fa-sliders"></i> ${loc('vn.toolbar.fxSettingsHeader')}</div>
+                        <div class="vn-fxset-body">
+                            <div class="vn-fxset-section">${loc('vn.bg.particlesLayer')}</div>
+                            <div class="vn-fxset-layers" role="group">${layerOpts}</div>
+                            <label class="vn-fxset-intensity-row"><i class="fas fa-snowflake"></i><span>${loc('vn.bg.particleIntensity')}</span>
+                                <input type="range" class="vn-fxset-intensity" min="1" max="20" step="1" value="${state.particleIntensity}">
+                                <span class="vn-fxset-intensity-val">${state.particleIntensity}</span></label>
+                            <div class="vn-fxset-section">${loc('vn.toolbar.fxSettingsFrame')}</div>
+                            ${toggle('vn-fxset-dimming', state.backgroundOverlay !== false, loc('vn.bg.overlay'), 'fa-circle-half-stroke')}
+                            ${toggle('vn-fxset-vignette', state.vignette !== false, loc('vn.bg.vignette'), 'fa-bullseye')}
+                            ${toggle('vn-fxset-fog', state.groundFog !== false, loc('vn.bg.groundFog'), 'fa-smog')}
+                        </div>
+                    </div>
+                </div>`;
+
         const toolbar = isGM
             ? `<div class="vn-toolbar">
                 ${btn('vn-settings-button', 'fa-cog', game.i18n.localize('vn.toolbar.settings'))}
@@ -233,7 +259,7 @@ class VNSceneHTML {
                         <div class="vn-atmosphere-picker-grid">${visualPickerItems}</div>
                     </div>
                 </div>
-                ${btn(`vn-particles-fg-btn${state.particlesLayer !== 'back' ? ' active' : ''}`, PARTICLE_LAYER_ICONS[state.particlesLayer], game.i18n.localize(`vn.toolbar.particlesLayer.${state.particlesLayer}`))}
+                ${fxSettings}
                 ${this._scene._generateSoundsWrapHTML()}
                 ${btn('vn-minimize-all-button', 'fa-window-minimize', game.i18n.localize('vn.toolbar.minimizeAll'))}
                 ${btn('vn-minimize-self-button', 'fa-eye-slash', game.i18n.localize('vn.toolbar.minimizeSelf'))}
@@ -252,7 +278,8 @@ class VNSceneHTML {
             <button type="button" class="vn-toolbar-btn vn-maximize-self-button" title="${game.i18n.localize('vn.toolbar.maximizeSelf')}"><i class="fas fa-eye"></i></button>
         </div>` : '';
 
-        return `<div id="vn-scene-overlay"${this._scene.liteMode ? ' class="vn-lite"' : ''}>
+        const overlayClasses = [this._scene.liteMode && 'vn-lite', state.vignette === false && 'vn-no-vignette', state.groundFog === false && 'vn-no-fog'].filter(Boolean).join(' ');
+        return `<div id="vn-scene-overlay"${overlayClasses ? ` class="${overlayClasses}"` : ''}>
             <div class="vn-bg-layer"></div><div class="vn-background-overlay"></div>
             <div class="vn-fx-tint"></div><div class="vn-fx-rays"></div><div class="vn-fx-edges"></div><div class="vn-fx-scan"></div><div class="vn-fx-flash"></div>
             <div class="vn-vignette"></div><div class="vn-ambient-light"></div><div class="vn-particles"></div><div class="vn-particles vn-particles-upper"></div><div class="vn-ground-fog"></div>

@@ -5,7 +5,7 @@
 import { VNSceneState, VNPresets, resolveParticlesLayer } from '../vn-state.js';
 import { VNAtmosphere } from '../visual-effects/atmosphere/index.js';
 import { stripDupSuffix, parseActorId, toActorTokenId, FALLBACK_AVATAR, escapeHtml } from '../vn-id-utils.js';
-import { CHAR_FX, CHAR_FX_GROUPS, CHAR_FX_ICONS, CHAR_FX_VARIANTS, charFxBase, VNCharFx } from '../visual-effects/character-fx/vn-character-fx.js';
+import { CHAR_FX, CHAR_FX_GROUPS, CHAR_FX_ICONS, CHAR_FX_VARIANTS, charFxBase, charFxLabelKey, VNCharFx } from '../visual-effects/character-fx/vn-character-fx.js';
 
 const VIS_ICON  = { visible: 'fa-eye', hidden: 'fa-eye-slash', 'name-hidden': 'fa-user-secret' };
 const VIS_TITLE = { visible: 'vn.dialog.vis.visible', hidden: 'vn.dialog.vis.hidden', 'name-hidden': 'vn.dialog.vis.nameHidden' };
@@ -151,6 +151,8 @@ export class VNDialogBuilder {
 
         const bg = root.querySelector('input[name="background"]:checked')?.value;
         const overlay = root.querySelector('#background-overlay')?.checked ?? true;
+        const vignette = root.querySelector('#background-vignette')?.checked ?? true;
+        const groundFog = root.querySelector('#background-fog')?.checked ?? true;
         const particleEffect = root.querySelector('#particle-effect')?.value || 'particles';
         const visualEffect = root.querySelector('#visual-effect')?.value || 'none';
         const particlesLayer = root.querySelector('#particles-layer')?.value || 'back';
@@ -176,14 +178,14 @@ export class VNDialogBuilder {
 
         if (isEdit) this._scene.updateSceneLayout({
             leftIds: left, centerIds: center, rightIds: right,
-            background: bg, backgroundOverlay: overlay,
+            background: bg, backgroundOverlay: overlay, vignette, groundFog,
             flipped: pendingFlipped ?? null, particleEffect, visualEffect, particlesLayer, particleIntensity,
             visibility: visibilityData, charFx: charFxData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales ?? null, gmOnly, presetActors,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
-            background: bg, backgroundOverlay: overlay,
+            background: bg, backgroundOverlay: overlay, vignette, groundFog,
             flipped: pendingFlipped || {}, particleEffect, visualEffect, particlesLayer, particleIntensity,
             visibility: visibilityData, charFx: charFxData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales || {}, gmOnly, presetActors,
@@ -294,8 +296,8 @@ export class VNDialogBuilder {
         else tokenOpt.dataset.charFx = id;
         const btn = tokenOpt.querySelector('.vn-token-fx-btn');
         if (!btn) return;
-        btn.querySelector('i').className = `fas ${CHAR_FX_ICONS[id]}`;
-        btn.title = game.i18n.format('vn.dialog.charFxTitle', { name: game.i18n.localize(`vn.charFx.${id}`) });
+        btn.querySelector('i').className = `fas ${CHAR_FX_ICONS[id] ?? CHAR_FX_ICONS[charFxBase(id)]}`;
+        btn.title = game.i18n.format('vn.dialog.charFxTitle', { name: game.i18n.localize(charFxLabelKey(id)) });
     }
 
     // One shared popover menu: the effect button of a card opens it next to the button, a pick applies to that card.
@@ -684,6 +686,10 @@ export class VNDialogBuilder {
         this._selectBackground(root, state.background);
         const oc = root.querySelector('#background-overlay');
         if (oc) oc.checked = state.backgroundOverlay;
+        const vc = root.querySelector('#background-vignette');
+        if (vc) vc.checked = state.vignette !== false;
+        const fc = root.querySelector('#background-fog');
+        if (fc) fc.checked = state.groundFog !== false;
         this._setEffectAxis(root, 'particle', state.particleEffect || 'particles');
         this._setEffectAxis(root, 'visual', state.visualEffect || 'none');
         this._scene._effectsManager.setLayer(root, state.particlesLayer ?? 'back');
@@ -769,6 +775,10 @@ export class VNDialogBuilder {
         this._selectBackground(root, preset.background);
         const overlayCheck = root.querySelector('#background-overlay');
         if (overlayCheck) overlayCheck.checked = preset.backgroundOverlay ?? true;
+        const vignetteCheck = root.querySelector('#background-vignette');
+        if (vignetteCheck) vignetteCheck.checked = preset.vignette ?? true;
+        const fogCheck = root.querySelector('#background-fog');
+        if (fogCheck) fogCheck.checked = preset.groundFog ?? true;
         if (preset.particleEffect != null || preset.visualEffect != null) {
             this._setEffectAxis(root, 'particle', preset.particleEffect || 'none');
             this._setEffectAxis(root, 'visual', preset.visualEffect || 'none');
@@ -894,6 +904,8 @@ export class VNDialogBuilder {
             rightIds: allDeduped.slice(leftCount + centerCount),
             background: root.querySelector('input[name="background"]:checked')?.value || null,
             backgroundOverlay: root.querySelector('#background-overlay')?.checked ?? true,
+            vignette: root.querySelector('#background-vignette')?.checked ?? true,
+            groundFog: root.querySelector('#background-fog')?.checked ?? true,
             particleEffect: root.querySelector('#particle-effect')?.value || 'particles',
             visualEffect: root.querySelector('#visual-effect')?.value || 'none',
             particlesLayer: root.querySelector('#particles-layer')?.value || 'back',
@@ -986,6 +998,8 @@ export class VNDialogBuilder {
     _generateContent(tokens, sceneState, presetsHTML = '', ioHTML = '') {
         const scene = this._scene;
         const currentOverlay = sceneState ? sceneState.backgroundOverlay !== false : true;
+        const currentVignette = sceneState ? sceneState.vignette !== false : true;
+        const currentFog = sceneState ? sceneState.groundFog !== false : true;
         const currentBg = sceneState?.background || null;
         const currentParticle = sceneState?.particleEffect || 'none';
         const currentVisual = sceneState?.visualEffect || 'none';
@@ -1067,7 +1081,7 @@ export class VNDialogBuilder {
                 </div>
             </div>
             <div class="vn-tab-panel" data-tab="background">
-                ${scene._bgManager.generateSelector(currentBg, currentOverlay)}
+                ${scene._bgManager.generateSelector(currentBg, currentOverlay, currentVignette, currentFog)}
             </div>
             <div class="vn-tab-panel" data-tab="effects">
                 ${scene._effectsManager.generateTab(currentParticle, currentVisual, currentParticlesLayer, currentParticleIntensity)}

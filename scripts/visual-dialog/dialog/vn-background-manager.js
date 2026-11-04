@@ -363,6 +363,7 @@ export class VNBackgroundManager {
         if (!el) return;
 
         const bgLayer = el.querySelector('.vn-bg-layer');
+        VNTransitions.releaseVideos(bgLayer);
         bgLayer?.querySelector('.vn-bg-video')?.remove();
 
         if (background && background !== 'none') {
@@ -469,7 +470,7 @@ export class VNBackgroundManager {
     // HTML Generation
     // ══════════════════════════════════════════════════════════
 
-    generateSelector(currentBg = null, currentOverlay = true) {
+    generateSelector(currentBg = null, currentOverlay = true, currentVignette = true, currentFog = true) {
         const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
         const customFolder = VNBackgroundManager.getCustomFolder();
         const folderLabel = customFolder
@@ -489,6 +490,12 @@ export class VNBackgroundManager {
                   <div class="vn-bg-toolbar-row">
                     <label class="vn-overlay-toggle">
                         <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${loc('vn.bg.overlay')}</span>
+                    </label>
+                    <label class="vn-overlay-toggle">
+                        <input type="checkbox" id="background-vignette" ${currentVignette ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${loc('vn.bg.vignette')}</span>
+                    </label>
+                    <label class="vn-overlay-toggle">
+                        <input type="checkbox" id="background-fog" ${currentFog ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${loc('vn.bg.groundFog')}</span>
                     </label>
                     ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${esc(sceneBg)}"><i class="fas fa-map"></i> ${loc('vn.bg.currentScene')}</button>` : ''}
                     <div class="vn-custom-path">
@@ -744,7 +751,9 @@ export class VNBackgroundManager {
         this._clearSearchUI(root);
         const currentBg = this._checkedValue(root) ?? null;
         const currentOverlay = root.querySelector('#background-overlay')?.checked ?? true;
-        section.outerHTML = this.generateSelector(currentBg, currentOverlay);
+        const currentVignette = root.querySelector('#background-vignette')?.checked ?? true;
+        const currentFog = root.querySelector('#background-fog')?.checked ?? true;
+        section.outerHTML = this.generateSelector(currentBg, currentOverlay, currentVignette, currentFog);
         this._keepSelection(root, currentBg);
         this._syncSelectionUI(root);
     }

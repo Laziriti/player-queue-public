@@ -53,8 +53,19 @@
     50%      { transform: scale(1.12); opacity: 1; }
 }
 
+/* Строчки ползут вниз: рисуются на ::before выше слоя на 200px (50 периодов по 4px) и сдвигаются ровно на них — на compositor */
 .vn-vfx-eldritch .vn-fx-scan {
     opacity: 0.15;
+    overflow: hidden;
+}
+
+.vn-vfx-eldritch .vn-fx-scan::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background: repeating-linear-gradient(
             to bottom,
             transparent 0px,
@@ -66,8 +77,8 @@
 }
 
 @keyframes vnScanlineMove {
-    from { background-position: 0 0; }
-    to   { background-position: 0 200px; }
+    from { translate: 0 0; }
+    to   { translate: 0 200px; }
 }
 
 .vn-vfx-eldritch .vn-fx-edges {

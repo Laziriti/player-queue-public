@@ -119,6 +119,18 @@ class VNTransitions {
     // Смена фона
     // ═══════════════════════════════════════════
 
+    /**
+     * Останавливает и отпускает видео внутри элемента, который сейчас будет убран из DOM: оторванный <video> с autoplay
+     * продолжает декодироваться и держать память до сборки мусора.
+     */
+    static releaseVideos(root) {
+        root?.querySelectorAll?.('video').forEach(v => {
+            v.pause();
+            v.removeAttribute('src');
+            v.load();
+        });
+    }
+
     static async switchBackground(overlayEl, newImageUrl, type = 'dissolve', duration = null) {
         if (!overlayEl || !newImageUrl) return;
 
@@ -128,7 +140,7 @@ class VNTransitions {
         // A previous switch may still be running (fast stepping): finish it so layers never stack up
         const layers = [...overlayEl.querySelectorAll('.vn-bg-layer')];
         if (layers.length > 1) {
-            layers.slice(0, -1).forEach(layer => layer.remove());
+            layers.slice(0, -1).forEach(layer => { this.releaseVideos(layer); layer.remove(); });
             const newest = layers[layers.length - 1];
             newest.className = 'vn-bg-layer';
             newest.style.removeProperty('--vn-bg-rest');
@@ -172,7 +184,7 @@ class VNTransitions {
                 newBg.className = 'vn-bg-layer';
                 newBg.style.removeProperty('--vn-bg-rest');
                 newBg.style.removeProperty('--vn-bg-ms');
-                if (oldBg.parentNode) oldBg.remove();
+                if (oldBg.parentNode) { this.releaseVideos(oldBg); oldBg.remove(); }
                 resolve();
             };
 

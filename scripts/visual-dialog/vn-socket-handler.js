@@ -18,9 +18,12 @@ export class VNSocketHandler {
         setCharacterScale:    { gmOnly: true,  required: ['tokenId', 'scale'] },
         setExclusiveSpeaker:  { gmOnly: true,  required: ['tokenId'] },
         setBackgroundOverlay: { gmOnly: true,  required: ['enabled'] },
+        setVignette:          { gmOnly: true,  required: ['enabled'] },
+        setGroundFog:         { gmOnly: true,  required: ['enabled'] },
         setParticleEffect:    { gmOnly: true,  required: ['particle'] },
         setVisualEffect:      { gmOnly: true,  required: ['visual'] },
         setParticlesLayer: { gmOnly: true, required: ['layer'] },
+        setParticleIntensity: { gmOnly: true, required: ['intensity'] },
         setVisibility:        { gmOnly: true,  required: ['tokenId', 'visibility'] },
         preload:              { gmOnly: true,  required: ['urls'] },
     };
@@ -119,6 +122,8 @@ export class VNSocketHandler {
                     presetActors: p.presetActors ?? null,
                     background: p.background,
                     backgroundOverlay: p.backgroundOverlay,
+                    vignette: p.vignette ?? null,
+                    groundFog: p.groundFog ?? null,
                     particleEffect: p.particleEffect ?? null,
                     visualEffect: p.visualEffect ?? null,
                     particleIntensity: p.particleIntensity ?? null,
@@ -144,9 +149,12 @@ export class VNSocketHandler {
             case 'setCharacterScale':    s.setCharacterScale(p.tokenId, Number(p.scale), false); break;
             case 'setExclusiveSpeaker':  s.setExclusiveSpeaker(p.tokenId, false); break;
             case 'setBackgroundOverlay': s.setBackgroundOverlay(!!p.enabled, false); break;
+            case 'setVignette':          s.setVignette(!!p.enabled, false); break;
+            case 'setGroundFog':         s.setGroundFog(!!p.enabled, false); break;
             case 'setParticleEffect':    s.setParticleEffect(p.particle, false); break;
             case 'setVisualEffect':      s.setVisualEffect(p.visual, false); break;
             case 'setParticlesLayer':    s.setParticlesLayer(p.layer, false); break;
+            case 'setParticleIntensity': s.setParticleIntensity(Number(p.intensity), false); break;
             case 'setVisibility':        s.applyVisibility(p.tokenId, p.visibility, false); break;
             case 'preload':              s.preloadImages(p.urls); break;
             default: console.warn(`[VN] No handler for action: ${action}`);

@@ -5,21 +5,18 @@
 import { R, RD } from '../utils.js';
 
 /**
- * Формат конфигурации:
+ * Формат конфигурации (где и как быстро частицы стартуют; как они выглядят и движутся — config/particle-canvas.js):
  * {
- *   className: string,        — CSS-классы элемента
- *   count: number,            — количество частиц
+ *   count: number,            — количество частиц при интенсивности 1
  *   sizeMin: number,          — минимальный размер (px)
  *   sizeRange: number,        — диапазон размера (px)
- *   style: (size) => string   — генератор inline-стилей
- *   images?: string[],        — опционально: 1+ путей к картинкам.
- *                                Если задано, ParticleSystem рандомно
- *                                берёт одну на каждую частицу и рисует
- *                                её вместо CSS-градиента/border-radius.
+ *   spawn: (size) => {…}      — параметры старта частицы: left, top|bottom (% контейнера), delay, duration (с), drift, driftY (px),
+ *                                rotation (градусы), rise (vh), w/h (если не size×size)
+ *   images?: string[],        — опционально: 1+ путей к картинкам; каждая частица берёт одну случайную и рисуется ею
+ *   variants?: { [id]: {…} }  — поля, которые вариант переопределяет у базового типа (см. PARTICLE_VARIANTS в config/particle-types.js)
  * }
  *
- * Для эффектов со специальной генерацией (rain) style = null,
- * они обрабатываются отдельными фабриками в ParticleSystem.
+ * Дождь (drop — диапазоны), конфетти (mode) и призраки (count, images) строятся отдельно в ParticleSystem.
  */
 const PARTICLES_PATH = 'modules/player-queue/assets/effects/particles';
 
@@ -33,206 +30,327 @@ const parchmentScrapImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/parchment_
 
 export const PARTICLE_CONFIGS = {
     particles: {
-        className: 'vn-particle',
         count: 25,
         sizeMin: 2,
         sizeRange: 4,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;bottom:-5%;animation-delay:${R(20)}s;animation-duration:${12 + R(18)}s;--drift:${RD(60)}px;opacity:0`,
+        spawn: () => ({ left: R(100), bottom: -5, delay: R(20), duration: 12 + R(18), drift: RD(60) }),
+        variants: {
+            // Пыль не поднимается, а медленно оседает
+            settle: {
+                count: 32,
+                sizeMin: 1.5,
+                sizeRange: 2.5,
+                spawn: () => ({ left: R(100), top: -5, delay: R(14), duration: 22 + R(16), drift: RD(40) }),
+            },
+            // Звёзды не летят, а мерцают на месте по всему кадру
+            stars: {
+                count: 60,
+                sizeMin: 1,
+                sizeRange: 2.5,
+                spawn: () => ({ left: R(100), top: R(100), delay: R(8), duration: 3 + R(5), drift: RD(24), driftY: RD(24) }),
+            },
+        },
     },
 
     snow: {
-        className: 'vn-particle vn-particle-snow',
         count: 40,
         sizeMin: 2,
         sizeRange: 6,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(15)}s;animation-duration:${8 + R(12)}s;--drift:${RD(80)}px;opacity:0`,
+        spawn: () => ({ left: R(100), top: -5, delay: R(15), duration: 8 + R(12), drift: RD(80) }),
+        variants: {
+            heavy: {
+                count: 95,
+                sizeMin: 2,
+                sizeRange: 5,
+                spawn: () => ({ left: R(100), top: -5, delay: R(8), duration: 5 + R(6), drift: RD(60) }),
+            },
+            // Ветер сносит снег вправо: хлопья стартуют левее экрана и летят косо
+            flurry: {
+                count: 100,
+                sizeMin: 2,
+                sizeRange: 4,
+                spawn: () => ({ left: R(130) - 25, top: -5, delay: R(5), duration: 1.8 + R(2.4), drift: 280 + R(360) }),
+            },
+            dust: {
+                count: 80,
+                sizeMin: 1,
+                sizeRange: 1.8,
+                spawn: () => ({ left: R(100), top: -5, delay: R(12), duration: 14 + R(14), drift: RD(36) }),
+            },
+            flakes: {
+                count: 16,
+                sizeMin: 9,
+                sizeRange: 9,
+                spawn: () => ({ left: R(100), top: -5, delay: R(18), duration: 14 + R(10), drift: RD(120) }),
+            },
+        },
     },
 
+    // Дождь строит ParticleSystem._rainParams; drop — диапазоны [мин, макс]: ширина и высота капли (px),
+    // длительность падения (с), снос --drift (px); skew — капли стартуют левее экрана (косой дождь)
     rain: {
-        className: 'vn-particle vn-particle-rain',
         count: 80,
-        sizeMin: 0,
-        sizeRange: 0,
-        style: null, // Специальная фабрика
+        drop: { width: [1, 2], height: [8, 20], duration: [0.5, 1.3], drift: [-5, 5], skew: false },
+        variants: {
+            downpour: { count: 190, drop: { width: [1, 2.2], height: [16, 30], duration: [0.32, 0.7], drift: [-50, -20], skew: false } },
+            drizzle:  { count: 55,  drop: { width: [0.8, 1.1], height: [4, 9], duration: [0.9, 1.7], drift: [-4, 4], skew: false } },
+            slanted:  { count: 120, drop: { width: [1, 2], height: [10, 22], duration: [0.4, 0.9], drift: [230, 330], skew: true } },
+            blood:    { count: 90,  drop: { width: [1.2, 2.4], height: [10, 22], duration: [0.5, 1.2], drift: [-8, 8], skew: false } },
+        },
     },
 
     embers: {
-        className: 'vn-particle vn-particle-ember',
         count: 30,
         sizeMin: 1,
         sizeRange: 3,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;bottom:-5%;animation-delay:${R(15)}s;animation-duration:${5 + R(10)}s;--drift:${RD(100)}px;opacity:0`,
+        spawn: () => ({ left: R(100), bottom: -5, delay: R(15), duration: 5 + R(10), drift: RD(100) }),
+        variants: {
+            // Столб искр над костром: из середины кадра, ветер сносит вправо
+            bonfire: {
+                count: 46,
+                sizeMin: 1.5,
+                sizeRange: 3,
+                spawn: () => ({ left: 34 + R(32), bottom: -5, delay: R(8), duration: 3.5 + R(5), drift: 60 + R(180) }),
+            },
+            // Редкие крупные тусклые угольки
+            smolder: {
+                count: 16,
+                sizeMin: 4,
+                sizeRange: 5,
+                spawn: () => ({ left: R(100), bottom: -5, delay: R(14), duration: 10 + R(10), drift: RD(70) }),
+            },
+        },
     },
 
     fireflies: {
-        className: 'vn-particle vn-particle-firefly',
         count: 15,
         sizeMin: 3,
         sizeRange: 4,
-        style: (s) => `width:${s}px;height:${s}px;left:${10 + R(80)}%;top:${10 + R(70)}%;animation-delay:${R(10)}s;animation-duration:${6 + R(8)}s;--drift:${RD(120)}px;--drift-y:${RD(80)}px;opacity:0`,
+        spawn: () => ({ left: 10 + R(80), top: 10 + R(70), delay: R(10), duration: 6 + R(8), drift: RD(120), driftY: RD(80) }),
+        // Те же светлячки другого цвета: оттенок задаёт sprite варианта в config/particle-canvas.js
+        variants: { blue: {}, amber: {} },
     },
 
     divine_motes: {
-        className: 'vn-particle vn-particle-divine',
         count: 35,
         sizeMin: 2,
         sizeRange: 5,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${-5 + R(20)}%;animation-delay:${R(12)}s;animation-duration:${8 + R(14)}s;--drift:${RD(40)}px;opacity:0`,
+        spawn: () => ({ left: R(100), top: -5 + R(20), delay: R(12), duration: 8 + R(14), drift: RD(40) }),
+        variants: {
+            rise: {
+                count: 35,
+                spawn: () => ({ left: R(100), bottom: -5, delay: R(12), duration: 8 + R(12), drift: RD(50) }),
+            },
+            twinkle: {
+                count: 40,
+                spawn: () => ({ left: R(100), top: R(100), delay: R(8), duration: 4 + R(6), drift: RD(30), driftY: RD(30) }),
+            },
+        },
     },
 
     eldritch_spores: {
-        className: 'vn-particle vn-particle-eldritch',
         count: 20,
         sizeMin: 2,
         sizeRange: 4,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(15)}s;animation-duration:${10 + R(20)}s;--drift:${RD(160)}px;--drift-y:${RD(120)}px;opacity:0`,
+        spawn: () => ({ left: R(100), top: R(100), delay: R(15), duration: 10 + R(20), drift: RD(160), driftY: RD(120) }),
     },
 
     bubbles: {
-        className: 'vn-particle vn-particle-bubble',
         count: 25,
         sizeMin: 4,
         sizeRange: 10,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;bottom:-5%;animation-delay:${R(15)}s;animation-duration:${8 + R(12)}s;--drift:${RD(60)}px;opacity:0`,
+        spawn: () => ({ left: R(100), bottom: -5, delay: R(15), duration: 8 + R(12), drift: RD(60) }),
+        variants: {
+            champagne: {
+                count: 60,
+                sizeMin: 2,
+                sizeRange: 3.5,
+                spawn: () => ({ left: R(100), bottom: -5, delay: R(6), duration: 4 + R(5), drift: RD(24) }),
+            },
+            // Пузыри быстро поднимаются со дна и лопаются на полпути (vnBubbleBoil)
+            boil: {
+                count: 55,
+                sizeMin: 3,
+                sizeRange: 7,
+                spawn: () => ({ left: R(100), bottom: -5, delay: R(4), duration: 1.8 + R(2.4), drift: RD(30), rise: 35 + R(55) }),
+            },
+        },
     },
 
     dream_orbs: {
-        className: 'vn-particle vn-particle-dream',
         count: 12,
         sizeMin: 8,
         sizeRange: 20,
-        style: (s) => `width:${s}px;height:${s}px;left:${5 + R(90)}%;top:${5 + R(85)}%;animation-delay:${R(12)}s;animation-duration:${12 + R(16)}s;--drift:${RD(80)}px;--drift-y:${RD(60)}px;opacity:0`,
+        spawn: () => ({ left: 5 + R(90), top: 5 + R(85), delay: R(12), duration: 12 + R(16), drift: RD(80), driftY: RD(60) }),
     },
 
     ash: {
-        className: 'vn-particle vn-particle-ash',
-        count: 35,
-        sizeMin: 6,
-        sizeRange: 10,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(20)}s;animation-duration:${6 + R(10)}s;--drift:${RD(80)}px;opacity:0`,
+        count: 26,
+        sizeMin: 18,
+        sizeRange: 20,
+        spawn: () => ({ left: R(100), top: -5, delay: R(20), duration: 6 + R(10), drift: RD(80) }),
         images: [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/ash/ash_${n}.webp`),
+        variants: {
+            heavy: {
+                count: 60,
+                sizeMin: 10,
+                sizeRange: 10,
+                spawn: () => ({ left: R(100), top: -5, delay: R(10), duration: 4 + R(6), drift: RD(110) }),
+            },
+            big: {
+                count: 12,
+                sizeMin: 36,
+                sizeRange: 22,
+                spawn: () => ({ left: R(100), top: -5, delay: R(16), duration: 12 + R(10), drift: RD(60) }),
+            },
+        },
     },
 
     sakura: {
-        className: 'vn-particle vn-particle-sakura',
         count: 20,
-        sizeMin: 10,
-        sizeRange: 12,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(18)}s;animation-duration:${8 + R(12)}s;--drift:${RD(120)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        sizeMin: 16,
+        sizeRange: 16,
+        spawn: () => ({ left: R(100), top: -5, delay: R(18), duration: 8 + R(12), drift: RD(120), rotation: R(720) - 360 }),
         images: [1, 2].map(n => `${PARTICLES_PATH}/sakura_petals/sakura_petal_${n}.webp`),
     },
 
     sparks: {
-        className: 'vn-particle vn-particle-spark',
         count: 40,
         sizeMin: 1,
         sizeRange: 2,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;bottom:-5%;animation-delay:${R(8)}s;animation-duration:${2 + R(4)}s;--drift:${RD(80)}px;opacity:0`,
+        spawn: () => ({ left: R(100), bottom: -5, delay: R(8), duration: 2 + R(4), drift: RD(80) }),
+        variants: {
+            // Бьёт из одной точки внизу: взлетает дугой (--rise — высота подъёма) и падает обратно
+            fountain: {
+                count: 50,
+                sizeMin: 1.5,
+                sizeRange: 2.5,
+                spawn: () => ({ left: 40 + R(20), bottom: -3, delay: R(4), duration: 1.6 + R(1.8), drift: RD(340), rise: 40 + R(45) }),
+            },
+            // Искры сыплются сверху (болгарка, оборванный провод)
+            falling: {
+                count: 45,
+                sizeMin: 1,
+                sizeRange: 2.5,
+                spawn: () => ({ left: R(100), top: -5, delay: R(6), duration: 1.3 + R(2.2), drift: RD(120) }),
+            },
+            electric: {
+                count: 50,
+                sizeMin: 1,
+                sizeRange: 2,
+                spawn: () => ({ left: R(100), bottom: -5, delay: R(6), duration: 0.8 + R(1.6), drift: RD(260) }),
+            },
+        },
     },
 
     bokeh: {
-        className: 'vn-particle vn-particle-bokeh',
         count: 15,
         sizeMin: 15,
         sizeRange: 40,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(15)}s;animation-duration:${10 + R(15)}s;--drift:${RD(40)}px;--drift-y:${RD(30)}px;opacity:0`,
+        spawn: () => ({ left: R(100), top: R(100), delay: R(15), duration: 10 + R(15), drift: RD(40), driftY: RD(30) }),
+        // Те же круги другого цвета: оттенок задаёт sprite варианта в config/particle-canvas.js
+        variants: { cool: {}, neon: {} },
     },
     apocalypse_debris: {
-        className: 'vn-particle vn-particle-debris',
         count: 50,
-        sizeMin: 6,
-        sizeRange: 10,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(12)}s;animation-duration:${3 + R(6)}s;--drift:${RD(200)}px;--drift-y:${RD(150)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        sizeMin: 14,
+        sizeRange: 18,
+        spawn: () => ({ left: R(100), top: R(100), delay: R(12), duration: 3 + R(6), drift: RD(200), driftY: RD(150), rotation: R(720) - 360 }),
         images: [1, 2, 3].map(n => `${PARTICLES_PATH}/debris_apocalypse/debris_apocalypse_${n}.webp`),
     },
 
     ether_wisps: {
-        className: 'vn-particle vn-particle-ether',
         count: 18,
         sizeMin: 10,
         sizeRange: 30,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(15)}s;animation-duration:${12 + R(18)}s;--drift:${RD(100)}px;--drift-y:${RD(80)}px;opacity:0`,
+        spawn: () => ({ left: R(100), top: R(100), delay: R(15), duration: 12 + R(18), drift: RD(100), driftY: RD(80) }),
     },
 
     blood_motes: {
-        className: 'vn-particle vn-particle-blood',
         count: 30,
-        sizeMin: 5,
-        sizeRange: 6,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(15)}s;animation-duration:${6 + R(10)}s;--drift:${RD(60)}px;opacity:0`,
+        sizeMin: 16,
+        sizeRange: 14,
+        spawn: () => ({ left: R(100), top: -5, delay: R(15), duration: 6 + R(10), drift: RD(60) }),
         images: [1, 2].map(n => `${PARTICLES_PATH}/blood_motes/blood_mote_${n}.webp`),
     },
 
     shadow_wisps: {
-        className: 'vn-particle vn-particle-shadow-wisp',
         count: 22,
         sizeMin: 3,
         sizeRange: 8,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;bottom:${R(50)}%;animation-delay:${R(28)}s;animation-duration:${20 + R(22)}s;--drift:${RD(70)}px;opacity:0`,
+        spawn: () => ({ left: R(100), bottom: R(50), delay: R(28), duration: 20 + R(22), drift: RD(70) }),
     },
 
     glass_dust: {
-        className: 'vn-particle vn-particle-glass-dust',
         count: 25,
-        sizeMin: 4,
-        sizeRange: 6,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(14)}s;animation-duration:${5 + R(9)}s;--drift:${RD(80)}px;--drift-y:${RD(60)}px;opacity:0`,
+        sizeMin: 13,
+        sizeRange: 14,
+        spawn: () => ({ left: R(100), top: R(100), delay: R(14), duration: 5 + R(9), drift: RD(80), driftY: RD(60) }),
         images: [1, 2].map(n => `${PARTICLES_PATH}/glass_dust/glass_dust_${n}.webp`),
     },
 
     void_shards: {
-        className: 'vn-particle vn-particle-void-shard',
         count: 30,
-        sizeMin: 14,
-        sizeRange: 18,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(16)}s;animation-duration:${6 + R(10)}s;--drift:${RD(120)}px;--drift-y:${RD(100)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        sizeMin: 28,
+        sizeRange: 28,
+        spawn: () => ({ left: R(100), top: R(100), delay: R(16), duration: 6 + R(10), drift: RD(120), driftY: RD(100), rotation: R(720) - 360 }),
         images: [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/void_shards/void_shard_${n}.webp`),
     },
 
     cosmic_dust: {
-        className: 'vn-particle vn-particle-cosmic',
         count: 35,
         sizeMin: 1,
         sizeRange: 4,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:${R(100)}%;animation-delay:${R(20)}s;animation-duration:${10 + R(15)}s;--drift:${RD(60)}px;--drift-y:${RD(50)}px;opacity:0`,
+        spawn: () => ({ left: R(100), top: R(100), delay: R(20), duration: 10 + R(15), drift: RD(60), driftY: RD(50) }),
     },
 
     abyss_bubbles: {
-        className: 'vn-particle vn-particle-abyss',
         count: 20,
         sizeMin: 3,
         sizeRange: 8,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;bottom:-5%;animation-delay:${R(18)}s;animation-duration:${10 + R(14)}s;--drift:${RD(40)}px;opacity:0`,
+        spawn: () => ({ left: R(100), bottom: -5, delay: R(18), duration: 10 + R(14), drift: RD(40) }),
     },
 
     sand_grains: {
-        className: 'vn-particle vn-particle-sand',
         count: 60,
         sizeMin: 1,
         sizeRange: 2,
-        style: (s) => `width:${s * 3}px;height:${s}px;left:-5%;top:${15 + R(70)}%;animation-delay:${R(5)}s;animation-duration:${1.2 + R(2.5)}s;--drift-y:${RD(25)}px;opacity:0`,
+        spawn: (s) => ({ w: s * 3, h: s, left: -5, top: 15 + R(70), delay: R(5), duration: 1.2 + R(2.5), driftY: RD(25) }),
+        variants: {
+            // Позёмка: песок стелется низко над землёй, длинными быстрыми штрихами
+            ground: {
+                count: 80,
+                sizeMin: 1,
+                sizeRange: 1.2,
+                spawn: (s) => ({ w: s * 7, h: s, left: -5, top: 80 + R(16), delay: R(4), duration: 0.8 + R(1.6), driftY: RD(10) }),
+            },
+        },
     },
 
-    // Конфетти — фабрика в particle-system.js, здесь count и картинки кусочков
-    // (серпантин остаётся CSS-полоской — картинок под него пока нет)
+    // Конфетти — ParticleSystem._confettiParams, здесь count и картинки кусочков
+    // (серпантин — цветная полоска без картинки)
     confetti: {
         count: 55,
+        // mode: 'streamers' — только серпантин, 'pieces' — только кусочки; без mode ~четверть серпантина
+        variants: {
+            pieces: { mode: 'pieces' },
+            ribbon: { mode: 'streamers', count: 40 },
+        },
         images: Array.from({ length: 15 }, (_, i) => `${PARTICLES_PATH}/confetti/confetti_${i + 1}.webp`),
     },
 
-    // Призраки — _fillGhosts в particle-system.js, здесь число душ
-    // и картинки для головы (хвост остаётся CSS-градиентом)
+    // Призраки — ParticleSystem._fillGhosts, здесь число душ и картинки для головы
+    // (хвост и туман рисует canvas/ghosts.js)
     ghosts: {
         count: 42,
         images: [1, 2].map(n => `${PARTICLES_PATH}/ghosts/ghost_${n}.webp`),
     },
 
     feathers: {
-        className: 'vn-particle vn-particle-feather',
-        count: 16,
-        sizeMin: 14,
-        sizeRange: 16,
-        style: (s) => `width:${s}px;height:${s * 1.6}px;left:${R(100)}%;top:-5%;animation-delay:${R(22)}s;animation-duration:${14 + R(16)}s;--drift:${RD(160)}px;--rotation:${R(360) - 180}deg;opacity:0`,
+        count: 14,
+        sizeMin: 40,
+        sizeRange: 38,
+        spawn: () => ({ left: R(100), top: -5, delay: R(22), duration: 14 + R(16), drift: RD(160), rotation: R(360) - 180 }),
         images: [...featherBlackImages, ...featherWhiteImages],
         variants: {
             black: { images: featherBlackImages },
@@ -241,11 +359,10 @@ export const PARTICLE_CONFIGS = {
     },
 
     page_scraps: {
-        className: 'vn-particle vn-particle-page-scrap',
-        count: 22,
-        sizeMin: 14,
-        sizeRange: 16,
-        style: (s) => `width:${s}px;height:${s}px;left:${R(100)}%;top:-5%;animation-delay:${R(20)}s;animation-duration:${10 + R(14)}s;--drift:${RD(180)}px;--rotation:${R(720) - 360}deg;opacity:0`,
+        count: 16,
+        sizeMin: 36,
+        sizeRange: 34,
+        spawn: () => ({ left: R(100), top: -5, delay: R(20), duration: 10 + R(14), drift: RD(180), rotation: R(720) - 360 }),
         images: [...pageFragmentImages, ...parchmentScrapImages],
         variants: {
             pages: { images: pageFragmentImages },
@@ -256,11 +373,10 @@ export const PARTICLE_CONFIGS = {
     // Воздушные шарики — единственный тип с паттерном "float up"
     // (поднимаются вверх с покачиванием, а не падают вниз)
     balloons: {
-        className: 'vn-particle vn-particle-balloon',
         count: 9,
         sizeMin: 34,
         sizeRange: 26,
-        style: (s) => `width:${s}px;height:${s * 1.25}px;left:${R(100)}%;bottom:-10%;animation-delay:${R(18)}s;animation-duration:${16 + R(14)}s;--drift:${RD(120)}px;opacity:0`,
+        spawn: (s) => ({ w: s, h: s * 1.25, left: R(100), bottom: -10, delay: R(18), duration: 16 + R(14), drift: RD(120) }),
         images: [1, 2, 3, 4, 5, 6].map(n => `${PARTICLES_PATH}/balloons/balloon_${n}.webp`),
     },
 
@@ -269,17 +385,14 @@ export const PARTICLE_CONFIGS = {
     // через atan2 от того же --drift/--drift-y, что и движение, — угол
     // гарантированно совпадает с траекторией (не подбирается вручную).
     comets: {
-        className: 'vn-particle vn-particle-comet',
         count: 16,
         sizeMin: 60,
         sizeRange: 50,
-        style: (s) => {
+        spawn: (s) => {
             const dx = -(900 + R(600));
             const dy = 650 + R(400);
             const rotation = Math.atan2(dy, dx) * 180 / Math.PI;
-            return `width:${s}px;height:${s * 0.45}px;left:${45 + R(55)}%;top:${-8 + R(12)}%;` +
-                `animation-delay:${R(9)}s;animation-duration:${1.2 + R(1)}s;` +
-                `--drift:${dx}px;--drift-y:${dy}px;--rotation:${rotation}deg;opacity:0`;
+            return { w: s, h: s * 0.45, left: 45 + R(55), top: -8 + R(12), delay: R(9), duration: 1.2 + R(1), drift: dx, driftY: dy, rotation };
         },
         images: [1, 2].map(n => `${PARTICLES_PATH}/comets/comet_with_trail_to_right_${n}.webp`),
     },
@@ -287,17 +400,14 @@ export const PARTICLE_CONFIGS = {
     // Падающие звёзды — то же самое, но летят вниз-вправо (хвост
     // star_with_trail_to_left нарисован в другую сторону).
     shooting_stars: {
-        className: 'vn-particle vn-particle-shooting-star',
         count: 16,
         sizeMin: 60,
         sizeRange: 50,
-        style: (s) => {
+        spawn: (s) => {
             const dx = 900 + R(600);
             const dy = 650 + R(400);
             const rotation = Math.atan2(dy, dx) * 180 / Math.PI - 180;
-            return `width:${s}px;height:${s * 0.45}px;left:${R(55)}%;top:${-8 + R(12)}%;` +
-                `animation-delay:${R(9)}s;animation-duration:${1.2 + R(1)}s;` +
-                `--drift:${dx}px;--drift-y:${dy}px;--rotation:${rotation}deg;opacity:0`;
+            return { w: s, h: s * 0.45, left: R(55), top: -8 + R(12), delay: R(9), duration: 1.2 + R(1), drift: dx, driftY: dy, rotation };
         },
         images: [1, 2, 3].map(n => `${PARTICLES_PATH}/stars/star_with_trail_to_left_${n}.webp`),
     },

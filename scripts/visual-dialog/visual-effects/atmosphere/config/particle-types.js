@@ -76,6 +76,71 @@ export const PARTICLE_VARIANTS = {
         { id: 'pages',     label: 'vn.atmosphere.particleVariants.pages' },
         { id: 'parchment', label: 'vn.atmosphere.particleVariants.parchment' },
     ],
+    // Дальше — варианты без новых картинок: другие размеры, количество, траектория или цвет (см. variants в config/particles.js)
+    rain: [
+        { id: 'all',      label: 'vn.atmosphere.particleVariants.rain' },
+        { id: 'downpour', label: 'vn.atmosphere.particleVariants.downpour' },
+        { id: 'drizzle',  label: 'vn.atmosphere.particleVariants.drizzle' },
+        { id: 'slanted',  label: 'vn.atmosphere.particleVariants.slanted' },
+        { id: 'blood',    label: 'vn.atmosphere.particleVariants.bloodRain' },
+    ],
+    snow: [
+        { id: 'all',    label: 'vn.atmosphere.particleVariants.snow' },
+        { id: 'heavy',  label: 'vn.atmosphere.particleVariants.snowfall' },
+        { id: 'flurry', label: 'vn.atmosphere.particleVariants.flurry' },
+        { id: 'dust',   label: 'vn.atmosphere.particleVariants.iceDust' },
+        { id: 'flakes', label: 'vn.atmosphere.particleVariants.bigFlakes' },
+    ],
+    particles: [
+        { id: 'all',    label: 'vn.atmosphere.particleVariants.risingMotes' },
+        { id: 'settle', label: 'vn.atmosphere.particleVariants.settlingDust' },
+        { id: 'stars',  label: 'vn.atmosphere.particleVariants.starDust' },
+    ],
+    sparks: [
+        { id: 'all',      label: 'vn.atmosphere.particleVariants.sparks' },
+        { id: 'fountain', label: 'vn.atmosphere.particleVariants.sparkFountain' },
+        { id: 'falling',  label: 'vn.atmosphere.particleVariants.fallingSparks' },
+        { id: 'electric', label: 'vn.atmosphere.particleVariants.electric' },
+    ],
+    embers: [
+        { id: 'all',     label: 'vn.atmosphere.particleVariants.embers' },
+        { id: 'bonfire', label: 'vn.atmosphere.particleVariants.bonfire' },
+        { id: 'smolder', label: 'vn.atmosphere.particleVariants.smolder' },
+    ],
+    bokeh: [
+        { id: 'all',  label: 'vn.atmosphere.particleVariants.warmBokeh' },
+        { id: 'cool', label: 'vn.atmosphere.particleVariants.coolBokeh' },
+        { id: 'neon', label: 'vn.atmosphere.particleVariants.neonBokeh' },
+    ],
+    bubbles: [
+        { id: 'all',       label: 'vn.atmosphere.particleVariants.bubbles' },
+        { id: 'champagne', label: 'vn.atmosphere.particleVariants.champagne' },
+        { id: 'boil',      label: 'vn.atmosphere.particleVariants.boiling' },
+    ],
+    ash: [
+        { id: 'all',   label: 'vn.atmosphere.particleVariants.ash' },
+        { id: 'heavy', label: 'vn.atmosphere.particleVariants.ashfall' },
+        { id: 'big',   label: 'vn.atmosphere.particleVariants.ashFlakes' },
+    ],
+    sand_grains: [
+        { id: 'all',    label: 'vn.atmosphere.particleVariants.sandStorm' },
+        { id: 'ground', label: 'vn.atmosphere.particleVariants.groundDrift' },
+    ],
+    confetti: [
+        { id: 'all',    label: 'vn.atmosphere.particleVariants.confettiRibbons' },
+        { id: 'pieces', label: 'vn.atmosphere.particleVariants.confettiOnly' },
+        { id: 'ribbon', label: 'vn.atmosphere.particleVariants.ribbonsOnly' },
+    ],
+    divine_motes: [
+        { id: 'all',     label: 'vn.atmosphere.particleVariants.fallingMotes' },
+        { id: 'rise',    label: 'vn.atmosphere.particleVariants.ascendingMotes' },
+        { id: 'twinkle', label: 'vn.atmosphere.particleVariants.twinklingMotes' },
+    ],
+    fireflies: [
+        { id: 'all',   label: 'vn.atmosphere.particleVariants.greenFireflies' },
+        { id: 'blue',  label: 'vn.atmosphere.particleVariants.blueFireflies' },
+        { id: 'amber', label: 'vn.atmosphere.particleVariants.amberFireflies' },
+    ],
 };
 
 export const PARTICLE_ICONS = {

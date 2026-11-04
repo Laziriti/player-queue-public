@@ -287,12 +287,6 @@
     100% { opacity: 0.25; }
 }
 
-/* Замедленная анимация частиц */
-.vn-vfx-dream .vn-particles { animation: none; }
-.vn-vfx-dream .vn-particle {
-    animation-duration: 20s !important;
-}
-
 
 /* ══════════════════════════════════════════════════════════
    SACRED (Священное)
@@ -620,3 +614,296 @@
 .vn-vfx-divine  .vn-fx-grain,
 .vn-vfx-sacred  .vn-fx-grain,
 .vn-vfx-warm    .vn-fx-grain { opacity: 0.04; }
+
+
+/* ══════════════════════════════════════════════════════════
+   ВАРИАНТЫ ЭФФЕКТОВ (VISUAL_VARIANTS): поверх базовых правил выше, на классах .vn-vfx-<тип>-<вариант>
+   Цветной туман собран как в vn-fx-nature.css: заливка цветом + маска-плитка --vn-tex-fog.
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ── DREAM · Кошмар (.vn-vfx-dream-nightmare) ──
+   Фиолетово-чёрный кадр с рябью (искажающий фильтр как у «Древнего ужаса»), по краям сгущается тьма:
+   она то подступает, то отхлынывает. */
+
+.vn-vfx-dream-nightmare .vn-bg-layer {
+    filter: saturate(0.55) brightness(0.55) contrast(1.28) hue-rotate(-18deg) url(#vn-distort-eldritch);
+}
+
+.vn-vfx-dream-nightmare .vn-fx-tint {
+    background: radial-gradient(ellipse at center, rgba(90, 0, 140, 0.18) 0%, rgba(50, 0, 90, 0.42) 60%, rgba(12, 0, 24, 0.7) 100%);
+    animation: vnNightmareTint 5s ease-in-out infinite alternate;
+}
+
+@keyframes vnNightmareTint {
+    0%   { opacity: 0.75; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-dream-nightmare .vn-fx-edges {
+    box-shadow: none;
+    background: radial-gradient(ellipse at center, transparent 38%, rgba(6, 0, 16, 0.88) 100%);
+    animation: vnNightmareClose 7s ease-in-out infinite;
+}
+
+@keyframes vnNightmareClose {
+    0%, 100% { scale: 1.28; }
+    50%      { scale: 1; }
+}
+
+.vn-vfx-dream-nightmare .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(30, 0, 55, 0.4) 75%, rgba(8, 0, 18, 0.8) 100%);
+}
+
+.vn-vfx-dream-nightmare .vn-ambient-light {
+    background:
+        radial-gradient(ellipse at 25% 35%, rgba(190, 40, 200, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 78% 70%, rgba(110, 30, 220, 0.28) 0%, transparent 45%) !important;
+    animation: vnNightmareAmbient 4s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnNightmareAmbient {
+    0%   { opacity: 0.08; }
+    100% { opacity: 0.22; }
+}
+
+.vn-vfx-dream-nightmare .vn-character.active .vn-character-img {
+    filter: brightness(0.85) contrast(1.2) saturate(0.7)
+        drop-shadow(0 0 22px rgba(150, 40, 230, 0.55))
+        drop-shadow(0 5px 18px rgba(0, 0, 0, 0.8)) !important;
+}
+
+.vn-vfx-dream-nightmare .vn-character-glow {
+    background: radial-gradient(ellipse at center, rgba(140, 30, 220, 0.4) 0%, transparent 68%) !important;
+}
+
+
+/* ── DREAM · Лёгкая дрёма (.vn-vfx-dream-doze) ──
+   Никакого искажения: мягкий фокус, пастельная дымка, светящиеся края и медленно плывущие пятна света. */
+
+.vn-vfx-dream-doze .vn-bg-layer {
+    filter: saturate(0.85) brightness(1.02) contrast(0.85) blur(1.4px);
+}
+
+.vn-vfx-dream-doze .vn-fx-tint {
+    background: radial-gradient(ellipse at 50% 40%, rgba(255, 215, 235, 0.22) 0%, rgba(200, 170, 245, 0.25) 60%, rgba(150, 130, 225, 0.3) 100%);
+    animation: vnDozeTint 12s ease-in-out infinite alternate;
+}
+
+@keyframes vnDozeTint {
+    0%   { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-dream-doze .vn-fx-rays {
+    opacity: 0.6;
+    background:
+        radial-gradient(ellipse 28% 34% at 24% 30%, rgba(255, 220, 240, 0.5) 0%, transparent 70%),
+        radial-gradient(ellipse 30% 30% at 74% 64%, rgba(200, 220, 255, 0.45) 0%, transparent 70%),
+        radial-gradient(ellipse 22% 26% at 52% 82%, rgba(240, 210, 255, 0.4) 0%, transparent 70%);
+    filter: blur(18px);
+    animation: vnDozeDrift 22s ease-in-out infinite alternate;
+}
+
+@keyframes vnDozeDrift {
+    0%   { opacity: 0.4; translate: -30px 10px; }
+    100% { opacity: 0.8; translate: 40px -16px; }
+}
+
+.vn-vfx-dream-doze .vn-fx-edges {
+    box-shadow: inset 0 0 140px 50px rgba(255, 235, 250, 0.3);
+    animation: vnDozeBreath 9s ease-in-out infinite alternate;
+}
+
+@keyframes vnDozeBreath {
+    0%   { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-dream-doze .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(190, 170, 235, 0.35) 85%, rgba(140, 120, 205, 0.5) 100%);
+}
+
+.vn-vfx-dream-doze .vn-fx-bloom {
+    opacity: 0.45;
+    background: radial-gradient(ellipse at 50% 42%, rgba(255, 225, 245, 0.7) 0%, transparent 62%);
+}
+
+.vn-vfx-dream-doze .vn-character.active .vn-character-img {
+    filter: brightness(1.06) contrast(0.92) saturate(0.95)
+        drop-shadow(0 0 26px rgba(255, 220, 245, 0.55))
+        drop-shadow(0 5px 15px rgba(0, 0, 0, 0.35)) !important;
+}
+
+.vn-vfx-dream-doze .vn-character-glow {
+    background: radial-gradient(ellipse at center, rgba(255, 225, 245, 0.5) 0%, transparent 68%) !important;
+}
+
+
+/* ── DIVINE · Лучи собора (.vn-vfx-divine-cathedral) ──
+   Неподвижные косые столбы света из высоких окон слева: золотые, голубые и розовые полосы, как от витража,
+   в них поднимается пыль. Вместо вращающихся лучей базового вида. */
+
+.vn-vfx-divine-cathedral .vn-fx-tint {
+    background: radial-gradient(ellipse at 22% -10%, rgba(255, 225, 150, 0.38) 0%, rgba(255, 190, 90, 0.12) 40%, transparent 70%);
+}
+
+.vn-vfx-divine-cathedral .vn-fx-rays {
+    opacity: 0.85;
+    background: linear-gradient(115deg,
+        transparent 6%,  rgba(255, 226, 150, 0.6) 9%,  rgba(255, 226, 150, 0.6) 17%, transparent 21%,
+        transparent 28%, rgba(190, 215, 255, 0.45) 31%, rgba(190, 215, 255, 0.45) 36%, transparent 40%,
+        transparent 47%, rgba(255, 200, 130, 0.55) 50%, rgba(255, 200, 130, 0.55) 60%, transparent 64%,
+        transparent 72%, rgba(255, 190, 190, 0.36) 75%, rgba(255, 190, 190, 0.36) 79%, transparent 83%);
+    -webkit-mask-image: linear-gradient(165deg, #000 0%, rgba(0, 0, 0, 0.8) 45%, transparent 92%);
+    mask-image: linear-gradient(165deg, #000 0%, rgba(0, 0, 0, 0.8) 45%, transparent 92%);
+    filter: blur(9px);
+    animation: vnCathedralBreath 9s ease-in-out infinite alternate;
+}
+
+@keyframes vnCathedralBreath {
+    0%   { opacity: 0.55; translate: 0 0; }
+    100% { opacity: 1;    translate: 26px 0; }
+}
+
+/* Пыль в лучах: плитка из точек поднимается на свой размер (300px) — бесшовный цикл */
+.vn-vfx-divine-cathedral .vn-fx-edges {
+    background: radial-gradient(ellipse at 22% 0%, rgba(255, 215, 120, 0.2) 0%, transparent 55%);
+    overflow: hidden;
+}
+
+.vn-vfx-divine-cathedral .vn-fx-edges::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% + 300px);
+    background:
+        radial-gradient(circle at 34px 52px,  rgba(255, 245, 210, 0.95) 0 1.6px, transparent 3.2px),
+        radial-gradient(circle at 128px 140px, rgba(255, 238, 190, 0.8) 0 1.2px, transparent 2.6px),
+        radial-gradient(circle at 196px 36px, rgba(255, 245, 210, 0.9) 0 1.8px, transparent 3.4px),
+        radial-gradient(circle at 76px 232px, rgba(255, 238, 190, 0.7) 0 1.1px, transparent 2.4px),
+        radial-gradient(circle at 170px 262px, rgba(255, 245, 210, 0.85) 0 1.5px, transparent 3px),
+        radial-gradient(circle at 214px 168px, rgba(255, 238, 190, 0.75) 0 1.2px, transparent 2.6px);
+    background-size: 240px 300px;
+    -webkit-mask-image: linear-gradient(115deg, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 100%);
+    mask-image: linear-gradient(115deg, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 100%);
+    animation: vnCathedralDust 46s linear infinite;
+}
+
+@keyframes vnCathedralDust { to { translate: 0 -300px; } }
+
+.vn-vfx-divine-cathedral .vn-fx-bloom {
+    background:
+        radial-gradient(ellipse at 20% 0%,  rgba(255, 230, 130, 0.8) 0%, transparent 48%),
+        radial-gradient(ellipse at 52% 30%, rgba(255, 210, 110, 0.3) 0%, transparent 45%);
+}
+
+
+/* ── DIVINE · Золотой туман (.vn-vfx-divine-mist) ──
+   Тёплая золотая дымка: два слоя тумана плывут вверх и вбок, внизу густо, лучей нет. */
+
+.vn-vfx-divine-mist .vn-fx-tint {
+    background: radial-gradient(ellipse at 50% 85%, rgba(255, 205, 110, 0.36) 0%, rgba(255, 170, 60, 0.16) 50%, transparent 82%);
+}
+
+.vn-vfx-divine-mist .vn-fx-rays {
+    opacity: 0.6;
+    overflow: hidden;
+    background: none;
+    filter: blur(5px);
+    animation: none;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.3) 100%);
+    mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+.vn-vfx-divine-mist .vn-fx-rays::before,
+.vn-vfx-divine-mist .vn-fx-rays::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% + 512px);
+    -webkit-mask: var(--vn-tex-fog) 0 0 / 512px 512px;
+    mask: var(--vn-tex-fog) 0 0 / 512px 512px;
+    background: rgba(255, 214, 120, 0.5);
+    animation: vnSmokeRise 80s linear infinite;
+}
+
+.vn-vfx-divine-mist .vn-fx-rays::after {
+    width: calc(100% + 768px);
+    height: calc(100% + 768px);
+    background: rgba(255, 236, 170, 0.42);
+    -webkit-mask-size: 768px 768px;
+    mask-size: 768px 768px;
+    animation: vnSmokeDrift 130s linear infinite;
+}
+
+.vn-vfx-divine-mist .vn-ground-fog {
+    background: linear-gradient(to top, rgba(255, 205, 110, 0.55) 0%, rgba(255, 190, 90, 0.22) 20%, transparent 50%);
+}
+
+.vn-vfx-divine-mist .vn-fx-bloom {
+    opacity: 0.6;
+    background: radial-gradient(ellipse at 50% 70%, rgba(255, 215, 120, 0.7) 0%, transparent 60%);
+}
+
+
+/* ── SACRED · Лунное сияние (.vn-vfx-sacred-lunar) ──
+   Холодное серебро вместо золота: луна у верхнего правого угла, ровные лунные дорожки вниз и синеватая тьма. */
+
+.vn-vfx-sacred-lunar .vn-bg-layer {
+    filter: saturate(0.55) brightness(0.85) hue-rotate(-12deg) contrast(1.05);
+}
+
+.vn-vfx-sacred-lunar .vn-fx-tint {
+    background: radial-gradient(ellipse at 78% 6%, rgba(215, 230, 255, 0.36) 0%, rgba(150, 175, 235, 0.14) 38%, transparent 70%);
+}
+
+.vn-vfx-sacred-lunar .vn-fx-rays {
+    opacity: 0.8;
+    background: linear-gradient(200deg,
+        transparent 12%, rgba(205, 222, 255, 0.36) 16%, rgba(205, 222, 255, 0.36) 24%, transparent 29%,
+        transparent 38%, rgba(205, 222, 255, 0.26) 42%, rgba(205, 222, 255, 0.26) 47%, transparent 51%,
+        transparent 60%, rgba(205, 222, 255, 0.3) 63%, rgba(205, 222, 255, 0.3) 70%, transparent 74%);
+    -webkit-mask-image: radial-gradient(ellipse at 78% 4%, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 85%);
+    mask-image: radial-gradient(ellipse at 78% 4%, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 85%);
+    filter: blur(8px);
+    transform: none;
+    animation: vnLunarBreath 10s ease-in-out infinite alternate;
+}
+
+@keyframes vnLunarBreath {
+    0%   { opacity: 0.5; }
+    100% { opacity: 0.95; }
+}
+
+/* Сама луна: резкий диск и мягкое гало */
+.vn-vfx-sacred-lunar .vn-fx-edges {
+    opacity: 1;
+    background:
+        radial-gradient(circle at 78% 7%, #fff 0, rgba(246, 250, 255, 0.98) 2.4%, rgba(210, 226, 255, 0.5) 3.4%, rgba(170, 195, 245, 0.18) 9%, transparent 20%);
+}
+
+.vn-vfx-sacred-lunar .vn-vignette {
+    background: radial-gradient(ellipse at 78% 0%, rgba(210, 225, 255, 0.12) 0%, transparent 40%, rgba(2, 6, 24, 0.55) 90%, rgba(0, 2, 14, 0.78) 100%);
+}
+
+.vn-vfx-sacred-lunar .vn-fx-bloom {
+    background:
+        radial-gradient(ellipse at 78% 0%,  rgba(220, 235, 255, 0.75) 0%, transparent 48%),
+        radial-gradient(ellipse at 50% 25%, rgba(190, 210, 250, 0.25) 0%, transparent 42%);
+}
+
+.vn-vfx-sacred-lunar .vn-character.active .vn-character-img {
+    filter: brightness(1.08) contrast(1) saturate(0.7)
+        drop-shadow(0 0 28px rgba(200, 220, 255, 0.55))
+        drop-shadow(0 0 60px rgba(150, 180, 240, 0.3))
+        drop-shadow(0 5px 15px rgba(0, 0, 0, 0.55)) !important;
+}
+
+.vn-vfx-sacred-lunar .vn-character-glow {
+    background: radial-gradient(ellipse at center, rgba(200, 222, 255, 0.5) 0%, transparent 68%) !important;
+}

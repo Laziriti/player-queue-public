@@ -44,10 +44,13 @@
                         </label>
                         <div class="pq-fx-items">
                             {{#each items}}
-                                <label class="pq-fx-item">
+                                <label class="pq-fx-item"{{#if variants}} title="{{variantsTitle}}"{{/if}}>
                                     <input type="checkbox" name="off" value="{{key}}"{{#if off}} checked{{/if}}>
                                     <i class="fas {{icon}}" aria-hidden="true"></i>
-                                    <span>{{label}}</span>
+                                    <span class="pq-fx-item-text">
+                                        <span class="pq-fx-item-name">{{label}}</span>
+                                        {{#if variants}}<small class="pq-fx-item-variants">{{localize "fxFilters.variantsLabel"}} {{variants}}</small>{{/if}}
+                                    </span>
                                 </label>
                             {{/each}}
                         </div>

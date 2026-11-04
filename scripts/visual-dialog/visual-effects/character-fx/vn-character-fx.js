@@ -28,6 +28,49 @@ export const CHAR_FX_GROUPS = [
  * Каждый вариант — самостоятельный id эффекта (так он и хранится в state.charFx); первый — сам базовый тип.
  */
 export const CHAR_FX_VARIANTS = {
+    fire: [
+        { id: 'fire', label: 'vn.charFx.variants.normal' },
+        { id: 'fire:embers', label: 'vn.charFx.variants.embers' },
+        { id: 'fire:charred', label: 'vn.charFx.variants.charred' },
+    ],
+    ice: [
+        { id: 'ice', label: 'vn.charFx.variants.normal' },
+        { id: 'ice:frozen', label: 'vn.charFx.variants.frozen' },
+        { id: 'ice:crystal', label: 'vn.charFx.variants.crystal' },
+    ],
+    stone: [
+        { id: 'stone', label: 'vn.charFx.variants.normal' },
+        { id: 'stone:mossy', label: 'vn.charFx.variants.mossy' },
+        { id: 'stone:polished', label: 'vn.charFx.variants.polished' },
+    ],
+    hologram: [
+        { id: 'hologram', label: 'vn.charFx.variants.normal' },
+        { id: 'hologram:terminal', label: 'vn.charFx.variants.terminal' },
+        { id: 'hologram:stable', label: 'vn.charFx.variants.stable' },
+    ],
+    shadow: [
+        { id: 'shadow', label: 'vn.charFx.variants.normal' },
+        { id: 'shadow:smoke', label: 'vn.charFx.variants.smoke' },
+    ],
+    ghost: [
+        { id: 'ghost', label: 'vn.charFx.variants.normal' },
+        { id: 'ghost:trail', label: 'vn.charFx.variants.trail' },
+    ],
+    drunk: [
+        { id: 'drunk', label: 'vn.charFx.variants.normal' },
+        { id: 'drunk:tipsy', label: 'vn.charFx.variants.tipsy' },
+        { id: 'drunk:wasted', label: 'vn.charFx.variants.wasted' },
+    ],
+    neon: [
+        { id: 'neon', label: 'vn.charFx.variants.normal' },
+        { id: 'neon:cyan', label: 'vn.charFx.variants.cyan' },
+        { id: 'neon:acid', label: 'vn.charFx.variants.acid' },
+    ],
+    glass: [
+        { id: 'glass', label: 'vn.charFx.variants.normal' },
+        { id: 'glass:large', label: 'vn.charFx.variants.large' },
+        { id: 'glass:fine', label: 'vn.charFx.variants.fine' },
+    ],
     holy: [
         { id: 'holy',         label: 'vn.charFx.variants.normal' },
         { id: 'holy_radiant', label: 'vn.charFx.variants.exalted' },
@@ -39,6 +82,15 @@ export const CHAR_FX = CHAR_FX_GROUPS.flatMap(g => g.fx.flatMap(id => CHAR_FX_VA
 /** Базовый тип для варианта ('holy_radiant' → 'holy'); не вариант — сам id. */
 export function charFxBase(fx) {
     return Object.keys(CHAR_FX_VARIANTS).find(base => CHAR_FX_VARIANTS[base].some(v => v.id === fx)) ?? fx;
+}
+
+/** Ключ перевода для названия эффекта или варианта: у варианта — его подпись, у обычного id — vn.charFx.<id>. */
+export function charFxLabelKey(fx) {
+    for (const list of Object.values(CHAR_FX_VARIANTS)) {
+        const v = list.find(x => x.id === fx);
+        if (v && fx.includes(':')) return v.label;
+    }
+    return `vn.charFx.${fx}`;
 }
 
 export const CHAR_FX_ICONS = {
@@ -69,11 +121,13 @@ export const CHAR_FX_ICONS = {
 
 const CLASS = 'vn-character-fx';
 const SHARD_CLASS = 'vn-fx-shard';
-const GLOSS_CLASS = 'vn-fx-shard-gloss';
 const HOLY_CLASS = 'vn-fx-holy';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const FILTERS_ID = 'vn-charfx-filters';
 const SVG_FX = new Set(CHAR_FX_GROUPS.find(g => g.id === 'svg').fx);
+
+/** 'fire:embers' → ['fire', 'embers']; обычный id и устаревший 'holy_radiant' — сами себе тип, без варианта. */
+const splitFx = fx => String(fx).split(':');
 
 function absUrl(src) {
     let abs = String(src ?? '');
@@ -141,17 +195,26 @@ function crackStyle(key) {
     return svgUrl(svg);
 }
 
+// Форма сетки по варианту: число лучей, радиусы колец (минимум, разброс) и множитель разъезда осколков
+const GLASS_SHAPES = {
+    default: { N: 6, r0: [9, 5], r1: [24, 9], amp: 1 },
+    large:   { N: 4, r0: [12, 5], r1: [34, 10], amp: 1.3 },
+    fine:    { N: 10, r0: [6, 3], r1: [15, 6], amp: 0.75 },
+};
+
 /**
  * Осколки для эффекта «Стекло». Удар приходится в случайную точку корпуса: от неё расходятся лучи, а кольца
  * (хаб → середина → край) делят картинку на неправильные четырёхугольники, часть из них — на два треугольника.
  * Общие рёбра соседних осколков берутся из одних и тех же точек, поэтому щелей между ними нет, пока осколки не сдвинуты.
  * Возвращает осколки: контур в процентах, поза, длительность покачивания и SVG-грань (`facet`) для слоя блика.
  */
-function glassShards(key) {
+function glassShards(key, variant = null) {
     const rnd = seededRandom(`glass|${key}`);
     const cx = 40 + rnd() * 20, cy = 24 + rnd() * 22;
-    const N = 6;
-    const radii = [9 + rnd() * 5, 24 + rnd() * 9, 160];
+    // large — мало крупных осколков с большим разъездом; fine — частая сетка мелких, почти не разъезжаются
+    const shape = GLASS_SHAPES[variant] ?? GLASS_SHAPES.default;
+    const N = shape.N;
+    const radii = [shape.r0[0] + rnd() * shape.r0[1], shape.r1[0] + rnd() * shape.r1[1], 160];
 
     const ring = (r, jitter) => {
         const angles = Array.from({ length: N }, (_, i) => (i / N + (rnd() - 0.5) * jitter / N) * Math.PI * 2).sort((a, b) => a - b);
@@ -187,7 +250,7 @@ function glassShards(key) {
         const gx = clip.reduce((s, p) => s + p[0], 0) / clip.length;
         const gy = clip.reduce((s, p) => s + p[1], 0) / clip.length;
         // Чем дальше от удара, тем сильнее осколок повело
-        const amp = 0.6 + Math.min(1, Math.hypot(gx - cx, (gy - cy) / 1.6) / 60) * 1.8;
+        const amp = (0.6 + Math.min(1, Math.hypot(gx - cx, (gy - cy) / 1.6) / 60) * 1.8) * shape.amp;
         const pose = k => {
             const tilt = () => ((rnd() - 0.5) * 11 * amp).toFixed(2);
             return `translate(${((rnd() - 0.5) * 1.8 * amp * k).toFixed(2)}%, ${((rnd() - 0.5) * 1.1 * amp * k).toFixed(2)}%) `
@@ -278,9 +341,10 @@ export class VNCharFx {
      */
     static wrapHTML(imgHTML, fx, src) {
         if (!fx || isFxDisabled('charfx', fx)) return imgHTML;
-        if (SVG_FX.has(fx)) VNCharFx.ensureFilters();
-        const style = Object.entries(VNCharFx._vars(fx, src)).map(([k, v]) => `${k}: ${v}`).join('; ');
-        return `<div class="${CLASS}" data-fx="${fx}" style="${escapeHtml(style)}">${imgHTML}</div>`;
+        const [base, variant] = splitFx(fx);
+        if (SVG_FX.has(base)) VNCharFx.ensureFilters();
+        const style = Object.entries(VNCharFx._vars(base, src)).map(([k, v]) => `${k}: ${v}`).join('; ');
+        return `<div class="${CLASS}" data-fx="${base}"${variant ? ` data-fx-variant="${variant}"` : ''} style="${escapeHtml(style)}">${imgHTML}</div>`;
     }
 
     /** Sets (or clears) the effect on a live `.vn-character`. The layer is created on demand and kept once created. */
@@ -291,6 +355,7 @@ export class VNCharFx {
         if (!fx) {
             if (layer) {
                 layer.removeAttribute('data-fx');
+                layer.removeAttribute('data-fx-variant');
                 VNCharFx._clearShards(layer);
                 VNCharFx._clearHoly(layer);
             }
@@ -304,17 +369,20 @@ export class VNCharFx {
             img.before(layer);
             layer.append(img);
         }
-        if (SVG_FX.has(fx)) VNCharFx.ensureFilters();
+        const [base, variant] = splitFx(fx);
+        if (SVG_FX.has(base)) VNCharFx.ensureFilters();
 
-        const vars = VNCharFx._vars(fx, img.src);
+        const vars = VNCharFx._vars(base, img.src);
         layer.style.setProperty('--fx-src', vars['--fx-src']);
         if ('--fx-cracks' in vars) layer.style.setProperty('--fx-cracks', vars['--fx-cracks']);
         else layer.style.removeProperty('--fx-cracks');
-        if (layer.dataset.fx !== fx) layer.dataset.fx = fx;
+        if (layer.dataset.fx !== base) layer.dataset.fx = base;
+        if (variant) layer.dataset.fxVariant = variant;
+        else delete layer.dataset.fxVariant;
 
-        if (fx === 'glass') VNCharFx._buildShards(layer, img);
+        if (base === 'glass') VNCharFx._buildShards(layer, img, variant);
         else VNCharFx._clearShards(layer);
-        if (fx === 'holy' || fx === 'holy_radiant') VNCharFx._buildHoly(layer, fx);
+        if (base === 'holy' || base === 'holy_radiant') VNCharFx._buildHoly(layer, base);
         else VNCharFx._clearHoly(layer);
     }
 
@@ -351,31 +419,24 @@ export class VNCharFx {
      * неактивного, зеркало и «скрытый силуэт» применяются к ним теми же правилами, что и к самому портрету.
      * Оригинал остаётся первым в слое (на него завязан остальной код) и прячется через [data-shards].
      */
-    static _buildShards(layer, img) {
-        const key = absUrl(img.src);
+    static _buildShards(layer, img, variant = null) {
+        const key = absUrl(img.src) + (variant ? `|${variant}` : '');
         if (layer.dataset.shardSrc === key && layer.querySelector(`:scope > .${SHARD_CLASS}`)) return;
         VNCharFx._clearShards(layer);
 
-        const shards = glassShards(key);
-        const pose = s => `clip-path: ${s.clip}; --origin: ${s.origin}; --t0: ${s.t0}; --t1: ${s.t1}; `
-            + `--dur: ${s.dur.toFixed(1)}s; --delay: ${s.delay.toFixed(1)}s;`;
-        for (const s of shards) {
-            const el = document.createElement('img');
+        const shards = glassShards(key, variant);
+        const pose = (s, z) => `clip-path: ${s.clip}; --origin: ${s.origin}; --t0: ${s.t0}; --t1: ${s.t1}; `
+            + `--dur: ${s.dur.toFixed(1)}s; --delay: ${s.delay.toFixed(1)}s; z-index: ${z};`;
+        // Осколок — один элемент: картинка портрета фоном, а грань и полоса блика — его ::after и ::before (CSS), поэтому
+        // свет идёт по осколкам, а не по исходному силуэту, и закрывается следующим осколком вместе с картинкой.
+        // Раньше на осколок шли два слоя (<img> и слой блика с собственной маской): с тремя стеклянными
+        // персонажами это ~90 слоёв размером с портрет, и экран начинал «сыпаться»
+        shards.forEach((s, i) => {
+            const el = document.createElement('div');
             el.className = `vn-character-img ${SHARD_CLASS}`;
-            el.src = img.src;
-            el.alt = '';
-            el.draggable = false;
-            el.style.cssText = pose(s);
+            el.style.cssText = `${pose(s, 2 + i)} --facet: ${s.facet};`;
             layer.append(el);
-        }
-        // Блик и грань — отдельный слой на каждый осколок, с той же формой, позой и покачиванием: свет идёт по
-        // осколкам, а не по исходному силуэту. Слои блика — поверх всех осколков, чтобы соседний осколок их не закрыл
-        for (const s of shards) {
-            const gloss = document.createElement('div');
-            gloss.className = `${SHARD_CLASS} ${GLOSS_CLASS}`;
-            gloss.style.cssText = `${pose(s)} --facet: ${s.facet};`;
-            layer.append(gloss);
-        }
+        });
         layer.dataset.shardSrc = key;
         layer.toggleAttribute('data-shards', true);
     }

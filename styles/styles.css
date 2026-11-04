@@ -1057,7 +1057,7 @@ body.player-queue-dark-theme .vn-character.active img {
 
 .pq-fx-items {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 2px 8px;
     padding: 6px 10px 0;
 }
@@ -1082,17 +1082,30 @@ body.player-queue-dark-theme .vn-character.active img {
     color: var(--pq-fg-dim);
 }
 
-.pq-fx-item span {
+.pq-fx-item-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.pq-fx-item-name,
+.pq-fx-item-variants {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.pq-fx-item-variants {
+    font-size: 0.8em;
+    line-height: 1.25;
+    color: var(--pq-fg-dim);
 }
 
 .pq-fx-item:has(input:checked) {
     opacity: 0.6;
 }
 
-.pq-fx-item:has(input:checked) span {
+.pq-fx-item:has(input:checked) .pq-fx-item-name {
     text-decoration: line-through;
 }
 

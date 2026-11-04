@@ -33,7 +33,7 @@ function grow(rnd, o, out) {
     const nodes = [{ x: o.x, y: o.y, ang: o.angle }];
     let ang = o.angle, turn = 0;
     for (let i = 0; i < o.steps; i++) {
-        turn = turn * 0.55 + gauss(rnd) * 0.30;
+        turn = turn * 0.55 + gauss(rnd) * 0.30 * (o.wobble ?? 1);
         ang += turn;
         const len = o.step * (0.7 + rnd() * 0.6);
         const p = nodes[nodes.length - 1];
@@ -55,7 +55,7 @@ function grow(rnd, o, out) {
         const wHere = Math.max(0.5, o.width * Math.pow(1 - t, 0.55));
         const left = nodes.length - 1 - i;
 
-        if (o.depth < o.maxDepth && rnd() < 0.34 * Math.pow(0.62, o.depth)) {
+        if (o.depth < o.maxDepth && rnd() < 0.34 * (o.branch ?? 1) * Math.pow(0.62, o.depth)) {
             const side = rnd() < 0.5 ? -1 : 1;
             grow(rnd, {
                 ...o,
@@ -84,8 +84,9 @@ function grow(rnd, o, out) {
 /**
  * Дерево трещин от точки (x, y).
  * @param {() => number} rnd — ГСЧ (Math.random или детерминированный)
- * @param {{x:number,y:number,angle:number,length:number,width:number,maxDepth?:number,step?:number,bounds?:{w:number,h:number}}} o
- *   length — примерная длина ствола, width — ширина раскрытия у начала ствола, step — длина узлового отрезка
+ * @param {{x:number,y:number,angle:number,length:number,width:number,maxDepth?:number,step?:number,bounds?:{w:number,h:number},wobble?:number,branch?:number}} o
+ *   length — примерная длина ствола, width — ширина раскрытия у начала ствола, step — длина узлового отрезка,
+ *   wobble — множитель извилистости (меньше 1 — ровнее, по умолчанию 1), branch — множитель частоты ветвления (по умолчанию 1)
  * @returns {{branches: Array<{pts: Array<{x:number,y:number,t:number,w:number}>, depth:number, width:number, hair:boolean}>}}
  */
 export function generateCrack(rnd, o) {
@@ -95,6 +96,7 @@ export function generateCrack(rnd, o) {
         x: o.x, y: o.y, angle: o.angle,
         steps: Math.max(3, Math.round(o.length / step)),
         step, width: o.width, depth: 0, maxDepth: o.maxDepth ?? 3, bounds: o.bounds ?? null,
+        wobble: o.wobble ?? 1, branch: o.branch ?? 1,
     }, out);
     return { branches: out };
 }

@@ -494,3 +494,184 @@
 
 .vn-vfx-ghosts   .vn-fx-grain { opacity: 0.14; }
 .vn-vfx-carnival .vn-fx-grain { opacity: 0.04; }
+
+
+/* ══════════════════════════════════════════════════════════
+   ВАРИАНТЫ ЭФФЕКТОВ (VISUAL_VARIANTS): поверх базовых правил выше, на классах .vn-vfx-<тип>-<вариант>
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ── GHOSTS · Гаснущие огни (.vn-vfx-ghosts-lights) ──
+   По полу катится низкий туман, а вдоль стен горят три пары огоньков: каждая пара по очереди дрожит,
+   гаснет и разгорается снова (период у пар разный, поэтому в кадре всегда что-то погасло). */
+
+.vn-vfx-ghosts-lights .vn-fx-rays,
+.vn-vfx-ghosts-lights .vn-fx-edges {
+    opacity: 1;
+    overflow: hidden;
+    filter: none;
+    animation: none;
+}
+
+.vn-vfx-ghosts-lights .vn-fx-rays {
+    background: none;
+}
+
+.vn-vfx-ghosts-lights .vn-fx-rays::before,
+.vn-vfx-ghosts-lights .vn-fx-rays::after,
+.vn-vfx-ghosts-lights .vn-fx-edges::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    animation: vnLanternFade 19s linear infinite;
+}
+
+.vn-vfx-ghosts-lights .vn-fx-rays::before {
+    background:
+        radial-gradient(circle at 13% 56%, #fff3d0 0 3px, rgba(255, 200, 110, 0.9) 6px, rgba(255, 150, 60, 0.32) 24px, transparent 78px),
+        radial-gradient(circle at 87% 54%, #fff3d0 0 3px, rgba(255, 200, 110, 0.9) 6px, rgba(255, 150, 60, 0.32) 24px, transparent 78px);
+}
+
+.vn-vfx-ghosts-lights .vn-fx-rays::after {
+    background:
+        radial-gradient(circle at 29% 43%, #fff3d0 0 2.5px, rgba(255, 200, 110, 0.85) 5px, rgba(255, 150, 60, 0.28) 20px, transparent 64px),
+        radial-gradient(circle at 71% 41%, #fff3d0 0 2.5px, rgba(255, 200, 110, 0.85) 5px, rgba(255, 150, 60, 0.28) 20px, transparent 64px);
+    animation-duration: 27s;
+    animation-delay: -9s;
+}
+
+.vn-vfx-ghosts-lights .vn-fx-edges::before {
+    background:
+        radial-gradient(circle at 40% 30%, #fff3d0 0 2px, rgba(255, 200, 110, 0.8) 4px, rgba(255, 150, 60, 0.25) 16px, transparent 52px),
+        radial-gradient(circle at 60% 29%, #fff3d0 0 2px, rgba(255, 200, 110, 0.8) 4px, rgba(255, 150, 60, 0.25) 16px, transparent 52px);
+    animation-duration: 23s;
+    animation-delay: -15s;
+}
+
+@keyframes vnLanternFade {
+    0%, 30%   { opacity: 1; }
+    8%        { opacity: 0.8; }
+    14%       { opacity: 1; }
+    21%       { opacity: 0.85; }
+    34%       { opacity: 0.45; }
+    37%       { opacity: 0.95; }
+    43%       { opacity: 0.25; }
+    47%       { opacity: 0.6; }
+    52%, 84%  { opacity: 0; }
+    90%       { opacity: 0.35; }
+    93%       { opacity: 0.1; }
+    97%       { opacity: 0.8; }
+    100%      { opacity: 1; }
+}
+
+/* Туман по полу: плитка тумана плывёт вбок, маской обрезана до нижней половины кадра */
+.vn-vfx-ghosts-lights .vn-fx-edges::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 768px);
+    height: 100%;
+    background: rgba(175, 205, 245, 0.55);
+    -webkit-mask-image: var(--vn-tex-fog), linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.75) 26%, transparent 62%);
+    mask-image: var(--vn-tex-fog), linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.75) 26%, transparent 62%);
+    -webkit-mask-size: 768px 420px, 100% 100%;
+    mask-size: 768px 420px, 100% 100%;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+    animation: vnFogSlide768 90s linear infinite;
+}
+
+.vn-vfx-ghosts-lights .vn-ground-fog {
+    background: linear-gradient(to top, rgba(165, 195, 240, 0.7) 0%, rgba(130, 165, 220, 0.34) 12%, transparent 40%);
+}
+
+
+/* ── GHOSTS · Шёпот теней (.vn-vfx-ghosts-shadows) ──
+   По краям кадра шевелится чёрная пелена: клубы тьмы ползут вверх вдоль стен и то набегают на кадр,
+   то отступают. Лунный свет из базового вида остаётся. */
+
+.vn-vfx-ghosts-shadows .vn-fx-edges {
+    opacity: 1;
+    overflow: hidden;
+    background: none;
+}
+
+.vn-vfx-ghosts-shadows .vn-fx-edges::before,
+.vn-vfx-ghosts-shadows .vn-fx-edges::after,
+.vn-vfx-ghosts-shadows .vn-fx-rays::before,
+.vn-vfx-ghosts-shadows .vn-fx-rays::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    height: calc(100% + 640px);
+    background: rgba(1, 3, 12, 0.96);
+    -webkit-mask-image: var(--vn-tex-fog), linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+    mask-image: var(--vn-tex-fog), linear-gradient(to right, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+    -webkit-mask-size: 420px 640px, 100% 100%;
+    mask-size: 420px 640px, 100% 100%;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+}
+
+.vn-vfx-ghosts-shadows .vn-fx-edges::before {
+    left: 0;
+    width: 54%;
+    transform-origin: 0 50%;
+    animation: vnShadowCreep 34s linear infinite, vnShadowBreathe 7s ease-in-out infinite alternate;
+}
+
+.vn-vfx-ghosts-shadows .vn-fx-edges::after {
+    right: 0;
+    width: 54%;
+    transform-origin: 100% 50%;
+    -webkit-mask-image: var(--vn-tex-fog), linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+    mask-image: var(--vn-tex-fog), linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+    -webkit-mask-position: 130px 0, 0 0;
+    mask-position: 130px 0, 0 0;
+    animation: vnShadowCreep 29s linear infinite, vnShadowBreathe 9s ease-in-out -3s infinite alternate;
+}
+
+/* Второй, более медленный ярус — мельче и тоньше, на слое лунного света (rays) */
+.vn-vfx-ghosts-shadows .vn-fx-rays::before,
+.vn-vfx-ghosts-shadows .vn-fx-rays::after {
+    width: 30%;
+    opacity: 0.7;
+    -webkit-mask-size: 300px 460px, 100% 100%;
+    mask-size: 300px 460px, 100% 100%;
+    height: calc(100% + 460px);
+}
+
+.vn-vfx-ghosts-shadows .vn-fx-rays::before {
+    left: 0;
+    animation: vnShadowCreepSmall 46s linear infinite reverse, vnShadowBreathe 11s ease-in-out -5s infinite alternate;
+}
+
+.vn-vfx-ghosts-shadows .vn-fx-rays::after {
+    right: 0;
+    -webkit-mask-image: var(--vn-tex-fog), linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+    mask-image: var(--vn-tex-fog), linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+    animation: vnShadowCreepSmall 38s linear infinite reverse, vnShadowBreathe 8s ease-in-out -2s infinite alternate;
+}
+
+@keyframes vnShadowCreep      { to { translate: 0 -640px; } }
+@keyframes vnShadowCreepSmall { to { translate: 0 -460px; } }
+
+@keyframes vnShadowBreathe {
+    0%   { scale: 0.82 1; }
+    100% { scale: 1.22 1; }
+}
+
+/* Кадр светлее, чем у базового вида, иначе чёрные клубы по краям тонут в и без того тёмной сцене */
+.vn-vfx-ghosts-shadows .vn-bg-layer {
+    animation-name: vnGhostsShadowsBg;
+}
+
+@keyframes vnGhostsShadowsBg {
+    0%, 100% { filter: saturate(0.3) brightness(0.95) contrast(1.05) hue-rotate(-8deg); }
+    50%      { filter: saturate(0.28) brightness(0.88) contrast(1.08) hue-rotate(-10deg); }
+}
+
+.vn-vfx-ghosts-shadows .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(2, 4, 18, 0.25) 75%, rgba(0, 1, 10, 0.5) 100%);
+}

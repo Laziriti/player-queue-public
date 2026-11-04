@@ -19,8 +19,78 @@ const CRACK_VOID = {
     debris: { color: 'rgba(214, 170, 255, 0.95)', dir: -1 },
 };
 
+// Чёрные разрывы: пустота почти без цвета, слабая кромка, редкие холодные звёзды
+const CRACK_DARK = {
+    glow: 'rgba(95, 40, 170, 0.55)', edge: 'rgba(214, 196, 255, 0.95)', hair: 'rgba(6, 0, 14, 0.95)',
+    inner: 'radial-gradient(circle at 35% 45%, rgba(70, 30, 120, 0.5) 0%, transparent 60%) 0 0 / 240px 200px,'
+        + 'radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 0.8px, transparent 1.4px) 0 0 / 67px 59px,'
+        + '#030008',
+    flash: 'rgba(120, 70, 200, 0.55)',
+    debris: { color: 'rgba(170, 140, 235, 0.85)', dir: -1 },
+};
+
+// Планы стихий (вариант `planes`): у каждого разлома своя палитра, окно открывается в один из четырёх миров.
+// Порядок: огонь, вода, земля, воздух
+const CRACK_PLANES = {
+    fire: {
+        glow: 'rgba(255, 110, 30, 0.55)', edge: 'rgba(255, 214, 130, 0.95)', hair: 'rgba(30, 6, 0, 0.95)',
+        inner: 'radial-gradient(circle at 30% 60%, rgba(255, 220, 90, 0.95) 0%, rgba(255, 120, 30, 0.75) 30%, transparent 68%) 0 0 / 170px 150px,'
+            + 'radial-gradient(circle at 70% 35%, rgba(255, 70, 20, 0.85) 0%, transparent 62%) 50px 30px / 210px 180px,'
+            + 'radial-gradient(circle, rgba(255, 230, 150, 0.9) 0 1px, transparent 1.8px) 0 0 / 37px 43px,'
+            + '#2a0904',
+        flash: 'rgba(255, 170, 70, 0.9)',
+        debris: { color: 'rgba(255, 170, 60, 0.95)', dir: -1 },
+    },
+    water: {
+        glow: 'rgba(50, 180, 240, 0.5)', edge: 'rgba(190, 240, 255, 0.95)', hair: 'rgba(0, 12, 28, 0.95)',
+        inner: 'radial-gradient(ellipse at 30% 40%, rgba(120, 235, 255, 0.85) 0%, rgba(30, 130, 200, 0.6) 38%, transparent 72%) 0 0 / 200px 120px,'
+            + 'radial-gradient(ellipse at 70% 70%, rgba(40, 90, 220, 0.8) 0%, transparent 65%) 60px 40px / 230px 150px,'
+            + 'radial-gradient(circle, rgba(220, 250, 255, 0.85) 0 1.2px, transparent 2px) 0 0 / 47px 41px,'
+            + '#031a33',
+        flash: 'rgba(150, 230, 255, 0.85)',
+        debris: { color: 'rgba(190, 240, 255, 0.9)', dir: -1 },
+    },
+    earth: {
+        glow: 'rgba(150, 100, 40, 0.5)', edge: 'rgba(230, 200, 140, 0.95)', hair: 'rgba(18, 10, 4, 0.95)',
+        inner: 'radial-gradient(circle at 35% 40%, rgba(150, 110, 60, 0.9) 0%, rgba(90, 60, 30, 0.7) 40%, transparent 75%) 0 0 / 190px 160px,'
+            + 'radial-gradient(circle at 70% 65%, rgba(70, 110, 50, 0.75) 0%, transparent 62%) 50px 40px / 220px 190px,'
+            + 'radial-gradient(circle, rgba(255, 220, 130, 0.9) 0 1.3px, transparent 2px) 0 0 / 53px 47px,'
+            + '#1a0f07',
+        flash: 'rgba(210, 170, 100, 0.85)',
+        debris: { color: 'rgba(170, 140, 90, 0.95)', dir: 1 },
+    },
+    air: {
+        glow: 'rgba(190, 225, 255, 0.5)', edge: 'rgba(255, 255, 255, 0.95)', hair: 'rgba(30, 50, 90, 0.9)',
+        inner: 'radial-gradient(ellipse at 30% 45%, rgba(255, 255, 255, 0.95) 0%, rgba(190, 225, 255, 0.7) 40%, transparent 72%) 0 0 / 200px 120px,'
+            + 'radial-gradient(ellipse at 72% 60%, rgba(150, 200, 255, 0.85) 0%, transparent 64%) 70px 30px / 240px 140px,'
+            + 'radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.8px) 0 0 / 45px 39px,'
+            + '#3a5f9a',
+        flash: 'rgba(235, 245, 255, 0.9)',
+        debris: { color: 'rgba(235, 245, 255, 0.9)', dir: -1 },
+    },
+};
+
+// Вид разлома по варианту эффекта (VISUAL_VARIANTS.void_breach). wobble / branch — извилистость и ветвление
+// (crack-geometry.js), widthK — множитель ширины раскрытия
+const CRACK_STYLES = {
+    all:     { palette: CRACK_VOID, widthK: 1 },
+    dark:    { palette: CRACK_DARK, widthK: 1.45 },
+    fissure: { palette: CRACK_DARK, widthK: 1.25, wobble: 0.2, branch: 0.55 },
+    planes:  { planes: CRACK_PLANES, widthK: 1.7 },
+};
+
+// Размеры разломов; weight — доля общего «бюджета»: много больших сразу забивали бы весь кадр
+const CRACK_TIERS = [
+    { len: 0.20, width: 11, depth: 2, weight: 1 },
+    { len: 0.36, width: 22, depth: 3, weight: 2 },
+    { len: 0.58, width: 32, depth: 3, weight: 4 },
+];
+const CRACK_BUDGET = 6;
 // Сколько разломов может быть открыто одновременно
-const CRACK_MAX = 5;
+const CRACK_MAX = 4;
+
+// Один толчок землетрясения: полный цикл анимации vnQuakeBg / vnQuakeSide (с запасом на сдвиг боковых колонок)
+const QUAKE_JOLT_MS = 1330;
 
 // Чётное число: нечётные сегменты зеркальные, при нечётном шов на 360° не сойдётся
 const KALEIDO_SEGMENTS = 6;
@@ -62,7 +132,7 @@ export class VisualFXSystem {
 
         switch (type) {
             case 'storm':
-                this._startLightning(overlayEl);
+                this._startLightning(overlayEl, variant);
                 break;
             case 'eldritch':
                 this._startGlitch(overlayEl, false);
@@ -75,10 +145,10 @@ export class VisualFXSystem {
                 this._startGlitch(overlayEl, false);
                 break;
             case 'void_breach':
-                this._startVoidBreach(overlayEl);
+                this._startVoidBreach(overlayEl, variant);
                 break;
             case 'glass_shatter':
-                this._startGlassShatter(overlayEl);
+                this._startGlassShatter(overlayEl, variant);
                 break;
             case 'cosmic_horror':
                 this._startCosmicPulse(overlayEl);
@@ -96,10 +166,10 @@ export class VisualFXSystem {
                 this._startKaleidoscope(overlayEl);
                 break;
             case 'vhs':
-                this._startGlitch(overlayEl, false);
+                this._startGlitch(overlayEl, variant === 'chewed');
                 break;
             case 'earthquake':
-                this._startEarthquake(overlayEl);
+                this._startEarthquake(overlayEl, variant);
                 break;
         }
     }
@@ -128,6 +198,7 @@ export class VisualFXSystem {
             'vn-void-tear-active', 'vn-glitch-active',
             'vn-gravity-wave', 'vn-pressure-wave', 'vn-quake-active', 'vn-quake-soft'
         );
+        this._overlayEl.style.removeProperty('--qs');
 
         // Убрать animation-state классы с FX-слоёв
         const flashEl = this._overlayEl.querySelector('.vn-fx-flash');
@@ -239,12 +310,28 @@ export class VisualFXSystem {
         document.body.appendChild(svg);
     }
 
-    _startLightning(overlayEl) {
+    // Варианты (VISUAL_VARIANTS.storm): обычная гроза — частые вспышки, иногда двойные; «далёкая» — только зарницы:
+    // мягкое свечение в случайном месте неба (CSS читает --bolt-x / --bolt-y); «ночная буря» — молнии реже
+    _startLightning(overlayEl, variant = 'all') {
         const flash = overlayEl.querySelector('.vn-fx-flash');
         if (!flash) return;
 
+        if (variant === 'distant') {
+            this._flashInterval = setInterval(() => {
+                if (Math.random() >= 0.4) return;
+                flash.style.setProperty('--bolt-x', `${(8 + Math.random() * 84).toFixed(0)}%`);
+                flash.style.setProperty('--bolt-y', `${(6 + Math.random() * 22).toFixed(0)}%`);
+                flash.classList.add('vn-lightning-active');
+                this._crackTimeouts.push(
+                    setTimeout(() => flash.classList.remove('vn-lightning-active'), 1000)
+                );
+            }, 3500);
+            return;
+        }
+
+        const chance = variant === 'gale' ? 0.18 : 0.3;
         this._flashInterval = setInterval(() => {
-            if (Math.random() >= 0.3) return;
+            if (Math.random() >= chance) return;
 
             flash.classList.add('vn-lightning-active');
             this._crackTimeouts.push(
@@ -280,7 +367,8 @@ export class VisualFXSystem {
 
     // ─── Void Breach / трещины ───────────────────────────────
 
-    _startVoidBreach(overlayEl) {
+    _startVoidBreach(overlayEl, variant = 'all') {
+        const style = CRACK_STYLES[variant] ?? CRACK_STYLES.all;
         let phase = 0;
         this._flashInterval = setInterval(() => {
             phase += 0.07;
@@ -291,15 +379,12 @@ export class VisualFXSystem {
         // Каждая трещина сама управляет своей жизнью; интервал лишь подсевает новые
         this._voidCrackInterval = setInterval(() => {
             const active = overlayEl.querySelectorAll('.vn-crack').length;
-            if (active >= CRACK_MAX) return;
             const burst = active < 2 ? 2 : 1;
-            for (let i = 0; i < burst && (active + i) < CRACK_MAX; i++) {
-                this._spawnVoidCrack(overlayEl, i * 250);
-            }
+            for (let i = 0; i < burst; i++) this._spawnVoidCrack(overlayEl, i * 250, style);
         }, 3000);
 
-        for (let i = 0; i < 3; i++) {
-            const t = setTimeout(() => this._spawnVoidCrack(overlayEl), 400 + i * 600);
+        for (let i = 0; i < 2; i++) {
+            const t = setTimeout(() => this._spawnVoidCrack(overlayEl, 0, style), 400 + i * 600);
             this._crackTimeouts.push(t);
         }
     }
@@ -311,7 +396,7 @@ export class VisualFXSystem {
      * зарегистрированными свойствами --crack-grow / --crack-heal (CSS в vn-fx-chaos.css): рост идёт от точки
      * удара наружу, закрытие «залечивает» от корня.
      */
-    _spawnVoidCrack(overlayEl, extraDelay = 0, palette = CRACK_VOID) {
+    _spawnVoidCrack(overlayEl, extraDelay = 0, style = CRACK_STYLES.all) {
         if (!overlayEl.isConnected) return;
 
         const W = overlayEl.offsetWidth || 1200;
@@ -319,20 +404,44 @@ export class VisualFXSystem {
         const diag = Math.hypot(W, H);
         const sc = Math.max(0.6, H / 1080);
 
-        // Размер: мелкая трещина / разлом / огромный рифт
+        // Открытых разломов не больше CRACK_MAX, а их суммарный размер укладывается в CRACK_BUDGET: если большому
+        // не хватает места, берём поменьше, а если нет места и мелкому — не создаём ничего
+        const open = [...overlayEl.querySelectorAll('.vn-crack')];
+        if (open.length >= CRACK_MAX) return;
+        const free = CRACK_BUDGET - open.reduce((sum, c) => sum + Number(c.dataset.weight || 0), 0);
         const roll = Math.random();
-        const tier = roll < 0.2 ? { len: 0.20, width: 11, depth: 2 }
-                   : roll < 0.7 ? { len: 0.40, width: 24, depth: 3 }
-                   :              { len: 0.75, width: 40, depth: 3 };
+        let tierIdx = roll < 0.35 ? 0 : roll < 0.85 ? 1 : 2;
+        while (tierIdx > 0 && CRACK_TIERS[tierIdx].weight > free) tierIdx--;
+        const tier = CRACK_TIERS[tierIdx];
+        if (tier.weight > free) return;
 
-        const cx = (0.08 + Math.random() * 0.84) * W;
-        const cy = (0.08 + Math.random() * 0.84) * H;
+        // Точка удара — самая далёкая от уже открытых разломов из нескольких случайных кандидатов
+        let cx = 0, cy = 0, farthest = -1;
+        for (let k = 0; k < 8; k++) {
+            const x = (0.08 + Math.random() * 0.84) * W;
+            const y = (0.08 + Math.random() * 0.84) * H;
+            const gap = open.length
+                ? Math.min(...open.map(c => Math.hypot(Number(c.dataset.impactX) - x, Number(c.dataset.impactY) - y)))
+                : Infinity;
+            if (gap > farthest) { farthest = gap; cx = x; cy = y; }
+        }
+        // Планы стихий: каждый разлом ведёт в свой мир, по возможности не в тот, что уже открыт
+        let plane = null, palette = style.palette;
+        if (style.planes) {
+            const names = Object.keys(style.planes);
+            const taken = new Set(open.map(c => c.dataset.plane));
+            const fresh = names.filter(n => !taken.has(n));
+            const pool = fresh.length ? fresh : names;
+            plane = pool[Math.floor(Math.random() * pool.length)];
+            palette = style.planes[plane];
+        }
         const angle = Math.random() * Math.PI * 2;
         const make = a => generateCrack(Math.random, {
             x: cx, y: cy, angle: a,
             length: diag * tier.len * (0.8 + Math.random() * 0.4) * 0.5,
-            width: tier.width * sc * (0.8 + Math.random() * 0.4),
+            width: tier.width * style.widthK * sc * (0.8 + Math.random() * 0.4),
             maxDepth: tier.depth, step: 44 * sc, bounds: { w: W, h: H },
+            wobble: style.wobble, branch: style.branch,
         }).branches;
         const branches = [...make(angle), ...make(angle + Math.PI + (Math.random() - 0.5) * 0.7)];
 
@@ -348,8 +457,10 @@ export class VisualFXSystem {
         const ox = box.x, oy = box.y;
         const reach = Math.max(...allPts.map(p => Math.hypot(p.x - cx, p.y - cy))) + 70;
 
-        const glow = openings.map(({ b }) =>
-            `<path d="${pathD(b.pts, ox, oy, false)}" fill="none" stroke="${palette.glow}" stroke-width="${(b.width * 1.8 + 6).toFixed(1)}" stroke-linecap="round" stroke-linejoin="round"/>`
+        // Свечение идёт по контуру раскрытия, а не по осевой линии постоянной ширины: у сужающихся концов
+        // оно сужается вместе с разломом и не расплывается вокруг тонких мест
+        const glow = openings.map(({ poly }) =>
+            `<path d="${pathD(poly, ox, oy)}" fill="${palette.glow}" stroke="${palette.glow}" stroke-width="3" stroke-linejoin="round"/>`
         ).join('');
         const rim = openings.map(({ poly }) =>
             `<path d="${pathD(poly, ox, oy)}" fill="none" stroke="${palette.edge}" stroke-width="2.8" stroke-linejoin="round"/>`
@@ -362,6 +473,10 @@ export class VisualFXSystem {
 
         const el = document.createElement('div');
         el.className = 'vn-fx-ray vn-crack';
+        el.dataset.weight = tier.weight;
+        if (plane) el.dataset.plane = plane;
+        el.dataset.impactX = cx.toFixed(0);
+        el.dataset.impactY = cy.toFixed(0);
         el.style.cssText = `left:${box.x}px;top:${box.y}px;width:${box.w}px;height:${box.h}px;--cx:${(cx - ox).toFixed(0)}px;--cy:${(cy - oy).toFixed(0)}px;`;
         // Порядок слоёв важен: кромка лежит ПОД окном. Контуры отдельных веток обведены вдвое толще, а окно
         // (объединение всех контуров) перекрывает их изнутри, поэтому остаётся видна только внешняя граница
@@ -371,11 +486,11 @@ export class VisualFXSystem {
             + `<div class="vn-crack-window" style="clip-path:path('${windowD}')"><div class="vn-crack-inner" style="background:${palette.inner}"></div></div>`;
         overlayEl.appendChild(el);
 
-        // Быстро у точки удара, к краям всё медленнее
-        const growMs = Math.max(500, Math.min(1500, reach * 1.25));
+        // Чуть быстрее у точки удара, к краям медленнее; мелкий разрыв раскрывается ~1,4 с, огромный ~3 с
+        const growMs = Math.max(1400, Math.min(3500, reach * 3.5));
         el.animate(
             [{ '--crack-grow': '0px' }, { '--crack-grow': `${reach.toFixed(0)}px` }],
-            { duration: growMs, delay: extraDelay, easing: 'cubic-bezier(0.04, 0, 0.18, 1)', fill: 'forwards' }
+            { duration: growMs, delay: extraDelay, easing: 'cubic-bezier(0.3, 0.05, 0.3, 1)', fill: 'forwards' }
         );
 
         this._crackTimeouts.push(setTimeout(
@@ -436,7 +551,8 @@ export class VisualFXSystem {
 
     // ─── Glass Shatter ───────────────────────────────────────
 
-    _startGlassShatter(overlayEl) {
+    // Варианты (VISUAL_VARIANTS.glass_shatter): осколки по всему кадру или только вокруг удара + длинные трещины
+    _startGlassShatter(overlayEl, variant = 'all') {
         const bgLayer  = overlayEl.querySelector('.vn-bg-layer');
         let bgImage = 'none';
         if (bgLayer) {
@@ -451,19 +567,20 @@ export class VisualFXSystem {
 
         const W = overlayEl.offsetWidth  || 1200;
         const H = overlayEl.offsetHeight || 700;
-        this._generateGlassShards(container, bgImage, W, H);
+        this._generateGlassShards(container, bgImage, W, H, variant === 'center');
     }
 
-    _generateGlassShards(container, bgImage, W, H) {
+    _generateGlassShards(container, bgImage, W, H, centerOnly = false) {
         const cx   = W * (0.46 + Math.random() * 0.08);
         const cy   = H * (0.46 + Math.random() * 0.08);
-        const N    = 10 + Math.floor(Math.random() * 3);
+        const N    = centerOnly ? 9 : 10 + Math.floor(Math.random() * 3);
         const diag = Math.sqrt(W * W + H * H);
         const Nf   = N * 2;
 
+        const ringK = centerOnly ? 0.72 : 1;
         const ringR = [
-            diag * (0.13 + Math.random() * 0.04),
-            diag * (0.28 + Math.random() * 0.06),
+            diag * (0.13 + Math.random() * 0.04) * ringK,
+            diag * (0.28 + Math.random() * 0.06) * ringK,
             diag * (0.50 + Math.random() * 0.08),
             diag * 1.05,
         ];
@@ -528,6 +645,15 @@ export class VisualFXSystem {
             ], 0.35, true);
         }
 
+        if (centerOnly) {
+            // Скол ограничен двумя внутренними кольцами; за его границей кадр цел, а щели между осколками чернит подложка
+            const dark = 'rgba(4, 8, 16, 0.85)';
+            const r0 = ringR[1] * 0.9, r1 = ringR[1] * 1.08;
+            container.style.background = `radial-gradient(circle at ${cx.toFixed(0)}px ${cy.toFixed(0)}px, ${dark} 0, ${dark} ${r0.toFixed(0)}px, transparent ${r1.toFixed(0)}px)`;
+            container.appendChild(this._glassCracks(W, H, cx, cy, ringR[1], diag));
+            return;
+        }
+
         // Transition ring (bR1 → bR2): bridge fine→coarse, each coarse shard spans 2 fine points
         for (let i = 0; i < N; i++) {
             emit([
@@ -543,6 +669,47 @@ export class VisualFXSystem {
                 onRing(bR3, 3, (i + 1) % N), onRing(bR3, 3, i),
             ], 0.90);
         }
+    }
+
+    // Длинные ломаные трещины от центра сквозь кольцо осколков и дальше по целому стеклу, с короткими ответвлениями
+    _glassCracks(W, H, cx, cy, startR, diag) {
+        const rays = 9 + Math.floor(Math.random() * 4);
+        const paths = [];
+        for (let i = 0; i < rays; i++) {
+            let ang = (i / rays) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+            let r = startR * (0.55 + Math.random() * 0.25);
+            const len = diag * (0.34 + Math.random() * 0.3);
+            let x = cx + Math.cos(ang) * r, y = cy + Math.sin(ang) * r;
+            let d = `M${x.toFixed(1)} ${y.toFixed(1)}`;
+            const end = r + len;
+            while (r < end) {
+                const step = 38 + Math.random() * 55;
+                r += step;
+                ang += (Math.random() - 0.5) * 0.16;
+                x = cx + Math.cos(ang) * r;
+                y = cy + Math.sin(ang) * r;
+                d += ` L${x.toFixed(1)} ${y.toFixed(1)}`;
+                if (Math.random() < 0.22) {
+                    const ba = ang + (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.5);
+                    const bl = 30 + Math.random() * 90;
+                    paths.push(`M${x.toFixed(1)} ${y.toFixed(1)} L${(x + Math.cos(ba) * bl).toFixed(1)} ${(y + Math.sin(ba) * bl).toFixed(1)}`);
+                }
+            }
+            paths.push(d);
+        }
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('class', 'vn-glass-cracks');
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        for (const cls of ['vn-crack-dark', 'vn-crack-light']) {
+            for (const d of paths) {
+                const p = document.createElementNS(SVG_NS, 'path');
+                p.setAttribute('class', cls);
+                p.setAttribute('d', d);
+                svg.appendChild(p);
+            }
+        }
+        return svg;
     }
 
     // Shrinks each polygon vertex toward its centroid by `px` pixels
@@ -623,35 +790,79 @@ export class VisualFXSystem {
 
     // ─── Earthquake ──────────────────────────────────────────
 
-    // Толчки идут сериями: класс .vn-quake-active трясёт фон и персонажей (CSS), в конце серия затухает
-    // (.vn-quake-soft); с потолка сыплются обломки и крошка
-    _startEarthquake(overlayEl) {
-        // Серия 3–5.5 с, пауза после неё 3–7 с (отсчёт от конца серии, поэтому серии не накладываются)
+    // Класс .vn-quake-active трясёт фон и персонажей (CSS); с потолка сыплются обломки и крошка.
+    // Два варианта (VISUAL_VARIANTS.earthquake): «Толчки» — случайные события с паузами, «Непрерывная» —
+    // ровная дрожь без остановок (её анимация — в .vn-vfx-earthquake-constant).
+    _startEarthquake(overlayEl, variant = 'all') {
+        if (variant === 'constant') {
+            overlayEl.classList.add('vn-quake-active');
+            const rain = () => {
+                this._glitchInterval = setTimeout(() => {
+                    this._spawnQuakeDebris(overlayEl, 1500, 0.35);
+                    rain();
+                }, 1200 + Math.random() * 2300);
+            };
+            rain();
+            return;
+        }
+
+        const later = (fn, ms) => this._crackTimeouts.push(setTimeout(fn, ms));
+        // `restart`: сбросить анимацию, чтобы новый удар начался с рывка, а не продолжил предыдущий
+        const jolt = (strength, restart) => {
+            overlayEl.style.setProperty('--qs', strength.toFixed(2));
+            overlayEl.classList.remove('vn-quake-soft');
+            if (restart) {
+                overlayEl.classList.remove('vn-quake-active');
+                void overlayEl.offsetWidth;
+            }
+            overlayEl.classList.add('vn-quake-active');
+        };
+
+        // Событие случайного вида; следующее наступает после паузы, отсчитанной от конца этого, поэтому они не накладываются
         const schedule = delay => {
             this._glitchInterval = setTimeout(() => {
-                const duration = 3000 + Math.random() * 2500;
-                overlayEl.classList.remove('vn-quake-soft');
-                overlayEl.classList.add('vn-quake-active');
-                this._crackTimeouts.push(
-                    setTimeout(() => overlayEl.classList.add('vn-quake-soft'), duration - 700),
-                    setTimeout(() => overlayEl.classList.remove('vn-quake-active', 'vn-quake-soft'), duration)
-                );
+                const roll = Math.random();
+                let total;
 
-                this._spawnQuakeDebris(overlayEl, duration);
+                if (roll < 0.4) {
+                    // Один толчок
+                    jolt(0.7 + Math.random() * 0.7, false);
+                    this._spawnQuakeDebris(overlayEl, QUAKE_JOLT_MS, 0.5);
+                    total = QUAKE_JOLT_MS;
+                } else if (roll < 0.75) {
+                    // Несколько ударов подряд, с короткими разрывами между ними
+                    const hits = 2 + Math.floor(Math.random() * 3);
+                    let at = 0;
+                    for (let i = 0; i < hits; i++) {
+                        const strength = 0.6 + Math.random() * 0.9;
+                        later(() => { jolt(strength, true); this._spawnQuakeDebris(overlayEl, QUAKE_JOLT_MS, 0.4); }, at);
+                        at += i < hits - 1 ? 350 + Math.random() * 900 : QUAKE_JOLT_MS;
+                    }
+                    total = at;
+                } else {
+                    // Затяжное землетрясение: несколько циклов подряд, к концу слабеет
+                    total = 3000 + Math.random() * 2500;
+                    jolt(0.9 + Math.random() * 0.4, false);
+                    later(() => overlayEl.classList.add('vn-quake-soft'), total - 700);
+                    this._spawnQuakeDebris(overlayEl, total, 1);
+                }
 
-                schedule(duration + 3000 + Math.random() * 4000);
+                later(() => overlayEl.classList.remove('vn-quake-active', 'vn-quake-soft'), total);
+                // Чаще короткая передышка, иногда долгое затишье
+                schedule(total + (Math.random() < 0.35 ? 1200 + Math.random() * 1800 : 3500 + Math.random() * 7000));
             }, delay);
         };
         schedule(1500);
     }
 
     // Обломки и крошка с потолка: сыплются из 2–3 мест (как из трещин в перекрытии), падают с ускорением
-    // и кувыркаются. Пока идёт серия, их становится меньше к концу — так же, как слабеют толчки
-    _spawnQuakeDebris(overlayEl, duration) {
+    // и кувыркаются. Пока идёт серия, их становится меньше к концу — так же, как слабеют толчки.
+    // `amount` — доля от полной «порции» (одиночному толчку хватает половины)
+    _spawnQuakeDebris(overlayEl, duration, amount = 1) {
         const W = overlayEl.offsetWidth  || 1200;
         const H = overlayEl.offsetHeight || 700;
         const sources = Array.from({ length: 2 + Math.floor(Math.random() * 2) }, () => (0.08 + Math.random() * 0.84) * W);
-        const count = 18 + Math.floor(Math.random() * 10);
+        const count = Math.max(4, Math.round((18 + Math.floor(Math.random() * 10)) * amount));
 
         for (let i = 0; i < count; i++) {
             const dust = Math.random() < 0.55;

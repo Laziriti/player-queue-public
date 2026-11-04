@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════
    VN-FX-NATURE — Природные эффекты атмосферы
-   Группа: storm, underwater, moonlight, sandstorm
+   Группа: storm, underwater, moonlight, sandstorm, frost, fog, earthquake
    ══════════════════════════════════════════════════════════ */
 
 
@@ -393,13 +393,17 @@
 
 /* ══════════════════════════════════════════════════════════
    EARTHQUAKE (Землетрясение)
-   Серии толчков (.vn-quake-active ставит JS): трясётся фон и персонажи, сыплются пыль и обломки.
-   Между толчками — тусклый пыльный кадр.
+   Два варианта (VISUAL_VARIANTS.earthquake):
+   • базовый «Толчки» — случайные события: один толчок, серия ударов подряд или затяжное землетрясение,
+     между ними тишина разной длины (.vn-quake-active ставит и снимает JS);
+   • «Непрерывная» (.vn-vfx-earthquake-constant) — ровная дрожь без остановок, .vn-quake-active стоит всё время.
+   Трясётся фон и персонажи, сыплются пыль и обломки; между толчками — тусклый пыльный кадр.
    Трясём через translate: параллакс владеет transform фона, а translate с ним не конфликтует.
-   --qa — сила толчка, ослабляется на излёте (.vn-quake-soft).
+   --qa — сила толчка, ослабляется на излёте (.vn-quake-soft); --qs — множитель силы конкретного толчка (JS, inline);
+   --qk — их произведение, его и берут keyframes.
    ══════════════════════════════════════════════════════════ */
 
-.vn-vfx-earthquake { --qa: 1; }
+.vn-vfx-earthquake { --qa: 1; --qk: calc(var(--qa) * var(--qs, 1)); }
 .vn-vfx-earthquake.vn-quake-soft { --qa: 0.4; }
 
 .vn-vfx-earthquake .vn-bg-layer {
@@ -494,26 +498,55 @@
 
 @keyframes vnQuakeBg {
     0%, 100% { translate: 0 0; }
-    3%       { translate: calc(13px * var(--qa)) calc(-6px * var(--qa)); }
-    7%       { translate: calc(-11px * var(--qa)) calc(7px * var(--qa)); }
-    12%      { translate: calc(9px * var(--qa)) calc(-4px * var(--qa)); }
-    18%      { translate: calc(-7px * var(--qa)) calc(4px * var(--qa)); }
-    25%      { translate: calc(5px * var(--qa)) calc(-2px * var(--qa)); }
-    34%      { translate: calc(-4px * var(--qa)) calc(2px * var(--qa)); }
-    45%      { translate: calc(3px * var(--qa)) calc(-1px * var(--qa)); }
-    58%      { translate: calc(-2px * var(--qa)) calc(1px * var(--qa)); }
-    74%      { translate: calc(1px * var(--qa)) 0; }
+    3%       { translate: calc(13px * var(--qk)) calc(-6px * var(--qk)); }
+    7%       { translate: calc(-11px * var(--qk)) calc(7px * var(--qk)); }
+    12%      { translate: calc(9px * var(--qk)) calc(-4px * var(--qk)); }
+    18%      { translate: calc(-7px * var(--qk)) calc(4px * var(--qk)); }
+    25%      { translate: calc(5px * var(--qk)) calc(-2px * var(--qk)); }
+    34%      { translate: calc(-4px * var(--qk)) calc(2px * var(--qk)); }
+    45%      { translate: calc(3px * var(--qk)) calc(-1px * var(--qk)); }
+    58%      { translate: calc(-2px * var(--qk)) calc(1px * var(--qk)); }
+    74%      { translate: calc(1px * var(--qk)) 0; }
 }
 
 @keyframes vnQuakeSide {
     0%, 100% { translate: 0 0; }
-    4%       { translate: calc(-9px * var(--qa)) calc(4px * var(--qa)); }
-    9%       { translate: calc(8px * var(--qa)) calc(-5px * var(--qa)); }
-    15%      { translate: calc(-6px * var(--qa)) calc(3px * var(--qa)); }
-    22%      { translate: calc(5px * var(--qa)) calc(-2px * var(--qa)); }
-    31%      { translate: calc(-3px * var(--qa)) calc(1px * var(--qa)); }
-    43%      { translate: calc(2px * var(--qa)) calc(-1px * var(--qa)); }
-    58%      { translate: calc(-1px * var(--qa)) 0; }
+    4%       { translate: calc(-9px * var(--qk)) calc(4px * var(--qk)); }
+    9%       { translate: calc(8px * var(--qk)) calc(-5px * var(--qk)); }
+    15%      { translate: calc(-6px * var(--qk)) calc(3px * var(--qk)); }
+    22%      { translate: calc(5px * var(--qk)) calc(-2px * var(--qk)); }
+    31%      { translate: calc(-3px * var(--qk)) calc(1px * var(--qk)); }
+    43%      { translate: calc(2px * var(--qk)) calc(-1px * var(--qk)); }
+    58%      { translate: calc(-1px * var(--qk)) 0; }
+}
+
+/* «Непрерывная»: мелкая неровная дрожь вместо затухающих ударов. Длительности фона и колонок разные
+   и не кратны друг другу, чтобы дрожь не складывалась в заметный ритм */
+.vn-vfx-earthquake-constant.vn-quake-active .vn-bg-layer {
+    animation: vnQuakeRumbleBg 0.83s linear infinite;
+}
+
+.vn-vfx-earthquake-constant.vn-quake-active .vn-side {
+    animation: vnQuakeRumbleSide 1.07s linear infinite;
+}
+
+@keyframes vnQuakeRumbleBg {
+    0%, 100% { translate: 0 0; }
+    11%      { translate: 3px -2px; }
+    26%      { translate: -4px 1.5px; }
+    39%      { translate: 2px 2.5px; }
+    55%      { translate: -3px -2px; }
+    71%      { translate: 4px 0.5px; }
+    86%      { translate: -1.5px -1.5px; }
+}
+
+@keyframes vnQuakeRumbleSide {
+    0%, 100% { translate: 0 0; }
+    14%      { translate: -2.5px 1.5px; }
+    31%      { translate: 3px -1px; }
+    47%      { translate: -1.5px -2px; }
+    63%      { translate: 2px 2px; }
+    82%      { translate: -3px 0.5px; }
 }
 
 .vn-vfx-earthquake .vn-character.active .vn-character-img {
@@ -534,3 +567,280 @@
 .vn-vfx-storm        .vn-fx-grain { opacity: 0.11; }
 .vn-vfx-moonlight    .vn-fx-grain { opacity: 0.10; }
 .vn-vfx-earthquake   .vn-fx-grain { opacity: 0.10; }
+
+
+/* ══════════════════════════════════════════════════════════
+   FOG (Туман)
+   Густой нейтральный туман: три слоя клубов (маска-плитка --vn-tex-fog, заливка цветом) плывут вбок с разной
+   скоростью, плотность медленно «дышит». Тот же приём, что у «Метели» (frost:blizzard), но спокойнее и серее.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-fog .vn-bg-layer {
+    filter: saturate(0.6) brightness(0.92) contrast(0.9);
+}
+
+.vn-vfx-fog .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(ellipse at center, rgba(222, 228, 234, 0.18) 0%, rgba(175, 186, 198, 0.28) 100%);
+}
+
+.vn-vfx-fog .vn-fx-rays,
+.vn-vfx-fog .vn-fx-flash {
+    opacity: 1;
+    overflow: hidden;
+    animation: none;
+}
+
+.vn-vfx-fog .vn-fx-rays {
+    background: none;
+    animation: vnFogBreath 16s ease-in-out infinite alternate;
+}
+
+/* Ровная дымка под клубами: кадр никогда не прорисовывается чисто */
+.vn-vfx-fog .vn-fx-flash {
+    background: rgba(208, 215, 224, 0.24);
+}
+
+.vn-vfx-fog .vn-fx-rays::before,
+.vn-vfx-fog .vn-fx-rays::after,
+.vn-vfx-fog .vn-fx-flash::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 1024px);
+    height: 100%;
+    background: rgba(232, 237, 242, 0.92);
+    -webkit-mask: var(--vn-tex-fog) 0 0 / 1024px 360px;
+    mask: var(--vn-tex-fog) 0 0 / 1024px 360px;
+    animation: vnFogSlide1024 14s linear infinite;
+}
+
+.vn-vfx-fog .vn-fx-rays::after {
+    width: calc(100% + 1536px);
+    opacity: 0.75;
+    -webkit-mask-size: 1536px 540px;
+    mask-size: 1536px 540px;
+    animation: vnFogSlide1536 24s linear infinite;
+}
+
+.vn-vfx-fog .vn-fx-flash::before {
+    width: calc(100% + 768px);
+    opacity: 0.5;
+    -webkit-mask-size: 768px 280px;
+    mask-size: 768px 280px;
+    animation: vnFogSlide768 9s linear infinite;
+}
+
+@keyframes vnFogBreath {
+    0%   { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-fog .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(120, 132, 146, 0.35) 80%, rgba(80, 92, 106, 0.6) 100%);
+}
+
+.vn-vfx-fog .vn-ground-fog {
+    background: linear-gradient(to top, rgba(226, 232, 238, 0.75) 0%, rgba(205, 213, 222, 0.35) 22%, transparent 52%);
+}
+
+.vn-vfx-fog .vn-character.active .vn-character-img {
+    filter: saturate(0.85) brightness(1) contrast(1)
+        drop-shadow(0 0 18px rgba(220, 228, 238, 0.4))
+        drop-shadow(0 5px 15px rgba(0, 0, 0, 0.55)) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ВАРИАНТЫ ЭФФЕКТОВ (VISUAL_VARIANTS): поверх базовых правил выше, на классах .vn-vfx-<тип>-<вариант>
+   Цветной туман/дым везде собран одинаково: псевдоэлемент шире слоя на 1536px, заливка цветом, форму даёт
+   маска-плитка --vn-tex-fog; сдвиг на период плитки (512 или 768px) — бесшовный цикл на compositor.
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ── STORM · Далёкая гроза (.vn-vfx-storm-distant) ──
+   Зарницы без дождя и без раскатов: за тучами на миг светится случайное место неба (JS кладёт --bolt-x / --bolt-y),
+   сам кадр и персонажей молния почти не освещает. */
+
+.vn-vfx-storm-distant .vn-bg-layer {
+    filter: saturate(0.55) brightness(0.78) contrast(1.08);
+}
+
+.vn-vfx-storm-distant .vn-fx-tint {
+    background: rgba(25, 35, 70, 0.18);
+}
+
+.vn-vfx-storm-distant .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 38%, rgba(8, 14, 34, 0.45) 80%, rgba(3, 7, 20, 0.7) 100%);
+}
+
+.vn-vfx-storm-distant .vn-fx-flash.vn-lightning-active {
+    background: radial-gradient(ellipse 55% 45% at var(--bolt-x, 50%) var(--bolt-y, 18%), rgba(205, 220, 255, 0.6) 0%, rgba(150, 175, 235, 0.22) 45%, transparent 75%);
+    animation: vnDistantFlash 1s ease-out forwards;
+}
+
+@keyframes vnDistantFlash {
+    0%   { opacity: 0; }
+    8%   { opacity: 1; }
+    22%  { opacity: 0.25; }
+    34%  { opacity: 0.85; }
+    100% { opacity: 0; }
+}
+
+.vn-vfx-storm-distant .vn-fx-flash.vn-lightning-active ~ .vn-side .vn-character-img {
+    filter: brightness(1.12) !important;
+}
+
+.vn-vfx-storm-distant .vn-fx-flash.vn-lightning-active ~ .vn-vignette {
+    opacity: 0.7 !important;
+}
+
+
+/* ── STORM · Ночная буря (.vn-vfx-storm-gale) ──
+   Почти чёрная ночь с глухой виньеткой; молнии редкие (см. VisualFXSystem._startLightning).
+   Дождь и ветер — это частицы, здесь их нет. */
+
+.vn-vfx-storm-gale .vn-bg-layer {
+    filter: saturate(0.35) brightness(0.5) contrast(1.25);
+}
+
+.vn-vfx-storm-gale .vn-fx-tint {
+    background: rgba(5, 10, 35, 0.4);
+}
+
+.vn-vfx-storm-gale .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 22%, rgba(2, 6, 22, 0.65) 70%, rgba(0, 2, 10, 0.92) 100%);
+}
+
+
+.vn-vfx-storm-gale .vn-ambient-light {
+    background: radial-gradient(ellipse at 50% 20%, rgba(80, 100, 190, 0.18) 0%, transparent 55%) !important;
+}
+
+
+/* ── FROST · Метель (.vn-vfx-frost-blizzard) ──
+   Белая пелена: три слоя снежного тумана быстро несутся вбок, порывы то закрывают кадр, то приоткрывают.
+   Иней у краёв и блёстки в метели не нужны. */
+
+.vn-vfx-frost-blizzard .vn-bg-layer {
+    filter: saturate(0.35) sepia(0.2) hue-rotate(170deg) brightness(0.95) contrast(0.88);
+}
+
+.vn-vfx-frost-blizzard .vn-fx-tint {
+    background: radial-gradient(ellipse at center, rgba(215, 230, 250, 0.28) 0%, rgba(170, 195, 235, 0.38) 100%);
+}
+
+.vn-vfx-frost-blizzard .vn-fx-edges {
+    opacity: 0;
+    animation: none;
+}
+
+.vn-vfx-frost-blizzard .vn-fx-rays,
+.vn-vfx-frost-blizzard .vn-fx-flash {
+    opacity: 1;
+    overflow: hidden;
+    animation: none;
+}
+
+.vn-vfx-frost-blizzard .vn-fx-rays {
+    background: none;
+}
+
+/* Ровная дымка под клубами: кадр никогда не прорисовывается чисто */
+.vn-vfx-frost-blizzard .vn-fx-flash {
+    background: rgba(225, 236, 252, 0.3);
+}
+
+.vn-vfx-frost-blizzard .vn-fx-rays {
+    animation: vnBlizzardGust 2s ease-in-out infinite;
+}
+
+.vn-vfx-frost-blizzard .vn-fx-rays::before,
+.vn-vfx-frost-blizzard .vn-fx-rays::after,
+.vn-vfx-frost-blizzard .vn-fx-flash::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 1024px);
+    height: 100%;
+    background: rgba(242, 248, 255, 0.95);
+    -webkit-mask: var(--vn-tex-fog) 0 0 / 1024px 360px;
+    mask: var(--vn-tex-fog) 0 0 / 1024px 360px;
+}
+
+.vn-vfx-frost-blizzard .vn-fx-rays::before {
+    animation: vnFogSlide1024 0.65s linear infinite;
+}
+
+.vn-vfx-frost-blizzard .vn-fx-rays::after {
+    width: calc(100% + 1536px);
+    opacity: 0.75;
+    -webkit-mask-size: 1536px 540px;
+    mask-size: 1536px 540px;
+    animation: vnFogSlide1536 0.95s linear infinite;
+}
+
+.vn-vfx-frost-blizzard .vn-fx-flash::before {
+    width: calc(100% + 768px);
+    opacity: 0.55;
+    -webkit-mask-size: 768px 280px;
+    mask-size: 768px 280px;
+    animation: vnFogSlide768 0.45s linear infinite;
+}
+
+@keyframes vnBlizzardGust {
+    0%, 100% { opacity: 0.55; }
+    22%      { opacity: 1; }
+    40%      { opacity: 0.7; }
+    62%      { opacity: 0.5; }
+    78%      { opacity: 0.95; }
+}
+
+.vn-vfx-frost-blizzard .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(150, 175, 215, 0.4) 78%, rgba(100, 130, 185, 0.7) 100%);
+}
+
+.vn-vfx-frost-blizzard .vn-ground-fog {
+    background: linear-gradient(to top, rgba(235, 245, 255, 0.8) 0%, rgba(210, 228, 250, 0.4) 20%, transparent 50%);
+}
+
+
+/* ── FROST · Утренняя изморозь (.vn-vfx-frost-hoarfrost) ──
+   Ясное морозное утро: тонкий иней только по углам, розово-золотой свет низкого солнца слева, много искр. */
+
+.vn-vfx-frost-hoarfrost .vn-bg-layer {
+    filter: saturate(0.65) brightness(1.12) contrast(0.92);
+}
+
+.vn-vfx-frost-hoarfrost .vn-fx-tint {
+    background: linear-gradient(115deg, rgba(255, 190, 160, 0.42) 0%, rgba(215, 225, 255, 0.3) 55%, rgba(150, 195, 250, 0.4) 100%);
+}
+
+.vn-vfx-frost-hoarfrost .vn-fx-edges {
+    animation-name: vnHoarfrostGrow;
+    animation-duration: 10s;
+}
+
+@keyframes vnHoarfrostGrow {
+    from { --vn-frost: 112%; }
+    to   { --vn-frost: 100%; }
+}
+
+.vn-vfx-frost-hoarfrost .vn-fx-flash {
+    animation-duration: 2.8s;
+}
+
+.vn-vfx-frost-hoarfrost .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(215, 225, 245, 0.3) 80%, rgba(170, 190, 225, 0.5) 100%);
+}
+
+.vn-vfx-frost-hoarfrost .vn-fx-bloom {
+    opacity: 0.5;
+    background: radial-gradient(ellipse at 6% 40%, rgba(255, 200, 150, 0.75) 0%, transparent 55%);
+}
+
+.vn-vfx-frost-hoarfrost .vn-ground-fog {
+    background: linear-gradient(to top, rgba(255, 232, 218, 0.55) 0%, rgba(235, 228, 245, 0.25) 14%, transparent 38%);
+}

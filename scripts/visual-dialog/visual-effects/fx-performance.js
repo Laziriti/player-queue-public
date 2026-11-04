@@ -24,7 +24,7 @@ export const FX_TIERS = ['heavy', 'medium', 'light'];
 export const FX_PERF = {
     visual: {
         heavy:  ['underwater', 'dream', 'eldritch', 'kaleidoscope', 'void_breach', 'earthquake', 'glass_shatter', 'cosmic_horror', 'ghosts', 'ethereal', 'apocalypse'],
-        medium: ['divine', 'sacred', 'abyss', 'fire', 'blood_moon', 'corruption', 'shadow_intrigue', 'storm', 'hologram', 'neon', 'vhs', 'sandstorm', 'frost'],
+        medium: ['divine', 'sacred', 'abyss', 'fire', 'blood_moon', 'corruption', 'shadow_intrigue', 'storm', 'hologram', 'neon', 'vhs', 'sandstorm', 'frost', 'fog'],
         light:  ['warm', 'cold', 'moonlight', 'dark', 'carnival', 'noir', 'memory'],
     },
     particle: {
@@ -34,7 +34,7 @@ export const FX_PERF = {
     },
     charfx: {
         heavy:  ['vhs', 'glass', 'fire', 'possessed'],
-        medium: ['hologram', 'glitch', 'ghost', 'shadow', 'ice', 'noir', 'drunk', 'rage', 'holy', 'holy_radiant', 'memory', 'dream', 'neon', 'xray', 'gold'],
+        medium: ['hologram', 'glitch', 'ghost', 'shadow', 'ice', 'noir', 'drunk', 'rage', 'holy', 'memory', 'dream', 'neon', 'xray', 'gold'],
         light:  ['stone', 'cracked', 'invisible'],
     },
 };
@@ -49,10 +49,14 @@ function readSetting(key, fallback) {
     catch { return fallback; }
 }
 
-/** Отключён ли эффект на этом клиенте. Вариант («feathers:black», «noir:blinds») отбрасывается: отключается весь тип. */
+// Вариант, который хранится самостоятельным id, но в меню настроек входит в базовый тип
+const BASE_ALIASES = { charfx: { holy_radiant: 'holy' } };
+
+/** Отключён ли эффект на этом клиенте. Вариант («feathers:black», «noir:blinds», «holy_radiant») отбрасывается: отключается весь тип. */
 export function isFxDisabled(kind, id) {
     if (!id || id === 'none') return false;
-    const base = String(id).split(':')[0];
+    let base = String(id).split(':')[0];
+    base = BASE_ALIASES[kind]?.[base] ?? base;
     const off = readSetting('fxDisabled', []);
     return Array.isArray(off) && off.includes(`${kind}:${base}`);
 }
