@@ -3,7 +3,7 @@
 // ============================================================
 
 import { QueueBridge } from './vn-queue-bridge.js';
-import { VNSceneState, PARTICLE_LAYERS, PARTICLE_LAYER_ICONS } from './vn-state.js';
+import { VNSceneState, PARTICLE_LAYERS, PARTICLE_LAYER_ICONS, PARTICLE_DEPTHS, PARTICLE_DEPTH_ICONS, windLabel } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { VNCharFx } from './visual-effects/character-fx/vn-character-fx.js';
 import { FALLBACK_AVATAR, stripEmoji, escapeHtml } from './vn-id-utils.js';
@@ -223,6 +223,10 @@ class VNSceneHTML {
             const title = loc(`vn.bg.particlesLayer${id[0].toUpperCase()}${id.slice(1)}`);
             return `<button type="button" class="vn-fxset-layer${id === state.particlesLayer ? ' active' : ''}" data-layer="${id}" title="${title}"><i class="fas ${PARTICLE_LAYER_ICONS[id]}"></i><span>${title}</span></button>`;
         }).join('');
+        const depthOpts = PARTICLE_DEPTHS.map(id => {
+            const title = loc(`vn.bg.particleDepth${id[0].toUpperCase()}${id.slice(1)}`);
+            return `<button type="button" class="vn-fxset-depth${id === state.particleDepth ? ' active' : ''}" data-depth="${id}" title="${title}"><i class="fas ${PARTICLE_DEPTH_ICONS[id]}"></i><span>${title}</span></button>`;
+        }).join('');
         const toggle = (cls, checked, label, icon) => `<label class="vn-overlay-toggle vn-fxset-toggle"><i class="fas ${icon}"></i><span>${label}</span><input type="checkbox" class="${cls}"${checked ? ' checked' : ''}><span class="vn-toggle-track"></span></label>`;
         const fxSettings = `<div class="vn-atmo-wrap">
                     ${btn('vn-fxset-btn', 'fa-sliders', loc('vn.toolbar.fxSettings'))}
@@ -234,6 +238,12 @@ class VNSceneHTML {
                             <label class="vn-fxset-intensity-row"><i class="fas fa-snowflake"></i><span>${loc('vn.bg.particleIntensity')}</span>
                                 <input type="range" class="vn-fxset-intensity" min="1" max="20" step="1" value="${state.particleIntensity}">
                                 <span class="vn-fxset-intensity-val">${state.particleIntensity}</span></label>
+                            <div class="vn-fxset-section">${loc('vn.bg.particleDepth')}</div>
+                            <div class="vn-fxset-layers" role="group">${depthOpts}</div>
+                            <label class="vn-fxset-intensity-row"><i class="fas fa-wind"></i><span>${loc('vn.bg.particleWind')}</span>
+                                <input type="range" class="vn-fxset-wind" min="-5" max="5" step="1" value="${state.particleWind}">
+                                <span class="vn-fxset-wind-val">${windLabel(state.particleWind)}</span></label>
+                            ${toggle('vn-fxset-gusts', state.particleGusts !== false, loc('vn.bg.particleGusts'), 'fa-wave-square')}
                             <div class="vn-fxset-section">${loc('vn.toolbar.fxSettingsFrame')}</div>
                             ${toggle('vn-fxset-dimming', state.backgroundOverlay !== false, loc('vn.bg.overlay'), 'fa-circle-half-stroke')}
                             ${toggle('vn-fxset-vignette', state.vignette !== false, loc('vn.bg.vignette'), 'fa-bullseye')}
@@ -278,7 +288,8 @@ class VNSceneHTML {
             <button type="button" class="vn-toolbar-btn vn-maximize-self-button" title="${game.i18n.localize('vn.toolbar.maximizeSelf')}"><i class="fas fa-eye"></i></button>
         </div>` : '';
 
-        const overlayClasses = [this._scene.liteMode && 'vn-lite', state.vignette === false && 'vn-no-vignette', state.groundFog === false && 'vn-no-fog'].filter(Boolean).join(' ');
+        const look = this._scene.inactiveLook ?? {};
+        const overlayClasses = [this._scene.liteMode && 'vn-lite', look.dim === false && 'vn-no-dim', look.blur === false && 'vn-no-blur', state.vignette === false && 'vn-no-vignette', state.groundFog === false && 'vn-no-fog'].filter(Boolean).join(' ');
         return `<div id="vn-scene-overlay"${overlayClasses ? ` class="${overlayClasses}"` : ''}>
             <div class="vn-bg-layer"></div><div class="vn-background-overlay"></div>
             <div class="vn-fx-tint"></div><div class="vn-fx-rays"></div><div class="vn-fx-edges"></div><div class="vn-fx-scan"></div><div class="vn-fx-flash"></div>

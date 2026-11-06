@@ -165,6 +165,14 @@
     "thumbnailFolder": {
       "name": "Папка миниатюр пресетов",
       "hint": "Куда сохраняются миниатюры пресетов диалоговых сцен. Пусто — отдельная папка внутри мира. Можно указать любую папку в Data, в том числе внутри модуля: тогда миниатюры переносятся вместе с ним. После смены папки старые миниатюры продолжают работать; чтобы пересоздать их в новом месте, нажмите «Перегенерировать все» в меню вкладки «Пресеты»."
+    },
+    "dimInactive": {
+      "name": "🌓 Затенять неактивных персонажей",
+      "hint": "Действует на всех клиентах. Если выключить, портреты персонажей, которые сейчас не говорят, не темнеют и не теряют цвет. Говорящего по-прежнему видно по свечению и плашке с именем"
+    },
+    "blurInactive": {
+      "name": "💧 Размывать неактивных персонажей",
+      "hint": "Действует на всех клиентах. Если выключить, портреты персонажей, которые сейчас не говорят, не размываются, в том числе при включённой у игрока глубине резкости. Затемнение настраивается отдельно"
     }
   },
   "fxFilters": {
@@ -314,7 +322,14 @@
         "ribbonsOnly": "Только серпантин",
         "fallingMotes": "Падающие",
         "ascendingMotes": "Возносящиеся",
-        "twinklingMotes": "Мерцающие"
+        "twinklingMotes": "Мерцающие",
+        "blizzard": "Буран",
+        "crystals": "Снежинки",
+        "fallingLeaves": "Листопад",
+        "windblownLeaves": "Листья на ветру",
+        "smoke": "Дым",
+        "steam": "Пар",
+        "warmMotes": "Тёплые пылинки"
       },
       "visualVariants": {
         "classic": "Классический",
@@ -358,7 +373,16 @@
         "eye": "Глаз",
         "spiral": "Спираль",
         "shardsFrame": "Осколки по кадру",
-        "crackCenter": "Трещины в центре"
+        "crackCenter": "Трещины в центре",
+        "drunk": "Пьяный",
+        "tipsy": "Навеселе",
+        "wasted": "В стельку",
+        "cubesSingle": "Отдельные кубы",
+        "cubesFull": "Вся сцена",
+        "fogMedium": "Туман",
+        "fogLight": "Лёгкая дымка",
+        "fogDense": "Плотная пелена",
+        "fogGround": "Стелющийся туман"
       },
       "groups": {
         "basic": "Базовые",
@@ -367,7 +391,9 @@
         "dark": "Тьма",
         "chaos": "Хаос",
         "special": "Особые",
-        "cinema": "Кино и стиль"
+        "cinema": "Кино и стиль",
+        "time": "Время суток",
+        "places": "Места и свет"
       },
       "particles": {
         "none": "Выкл",
@@ -399,7 +425,11 @@
         "page_scraps": "Обрывки страниц",
         "balloons": "Воздушные шарики",
         "comets": "Кометы",
-        "shooting_stars": "Падающие звёзды"
+        "shooting_stars": "Падающие звёзды",
+        "hail": "Град",
+        "leaves": "Листопад",
+        "fluff": "Пух и пыльца",
+        "smoke": "Дым и пар"
       },
       "visual": {
         "none": "Выкл",
@@ -434,7 +464,20 @@
         "memory": "🕰️ Воспоминание",
         "neon": "🌃 Неон / киберпанк",
         "vhs": "📼 VHS",
-        "fog": "🌫️ Туман"
+        "fog": "🌫️ Туман",
+        "drunk": "🍺 Опьянение",
+        "cubes": "🧱 Стена из кубов",
+        "dawn": "🌅 Рассвет",
+        "day": "☀️ Ясный день",
+        "sunset": "🌇 Закат",
+        "dusk": "🌆 Сумерки",
+        "overcast": "☁️ Пасмурно",
+        "candlelit": "🕯️ Свечи и таверна",
+        "torchlit": "🔥 Факелы и подземелье",
+        "windowlight": "🪟 Свет из окна",
+        "forest": "🌲 Лес",
+        "cave": "🦇 Пещера",
+        "heat": "🌡️ Зной"
       },
       "effects": {
         "none": "Выкл",
@@ -511,10 +554,22 @@
       "custom": "Пользовательский",
       "applyPathTitle": "Использовать этот путь",
       "cardSizeTitle": "Размер карточек",
-      "cardSizeLabel": "Размер"
+      "cardSizeLabel": "Размер",
+      "particleDepth": "Глубина частиц",
+      "particleDepthFlat": "Плоско",
+      "particleDepthSoft": "Объёмно",
+      "particleDepthDeep": "Глубоко",
+      "particleWind": "Ветер",
+      "windCalm": "штиль",
+      "particleGusts": "Порывы ветра",
+      "look": "Оформление фона",
+      "otherSource": "Другой источник",
+      "emptyFolder": "В этой папке пока нет фонов",
+      "emptyFolderHint": "Положите сюда изображения или видео либо выберите другую папку."
     },
     "io": {
-      "loadError": "Ошибка загрузки пресетов из {moduleId}: {msg}"
+      "loadError": "Ошибка загрузки пресетов из {moduleId}: {msg}",
+      "defaultSetName": "Основной набор"
     },
     "charFx": {
       "none": "Без эффекта",
@@ -615,7 +670,6 @@
       "noModulesFound": "Модулей с пресетами не найдено",
       "noActiveModules": "Нет активных модулей",
       "noActiveScenePin": "Нет активной сцены",
-      "noActiveSceneForPin": "Нет активной сцены для прикрепления",
       "noScene": "Без сцены",
       "nothingFound": "Ничего не найдено",
       "presetsDescription": "Сохраняйте текущую расстановку персонажей и фон как пресет.",
@@ -659,7 +713,6 @@
       "presetActionLoad": "Загрузить в диалог",
       "presetActionUpdate": "Обновить из диалога",
       "presetActionRegen": "Перегенерировать пресет",
-      "presetActionAssign": "Изменить сцену",
       "presetActionMacro": "Сгенерировать макрос",
       "presetActionTags": "Теги",
       "presetActionRename": "Переименовать",
@@ -669,7 +722,6 @@
       "panelLabelTags": "Теги",
       "panelTagsExisting": "Существующие теги — нажмите, чтобы добавить",
       "tagAddPlaceholder": "Добавить тег…",
-      "tagBarSearch": "Теги…",
       "macroDialogTitle": "Макрос для пресета «{name}»",
       "macroDialogHint": "Вставьте этот код в макрос Foundry, чтобы запускать эту сцену одним кликом.",
       "macroCopyBtn": "Скопировать",
@@ -682,11 +734,6 @@
       "updatePresetConfirm": "Перезаписать пресет «<strong>{name}</strong>» текущими настройками диалога?",
       "deletePresetTitle": "Удалить пресет",
       "deletePresetConfirm": "Удалить пресет «<strong>{name}</strong>»?",
-      "assignToSceneLabel": "К «{sceneName}»",
-      "unlinkFromScene": "Открепить от сцены",
-      "presetSceneLabel": "Сцена пресета: <strong>{sceneName}</strong>",
-      "currentSceneLabel": "Текущая сцена: <strong>{sceneName}</strong>",
-      "changeSceneDialogTitle": "Изменить сцену: «{presetName}»",
       "soundCuesLabel": "Звуки сцены",
       "soundCuesHint": "Треки, которые ГМ может запускать прямо со сцены (кнопка в тулбаре).",
       "cueLabelPlaceholder": "Название...",
@@ -705,7 +752,7 @@
       "tokenSearchPlaceholder": "Поиск персонажей...",
       "tokensOnScene": "Доступные на сцене",
       "participantsLabel": "Участники сцены",
-      "participantsHint": "Перетащите актёров из «Доступных» — они сохранятся в пресет и будут доступны независимо от текущей сцены.",
+      "participantsHint": "Сохраняются в пресет и доступны независимо от текущей сцены",
       "positionLeft": "Лево",
       "positionLeftOrder": "← дальше | ближе →",
       "positionCenter": "Центр",
@@ -734,7 +781,6 @@
       "folderInstalled": "Папка фонов установлена: {folder}",
       "specifyModuleId": "Укажите ID модуля",
       "selectAtLeastOnePreset": "Выберите хотя бы один пресет",
-      "exportSuccess": "Экспортировано {count} пресетов в modules/{moduleId}/vn-presets.json",
       "exportError": "Ошибка экспорта: {msg}",
       "downloadingPresets": "Скачивание {count} пр.…",
       "fileImportWithDupes": "В файле {total} пр. ({fresh} новых, {dupes} совп.).",
@@ -767,7 +813,80 @@
       "thumbFolderSet": "Папка миниатюр: {folder}",
       "thumbFolderRebuildTitle": "Новая папка миниатюр",
       "thumbFolderRebuildConfirm": "Пересоздать миниатюры всех пресетов в папке «{folder}»? Старые файлы останутся на месте.",
-      "fileTooLarge": "Файл слишком большой (максимум {mb} МБ)"
+      "fileTooLarge": "Файл слишком большой (максимум {mb} МБ)",
+      "setNameLabel": "Набор",
+      "setNameTitle": "Название набора пресетов в приключении. Одно приключение может содержать несколько наборов, при импорте мастер выберет нужный. Набор с таким же названием обновляется, остальные остаются нетронутыми",
+      "setWillCreate": "Новый набор «{name}»",
+      "setWillUpdate": "Набор «{name}» уже есть в модуле ({count}) и будет обновлён",
+      "setExisting": "В модуле:",
+      "setPick": "Набор:",
+      "exportSetCreated": "Создан набор «{set}»: {count} пресетов в modules/{moduleId}",
+      "exportSetUpdated": "Набор «{set}» обновлён: {count} пресетов в modules/{moduleId}",
+      "exportSetNoteCreated": "Создан набор «{name}». Всего наборов в файле: {total}",
+      "exportSetNoteUpdated": "Набор «{name}» обновлён. Всего наборов в файле: {total}",
+      "importTagsLabel": "Добавить пресетам теги: {tags}",
+      "importTagsTitle": "К каждому импортируемому пресету добавляются теги: название модуля и название набора. Уже имеющиеся теги пресета сохраняются",
+      "tagPickerBtn": "Теги",
+      "tagPickerTitle": "Фильтр по тегам: список всех тегов с поиском",
+      "tagPickerSearch": "Найти тег…",
+      "tagMatchAll": "Все",
+      "tagMatchAny": "Любой",
+      "tagMatchTitle": "Все — у пресета есть каждый выбранный тег. Любой — хотя бы один из выбранных",
+      "tagPickerReset": "Сбросить",
+      "tagClearTitle": "Сбросить фильтр по тегам",
+      "tagPickerTotal": "Найдено тегов: {shown} из {total}",
+      "tagPickerMore": "показаны первые {n}, уточните поиск",
+      "tagPickerEmpty": "Теги не найдены",
+      "tagDeleteEverywhere": "Удалить тег у всех пресетов",
+      "btnOpenLibrary": "Библиотека приключений",
+      "libraryHint": "Готовые наборы сцен, которые идут вместе с модулем",
+      "librarySearch": "Поиск по названию, автору или ID модуля",
+      "libraryActiveOnly": "Только запущенные в мире",
+      "libraryActiveOnlyTitle": "Показать только приключения, чей модуль включён в этом мире",
+      "librarySummary": "В библиотеке: {total} · запущено в мире: {active} · выключено: {inactive} · не установлено: {missing}",
+      "libraryNothing": "Ничего не найдено",
+      "libraryEmpty": "Библиотека пуста. Приключения добавляются в library/index.json",
+      "libraryError": "Не удалось прочитать library/index.json: {msg}",
+      "libraryCollections": "сборников: {count}",
+      "libraryStatus": {
+        "active": "Запущен",
+        "activeTitle": "Модуль включён в этом мире",
+        "inactive": "Выключен",
+        "inactiveTitle": "Модуль установлен, но не включён в этом мире",
+        "missing": "Не установлен",
+        "missingTitle": "Модуль не найден среди установленных"
+      },
+      "libraryWarn": {
+        "inactive": "Модуль «{title}» установлен, но выключен: фоны и портреты из него не загрузятся, пока его не включить.",
+        "missing": "Модуль «{title}» не установлен: фоны и портреты из него не загрузятся."
+      },
+      "presetActionAssign": "Выбрать сцены…",
+      "panelLabelScenes": "Сцены",
+      "deleteGroupShared": "Ещё <strong>{count}</strong> пресетов привязаны и к другим сценам: они останутся, у них будет снята только привязка к этой сцене.",
+      "ioModeExport": "Экспорт",
+      "ioModeImport": "Импорт",
+      "ioModeExportHint": "Сохранить пресеты в модуль или файл",
+      "ioModeImportHint": "Взять пресеты из модуля, библиотеки или файла",
+      "ioSelectedOf": "Выбрано: {count} из {total}",
+      "ioExportTarget": "Куда экспортировать",
+      "ioStepSource": "Откуда импортировать",
+      "ioStepPresets": "Выберите пресеты",
+      "ioImportEmpty": "Выберите источник выше и нажмите «Загрузить» — пресеты появятся здесь.",
+      "poolTabTokens": "Токены",
+      "poolTabFavorites": "Избранное",
+      "btnBackgroundOnlyHint": "Запустить сцену только с фоном, без персонажей",
+      "btnRemoveCharactersHint": "Убрать всех персонажей со сцены; фон и эффекты останутся",
+      "musicHint": "Фоновый трек: звучит, пока сцена открыта.",
+      "cuesEmptyTitle": "Звуков пока нет",
+      "cueMissing": "трек не найден",
+      "presetLaunchShort": "Запуск",
+      "hintMusic": "Музыка",
+      "panelBack": "К списку",
+      "participantsEmpty": "Перетащите сюда актёров из токенов или избранного",
+      "presetActionDuplicate": "Дублировать",
+      "presetActionDuplicateTitle": "Создать копию этого пресета (составной — вместе со всеми шагами)",
+      "presetCopyName": "{name} (копия)",
+      "presetDuplicated": "Создана копия: «{name}»"
     },
     "folders": {
       "modeScenes": "По сценам",
@@ -866,7 +985,9 @@
       "editBanner": "Правка шага {n} из «{name}»: измените сцену и сохраните",
       "editSave": "Сохранить в шаг",
       "editCancel": "Отмена правки",
-      "editLost": "Шаг не найден — возможно, его удалили"
+      "editLost": "Шаг не найден — возможно, его удалили",
+      "barNameTitle": "Название шага (пусто — автоматическое; Enter — применить, Esc — отмена)",
+      "stepMore": "Ещё действия"
     },
     "scenePresets": {
       "title": "Диалоги сцены: {scene}",
@@ -874,6 +995,24 @@
       "noScene": "Нет активной сцены на холсте",
       "unnamed": "Без названия",
       "notFound": "Пресет не найден"
+    },
+    "presetLink": {
+      "save": "Сохранить текущее состояние сцены в этот пресет",
+      "saved": "Пресет «{name}» сохранён",
+      "gone": "Пресет больше не существует, сохранять некуда",
+      "nameTitle": "Название пресета (Enter — переименовать, Esc — отмена)"
+    },
+    "scenePicker": {
+      "title": "Сцены пресета «{presetName}»",
+      "search": "Поиск по названию сцены",
+      "current": "Текущая",
+      "currentTitle": "Сцена, открытая на холсте",
+      "clear": "Снять все",
+      "folderTitle": "Отметить все показанные сцены папки",
+      "nothing": "Сцены не найдены",
+      "save": "Применить",
+      "count": "Выбрано: {count}",
+      "missing": "Нет в этом мире (привязка сохранена)"
     }
   }
 }

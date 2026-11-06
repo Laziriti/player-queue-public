@@ -5,6 +5,7 @@
 import { VNPresets } from './vn-state.js';
 import { VNPreloader } from './vn-preload.js';
 import { escapeHtml } from './vn-id-utils.js';
+import { VNPresetLink } from './vn-preset-link.js';
 
 const loc = (key) => game.i18n.localize(key);
 
@@ -115,6 +116,23 @@ export class VNSequence {
         this.preload();
     }
 
+    // Name field of the bar: the title of the current step (empty = the automatic one, shown as the placeholder)
+    get nameTitleKey() { return 'vn.sequence.barNameTitle'; }
+    get nameOptional() { return true; }
+    nameValue() { return this.steps[this._index]?.title ?? ''; }
+    namePlaceholder() { return VNSequence.autoLabel(this.steps, this._index); }
+
+    async renameTo(title) {
+        const index = this._index;
+        const steps = [...this.steps];
+        const { title: _old, ...rest } = steps[index];
+        steps[index] = title ? { ...rest, title } : rest;
+        const saved = await VNPresets.setSteps(this._preset.id, steps);
+        if (!saved) return;
+        this._preset = saved;
+        this._syncBar();
+    }
+
     /**
      * Warms the cache with the backgrounds and portraits of every step, nearest first, on every client
      * (the GM preloads locally and sends the same ordered list to the others). Per-sequence option `preload`.
@@ -223,6 +241,7 @@ export class VNSequence {
         const btn = (cls, icon, key) => `<button type="button" class="vn-seq-btn ${cls}" title="${loc(key)}"><i class="fas ${icon}"></i></button>`;
         const hasAuto = this.steps.some(s => Number(s.autoAdvance) > 0);
         return `<div class="vn-seq-bar">
+            ${VNPresetLink.nameHtml(this, 'fa-film')}
             <div class="vn-seq-row">
                 ${btn('vn-seq-first', 'fa-backward-step', 'vn.sequence.first')}
                 ${btn('vn-seq-prev', 'fa-chevron-left', 'vn.sequence.prev')}
@@ -243,6 +262,7 @@ export class VNSequence {
         if (!overlay || !this.active) return;
         overlay.querySelector('.vn-seq-bar')?.remove();
         overlay.insertAdjacentHTML('beforeend', this._barHtml());
+        VNPresetLink.wireName(this._bar(), this);
         this._syncBar();
     }
 
@@ -250,6 +270,8 @@ export class VNSequence {
         const bar = this._bar();
         if (!bar || !this.active) return;
         const last = this.steps.length - 1;
+        VNPresetLink.syncName(bar, this);
+        bar.querySelector('.vn-seq-counter').title = this._preset.name;
         bar.querySelector('.vn-seq-counter').textContent = `${this._index + 1} / ${this.steps.length}`;
         bar.querySelector('.vn-seq-first').disabled = bar.querySelector('.vn-seq-prev').disabled = this._index <= 0;
         bar.querySelector('.vn-seq-next').disabled = bar.querySelector('.vn-seq-last').disabled = this._index >= last;
@@ -271,6 +293,14 @@ export class VNSequence {
         }
     }
 
+    /** Automatic step name: first caption line, else the characters, else "Step N". */
+    static autoLabel(allSteps, index) {
+        const step = VNSequence.resolveStep(allSteps, index);
+        const names = [...(step.leftIds ?? []), ...(step.centerIds ?? []), ...(step.rightIds ?? [])]
+            .map(id => step.portraitNames?.[id]).filter(Boolean).join(', ');
+        return (step.caption || '').trim().split('\n')[0] || names || game.i18n.format('vn.sequence.stepTitle', { n: index + 1 });
+    }
+
     /** One button per step (thumbnail, one-line title, characters); shared by the in-scene picker and the launch chooser. */
     static rowsHtml(allSteps, activeIndex = -1) {
         return allSteps.map((_, i) => {
@@ -281,7 +311,7 @@ export class VNSequence {
             const title = (step.title || '').trim();
             // One line each, cut with an ellipsis; the full text is in the tooltip. A GM-given title wins over the
             // automatic one (first caption line, else the characters, else "Step N"), which then moves to the subtitle
-            const auto = caption.split('\n')[0] || names || game.i18n.format('vn.sequence.stepTitle', { n: i + 1 });
+            const auto = VNSequence.autoLabel(allSteps, i);
             const label = title || auto;
             const sub = title ? (caption.split('\n')[0] || names) : (caption ? names : '');
             const thumb = step.thumbnailData || (step.background && step.background !== 'none' ? step.background : null);

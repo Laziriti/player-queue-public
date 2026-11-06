@@ -1,5 +1,6 @@
 /* ══════════════════════════════════════════════════════════
    Background Tab (VNBackgroundManager)
+   Order: selected background + look chips  >  gallery card (toolbar + grid)  >  "other source" row
    ══════════════════════════════════════════════════════════ */
 
 .vn-bg-section {
@@ -8,70 +9,92 @@
 .vn-bg-section > summary { display: none; }
 .vn-bg-section > .vn-collapsible-body { padding: 0; }
 
-/* One panel with two lines: scene options on top, folder / search / card size below */
-.vn-bg-toolbar {
+/* ── Top row: selected background + look of the background ── */
+.vn-bg-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.vn-bg-look {
+    flex: none;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    margin-bottom: 10px;
-    padding: 8px;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 10px 8px;
     background: rgba(0,0,0,0.15);
+    border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
-    border: 1px solid var(--vn-border);
 }
-
-.vn-bg-toolbar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-
-.vn-locate-bg-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    background: rgba(255, 255, 255, 0.06);
-    border-color: var(--vn-border);
+.vn-bg-look-title {
+    font-size: max(11px, 0.68em);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--vn-text-dim);
 }
+.vn-bg-look-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
-.vn-custom-path {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    flex: 1;
-    min-width: 200px;
-}
-
-.vn-custom-path input[type="text"] {
-    flex: 1;
-    padding: 4px 8px;
-    background: rgba(0,0,0,0.3);
-    border: 1px solid var(--vn-border);
-    border-radius: var(--vn-radius-sm);
-    color: var(--vn-text);
-    font-size: 0.8em;
-    transition: border-color var(--vn-transition);
-}
-
-.vn-folder-row {
-    display: flex;
+.vn-bg-chip {
+    position: relative;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 0;
-    font-size: 0.8em;
-}
-.vn-folder-row > .fas { color: var(--vn-accent); opacity: 0.7; }
-.vn-folder-row-label {
-    flex: 1;
+    padding: 4px 11px;
+    border: 1px solid var(--vn-border);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
     color: var(--vn-text-dim);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 200px;
+    font-size: 0.8em;
+    cursor: pointer;
+    user-select: none;
+    transition: background var(--vn-transition), border-color var(--vn-transition), color var(--vn-transition);
 }
+.vn-bg-chip input[type="checkbox"] {
+    position: absolute;
+    width: 0; height: 0; margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+.vn-bg-chip > .fas { font-size: 0.9em; opacity: 0.7; }
+.vn-bg-chip:hover { background: rgba(255,255,255,0.09); color: var(--vn-text); }
+.vn-bg-chip:has(input:checked) {
+    background: var(--vn-accent-dim);
+    border-color: var(--vn-accent);
+    color: var(--vn-accent);
+    font-weight: 600;
+}
+.vn-bg-chip:has(input:checked) > .fas { opacity: 1; }
+.vn-bg-chip:has(input:focus-visible) { box-shadow: 0 0 0 2px var(--vn-accent-dim); }
+
+/* ── Gallery card: toolbar on top, grid below ── */
+.vn-bg-browser {
+    background: rgba(0,0,0,0.12);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius);
+    overflow: hidden;
+}
+
+.vn-bg-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    padding: 8px 10px;
+    background: rgba(0,0,0,0.18);
+    border-bottom: 1px solid var(--vn-border);
+}
+
+.vn-bg-folder-btns { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 
 .vn-bg-size-ctrl {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-left: auto;
-    opacity: 0.6;
+    gap: 6px;
+    opacity: 0.75;
     transition: opacity var(--vn-transition);
     cursor: default;
 }
@@ -79,22 +102,25 @@
 .vn-bg-size-ctrl > .fas { font-size: max(11px, 0.75em); color: var(--vn-text-dim); }
 .vn-bg-size-label { font-size: max(11px, 0.7em); color: var(--vn-text-dim); white-space: nowrap; }
 .vn-bg-size-slider {
-    width: 72px;
+    width: 84px;
     accent-color: var(--vn-accent);
     cursor: pointer;
 }
 
+/* Auto-fill grid: cards share the row width, so a small folder does not leave a ragged strip of tiny thumbs */
 .vn-background-gallery {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    /* follows the window instead of a fixed 600px, so the gallery uses the free height of the tab */
-    max-height: max(260px, calc(100vh - 420px));
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--vn-bg-thumb-w, 150px), 1fr));
+    align-content: start;
+    gap: 10px;
+    min-height: 240px;
+    /* follows the window instead of a fixed height, so the gallery uses the free height of the tab */
+    max-height: max(260px, calc(100vh - 470px));
     overflow-y: auto;
-    padding: 4px;
+    padding: 10px;
     scrollbar-width: thin;
     scrollbar-color: var(--vn-accent-dim) transparent;
-    --vn-bg-thumb-w: 120px;
+    --vn-bg-thumb-w: 150px;
 }
 
 .vn-background-gallery::-webkit-scrollbar { width: 5px; }
@@ -106,13 +132,12 @@
     cursor: pointer;
     border: 2px solid transparent;
     border-radius: var(--vn-radius);
-    padding: 3px;
+    padding: 4px;
     transition: all var(--vn-transition);
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: var(--vn-bg-thumb-w, 120px);
-    max-width: calc(var(--vn-bg-thumb-w, 120px) + 20px);
+    min-width: 0;
 }
 
 .vn-bg-option:hover {
@@ -134,8 +159,8 @@
 .vn-bg-option input[type="radio"] { display: none; }
 
 .vn-bg-preview {
-    width: var(--vn-bg-thumb-w, 120px);
-    height: calc(var(--vn-bg-thumb-w, 120px) * 0.5625);
+    width: 100%;
+    aspect-ratio: 16 / 9;
     border-radius: var(--vn-radius-sm);
     background-size: cover;
     background-position: center;
@@ -152,7 +177,7 @@
     background: linear-gradient(135deg, #3a3a3a, #252525);
     display: flex; align-items: center; justify-content: center;
 }
-.vn-bg-preview.vn-folder-preview i { font-size: calc(var(--vn-bg-thumb-w, 120px) * 0.167); color: var(--vn-gold); }
+.vn-bg-preview.vn-folder-preview i { font-size: clamp(18px, calc(var(--vn-bg-thumb-w, 150px) * 0.2), 40px); color: var(--vn-gold); }
 
 .vn-no-bg-text {
     color: var(--vn-text-dim);
@@ -162,9 +187,9 @@
 }
 
 .vn-bg-name {
-    font-size: max(11px, 0.7em);
+    font-size: max(11px, 0.72em);
     text-align: center;
-    max-width: calc(var(--vn-bg-thumb-w, 120px) - 20px);
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -176,7 +201,7 @@
 
 .vn-bg-sub {
     font-size: max(11px, 0.6em);
-    max-width: calc(var(--vn-bg-thumb-w, 120px) - 20px);
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -184,17 +209,26 @@
     opacity: 0.6;
 }
 
-/* ── Breadcrumbs + search ─────────────────────────────────── */
-.vn-bg-nav-row {
+/* Empty folder */
+.vn-bg-empty {
+    grid-column: 1 / -1;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
-    gap: 6px 10px;
-    margin-bottom: 6px;
+    gap: 4px;
+    padding: 28px 12px 24px;
+    text-align: center;
+    color: var(--vn-text-dim);
+    border: 2px dashed rgba(136,192,208,0.2);
+    border-radius: var(--vn-radius);
+    font-size: 0.82em;
 }
+.vn-bg-empty > .fas { font-size: 2em; opacity: 0.45; margin-bottom: 4px; }
+.vn-bg-empty > strong { color: var(--vn-text); font-weight: 600; }
 
+/* ── Breadcrumbs + search ─────────────────────────────────── */
 .vn-bg-crumbs {
-    flex: 1 1 260px;
+    flex: 1 1 240px;
     min-width: 0;
     display: flex;
     flex-wrap: wrap;
@@ -226,21 +260,23 @@
 
 .vn-bg-search {
     flex: 0 1 240px;
-    min-width: 160px;
+    min-width: 170px;
     position: relative;
     display: flex;
     align-items: center;
 }
 .vn-bg-search > .fas {
     position: absolute;
-    left: 8px;
+    left: 11px;
     font-size: max(11px, 0.75em);
     color: var(--vn-text-dim);
     pointer-events: none;
 }
-.vn-bg-search-input {
+.vn-bg-toolbar .vn-bg-search > input.vn-bg-search-input {
     width: 100%;
-    padding: 4px 24px 4px 24px;
+    height: 30px;
+    box-sizing: border-box;
+    padding: 0 28px 0 32px;
     background: rgba(0,0,0,0.3);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
@@ -251,8 +287,8 @@
 .vn-bg-search-input:focus { border-color: var(--vn-accent); outline: none; }
 .vn-bg-search-clear {
     position: absolute;
-    right: 2px;
-    width: 20px; height: 20px;
+    right: 4px;
+    width: 22px; height: 22px;
     padding: 0;
     display: flex; align-items: center; justify-content: center;
     background: none; border: none;
@@ -263,8 +299,8 @@
 .vn-bg-search-clear[hidden] { display: none; }
 
 .vn-bg-search-info {
-    width: 100%;
-    padding: 4px 10px;
+    grid-column: 1 / -1;
+    padding: 5px 10px;
     font-size: max(11px, 0.75em);
     color: var(--vn-text-dim);
     background: rgba(0,0,0,0.15);
@@ -274,59 +310,64 @@
 
 /* ── Current background bar ───────────────────────────────── */
 .vn-bg-current {
-    margin-bottom: 6px;
+    flex: 1 1 320px;
+    min-width: 0;
+    display: flex;
 }
 .vn-bg-current-body {
+    flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 6px;
-    min-height: 34px;
+    gap: 8px;
+    padding: 6px 8px;
+    min-height: 52px;
     background: rgba(136,192,208,0.08);
     border: 1px solid var(--vn-accent-dim);
-    border-radius: var(--vn-radius-sm);
+    border-radius: var(--vn-radius);
 }
 .vn-bg-current-main {
     flex: 1;
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 .vn-bg-current-main.vn-locatable { cursor: pointer; }
 .vn-bg-current-main.vn-locatable:hover .vn-bg-current-name { color: var(--vn-gold); }
 .vn-bg-current-thumb {
     flex: none;
-    width: 48px; height: 27px;
+    width: 72px; height: 40px;
     border-radius: 3px;
     background: #222 center / cover;
     border: 1px solid rgba(255,255,255,0.1);
     display: flex; align-items: center; justify-content: center;
     color: var(--vn-text-dim);
-    font-size: 0.8em;
+    font-size: 0.9em;
 }
 .vn-bg-current-text {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: 2px;
     line-height: 1.2;
 }
 .vn-bg-current-name {
-    font-size: 0.8em;
+    font-size: 0.88em;
     font-weight: 700;
     color: var(--vn-accent);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .vn-bg-current-where {
-    font-size: max(11px, 0.65em);
+    font-size: max(11px, 0.68em);
     color: var(--vn-text-dim);
     opacity: 0.8;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.vn-bg-current-empty { font-size: max(11px, 0.75em); color: var(--vn-text-dim); display: flex; align-items: center; gap: 6px; }
+.vn-bg-current-empty { font-size: max(11px, 0.78em); color: var(--vn-text-dim); display: flex; align-items: center; gap: 6px; }
 .vn-bg-current-clear {
     flex: none;
-    width: 22px; height: 22px;
+    width: 24px; height: 24px;
     padding: 0;
     display: flex; align-items: center; justify-content: center;
     background: none; border: none;
@@ -335,6 +376,53 @@
     border-radius: var(--vn-radius-sm);
 }
 .vn-bg-current-clear:hover { color: var(--vn-text); background: rgba(255,255,255,0.08); }
+
+/* ── Other source (scene background / manual path), secondary ── */
+.vn-bg-source { margin-top: 10px; }
+.vn-bg-source > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    list-style: none;
+    padding: 3px 4px;
+    font-size: max(11px, 0.78em);
+    color: var(--vn-text-dim);
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--vn-radius-sm);
+    transition: color var(--vn-transition);
+}
+.vn-bg-source > summary::-webkit-details-marker { display: none; }
+.vn-bg-source > summary::marker { content: ''; }
+.vn-bg-source > summary:hover { color: var(--vn-text); }
+.vn-bg-source-chevron { font-size: 0.8em; transition: transform var(--vn-transition); }
+.vn-bg-source[open] > summary .vn-bg-source-chevron { transform: rotate(180deg); }
+.vn-bg-source-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 0;
+}
+
+.vn-custom-path {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex: 1 1 320px;
+    min-width: 200px;
+}
+
+.vn-custom-path input[type="text"] {
+    flex: 1;
+    padding: 4px 8px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text);
+    font-size: 0.8em;
+    transition: border-color var(--vn-transition);
+}
 
 .vn-bg-preview-video {
     width: 100%; height: 100%;

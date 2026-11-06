@@ -2,7 +2,7 @@
 // vn-dialog-builder.js — UI диалога настроек сцены
 // ============================================================
 
-import { VNSceneState, VNPresets, resolveParticlesLayer } from '../vn-state.js';
+import { VNSceneState, VNPresets, resolveParticlesLayer, resolveParticleDepth, resolveParticleWind } from '../vn-state.js';
 import { VNAtmosphere } from '../visual-effects/atmosphere/index.js';
 import { stripDupSuffix, parseActorId, toActorTokenId, FALLBACK_AVATAR, escapeHtml } from '../vn-id-utils.js';
 import { CHAR_FX, CHAR_FX_GROUPS, CHAR_FX_ICONS, CHAR_FX_VARIANTS, charFxBase, charFxLabelKey, VNCharFx } from '../visual-effects/character-fx/vn-character-fx.js';
@@ -27,6 +27,7 @@ export class VNDialogBuilder {
         this._dragEls = null;
         this._pendingFlipped = null;
         this._pendingScales = null;
+        this._pendingSpeakers = null;
         this._tokenSearchQuery = '';
     }
 
@@ -42,9 +43,12 @@ export class VNDialogBuilder {
     static _DIALOG_SIZE_KEY = 'player-queue.vn-dialog-size';
 
     async _show(isEdit) {
+        // Opening takes several awaits: a second call before the first one finishes must replace it, not add a second window
+        const token = this._showToken = (this._showToken ?? 0) + 1;
         if (this._dialog) { try { this._dialog.close(); } catch {} }
         this._pendingFlipped = null;
         this._pendingScales = null;
+        this._pendingSpeakers = null;
         this._stepEdit = null;
         this._tokenSearchQuery = '';
         this._dialogAbortCtrl?.abort();
@@ -59,6 +63,7 @@ export class VNDialogBuilder {
         await scene.loadFavoriteActors();
 
         const sorted = await VNPresets.getSorted();
+        if (token !== this._showToken) return;
         const presetsHTML = scene._presetsManager.generateTab(sorted);
         const ioHTML = scene._ioManager.generateTab(sorted);
         const dialogContent = this._generateContent(tokens, isEdit ? scene.state : null, presetsHTML, ioHTML);
@@ -90,6 +95,8 @@ export class VNDialogBuilder {
                 if (width >= 600 && height >= 400)
                     localStorage.setItem(VNDialogBuilder._DIALOG_SIZE_KEY, JSON.stringify({ width, height }));
             } catch {}
+            // A dialog that was replaced by a newer one closes late: it must not drop the newer one's reference and listeners
+            if (this._dialog !== dialog) return;
             this._dialog = null;
             this._dialogAbortCtrl?.abort();
             this._dialogAbortCtrl = null;
@@ -99,8 +106,11 @@ export class VNDialogBuilder {
     }
 
     close() {
-        try { this._dialog?.close(); } catch {}
+        const dialog = this._dialog;
         this._dialog = null;
+        this._dialogAbortCtrl?.abort();
+        this._dialogAbortCtrl = null;
+        try { dialog?.close(); } catch {}
     }
 
     // ══════════════════════════════════════════════════════════
@@ -157,6 +167,9 @@ export class VNDialogBuilder {
         const visualEffect = root.querySelector('#visual-effect')?.value || 'none';
         const particlesLayer = root.querySelector('#particles-layer')?.value || 'back';
         const particleIntensity = parseInt(root.querySelector('#particle-intensity')?.value) || 1;
+        const particleDepth = resolveParticleDepth(root.querySelector('#particle-depth')?.value);
+        const particleWind = resolveParticleWind(root.querySelector('#particle-wind')?.value);
+        const particleGusts = root.querySelector('#particle-gusts')?.checked ?? true;
         const musicUuid = root.querySelector('#vn-music-uuid')?.value || null;
         const soundCues = this._scene._musicManager.gatherCues(root);
 
@@ -173,20 +186,21 @@ export class VNDialogBuilder {
             : null;
         this._pendingFlipped = null;
         this._pendingScales = null;
+        this._pendingSpeakers = null;
 
         const gmOnly = root.querySelector('#vn-gm-only-toggle')?.checked ?? false;
 
         if (isEdit) this._scene.updateSceneLayout({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay, vignette, groundFog,
-            flipped: pendingFlipped ?? null, particleEffect, visualEffect, particlesLayer, particleIntensity,
+            flipped: pendingFlipped ?? null, particleEffect, visualEffect, particlesLayer, particleIntensity, particleDepth, particleWind, particleGusts,
             visibility: visibilityData, charFx: charFxData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales ?? null, gmOnly, presetActors,
         });
         else this._scene.createScene({
             leftIds: left, centerIds: center, rightIds: right,
             background: bg, backgroundOverlay: overlay, vignette, groundFog,
-            flipped: pendingFlipped || {}, particleEffect, visualEffect, particlesLayer, particleIntensity,
+            flipped: pendingFlipped || {}, particleEffect, visualEffect, particlesLayer, particleIntensity, particleDepth, particleWind, particleGusts,
             visibility: visibilityData, charFx: charFxData, musicUuid, soundCues, portraitImages, portraitNames,
             portraitScales: pendingScales || {}, gmOnly, presetActors,
         });
@@ -211,6 +225,7 @@ export class VNDialogBuilder {
             },
             getLiveState: () => (this._scene.state.isActive ? this._scene.state : null),
             onSequenceChanged: (preset) => this._scene._sequence.syncPreset(preset),
+            onPresetCreated: (preset) => { if (isEdit) this._scene.bindPreset(preset); },
             beginStepEdit: (root, edit) => this.beginStepEdit(root, edit),
             syncPresetActors: (presetActors) => { if (this._scene.state.isActive) this._scene.state.presetActors = [...presetActors]; },
             onChanged: (root) => this._scene._ioManager.refreshExportList(root),
@@ -219,6 +234,8 @@ export class VNDialogBuilder {
             onImported: (root) => this._scene._presetsManager.refresh(root),
         });
         this._setupTabs(root);
+        this._setupPoolTabs(root);
+        this._syncFooter(root, 'characters');
         this._setupStepEditBanner(root);
         this._setupHideButtons(root);
         this._setupCharFxMenu(root);
@@ -238,7 +255,7 @@ export class VNDialogBuilder {
         const signal = this._dialogAbortCtrl?.signal;
 
         // Restore persisted card size and apply immediately
-        const savedSize = parseInt(localStorage.getItem(VNDialogBuilder._TOKEN_SIZE_KEY) || '48');
+        const savedSize = parseInt(localStorage.getItem(VNDialogBuilder._TOKEN_SIZE_KEY) || '64');
         this._applyTokenCardSize(root, savedSize);
         const slider = root.querySelector('.vn-token-size-slider');
         if (slider) slider.value = savedSize;
@@ -261,7 +278,7 @@ export class VNDialogBuilder {
 
     _applyTokenSearch(root) {
         const q = this._tokenSearchQuery;
-        root.querySelectorAll('#available-tokens .vn-token-option, #scene-participants .vn-token-option').forEach(item => {
+        root.querySelectorAll('#available-tokens .vn-token-option, #scene-participants .vn-token-option, .vn-favorites-section .vn-token-option').forEach(item => {
             item.style.display = !q || (item.dataset.name || '').includes(q) ? '' : 'none';
         });
     }
@@ -393,7 +410,81 @@ export class VNDialogBuilder {
                 const dialogRoot = root.querySelector('.vn-scene-dialog--tabs');
                 if (dialogRoot) dialogRoot.dataset.tab = tab;
                 this._syncTitle(tab);
+                this._syncFooter(root, tab);
             });
+        });
+    }
+
+    // Presets and import/export have their own launch/apply buttons: the footer's "update/create scene" and
+    // "remove characters / background only" would apply the half-edited form behind those tabs, so they are
+    // hidden and disabled there (disabled also stops Enter in a text field from submitting the form through the default button).
+    // Cancel turns into "Close" since nothing is being cancelled on those tabs.
+    static _NO_APPLY_TABS = new Set(['presets', 'adventure-io']);
+
+    _syncFooter(root, tab) {
+        const footer = root.querySelector('.form-footer');
+        if (!footer) return;
+        const off = VNDialogBuilder._NO_APPLY_TABS.has(tab);
+        for (const action of ['create', 'background-only']) {
+            const btn = footer.querySelector(`button[data-action="${action}"]`);
+            if (btn) { btn.hidden = off; btn.disabled = off; }
+        }
+        const bgOnly = footer.querySelector('button[data-action="background-only"]');
+        if (bgOnly) bgOnly.title = game.i18n.localize(root.querySelector('.vn-scene-dialog--tabs')?.dataset.mode === 'edit' ? 'vn.dialog.btnRemoveCharactersHint' : 'vn.dialog.btnBackgroundOnlyHint');
+        const label = footer.querySelector('button[data-action="cancel"] span');
+        if (label) {
+            label.dataset.label ??= label.textContent;
+            label.textContent = off ? game.i18n.localize('vn.dialog.btnClose') : label.dataset.label;
+        }
+    }
+
+    // ── Pool of actors (tokens on the canvas / favorites): one panel, two lists ──
+    // The "scene participants" strip above it is always there (collapsible, state remembered), so actors from either list
+    // can be dropped on it without switching tabs. The list under a pool tab is only shown while its tab is active, so while
+    // dragging a card the tab under the cursor opens by itself after a short hover ("spring-loaded" tab) —
+    // otherwise a card could not be dropped into a hidden list. A collapsed participants strip opens the same way.
+
+    static _PARTICIPANTS_COLLAPSED_KEY = 'player-queue:vn-participants-collapsed';
+
+    _showPool(root, name) {
+        root.querySelectorAll('.vn-pool-tab').forEach(t => {
+            const on = t.dataset.pool === name;
+            t.classList.toggle('active', on);
+            t.setAttribute('aria-selected', String(on));
+        });
+        root.querySelectorAll('.vn-pool-panel').forEach(p => p.classList.toggle('active', p.dataset.pool === name));
+    }
+
+    _setupPoolTabs(root) {
+        const signal = this._dialogAbortCtrl?.signal;
+        const strip = root.querySelector('.vn-participants-strip');
+        if (strip) {
+            strip.addEventListener('toggle', () => {
+                try { localStorage.setItem(VNDialogBuilder._PARTICIPANTS_COLLAPSED_KEY, strip.open ? '0' : '1'); } catch {}
+            }, { signal });
+            const header = strip.querySelector('summary');
+            let timer = null;
+            header.addEventListener('dragenter', () => {
+                if (strip.open) return;
+                clearTimeout(timer);
+                timer = setTimeout(() => { strip.open = true; }, 350);
+            }, { signal });
+            header.addEventListener('dragleave', () => clearTimeout(timer), { signal });
+            header.addEventListener('drop', () => clearTimeout(timer), { signal });
+        }
+        root.querySelectorAll('.vn-pool-tab').forEach(btn => {
+            let timer = null;
+            const cancel = () => { clearTimeout(timer); timer = null; btn.classList.remove('drag-hover'); };
+            btn.addEventListener('click', (e) => { e.preventDefault(); this._showPool(root, btn.dataset.pool); }, { signal });
+            btn.addEventListener('dragenter', () => {
+                if (btn.classList.contains('active')) return;
+                btn.classList.add('drag-hover');
+                clearTimeout(timer);
+                timer = setTimeout(() => { cancel(); this._showPool(root, btn.dataset.pool); }, 350);
+            }, { signal });
+            btn.addEventListener('dragleave', (e) => { if (!btn.contains(e.relatedTarget)) cancel(); }, { signal });
+            btn.addEventListener('drop', cancel, { signal });
+            document.addEventListener('dragend', cancel, { signal });
         });
     }
 
@@ -532,11 +623,13 @@ export class VNDialogBuilder {
         }, { signal });
     }
 
-    /** The badge counts what is in the list, however the actor got there or left (drag from outside, between zones, preset load). */
+    /** The badges count what is in the list, however the actor got there or left (drag from outside, between zones, preset load). */
     _syncParticipantsBadge(root) {
-        const badge = root?.querySelector('.vn-participants-badge');
-        const list = root?.querySelector('#scene-participants');
-        if (badge && list) badge.textContent = list.querySelectorAll('.vn-token-option').length;
+        for (const [badgeSel, listSel] of [['.vn-participants-badge', '#scene-participants'], ['.vn-favorites-badge', '.vn-favorites-section']]) {
+            const badge = root?.querySelector(badgeSel);
+            const list = root?.querySelector(listSel);
+            if (badge && list) badge.textContent = list.querySelectorAll('.vn-token-option').length;
+        }
     }
 
     _setupActorsDragAndDrop(root) {
@@ -611,6 +704,7 @@ export class VNDialogBuilder {
             ? `<div class="vn-favorites-empty"><i class="fas fa-arrow-down"></i> ${game.i18n.localize('vn.dialog.dragActorsFromJournal')}</div>`
             : scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean).map(a => VNDialogBuilder.generateActorToken(a)).join('');
         this._setupDragAndDrop(root);
+        this._syncParticipantsBadge(root);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -695,6 +789,10 @@ export class VNDialogBuilder {
         this._scene._effectsManager.setLayer(root, state.particlesLayer ?? 'back');
         const pi = root.querySelector('#particle-intensity');
         if (pi) { pi.value = state.particleIntensity ?? 1; const piVal = pi.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val'); if (piVal) piVal.textContent = pi.value; }
+        this._scene._effectsManager.setDepth(root, resolveParticleDepth(state.particleDepth));
+        this._scene._effectsManager.setWind(root, resolveParticleWind(state.particleWind));
+        const gc = root.querySelector('#particle-gusts');
+        if (gc) gc.checked = state.particleGusts !== false;
 
         const defaultsUsed = new Set();
         for (const [tokenId, vis] of Object.entries(state.visibility ?? {})) {
@@ -713,6 +811,7 @@ export class VNDialogBuilder {
     applyPreset(root, preset) {
         this._pendingFlipped = preset.flipped || {};
         this._pendingScales = preset.portraitScales || {};
+        this._pendingSpeakers = preset.speakers || {};
 
         const allIds = [...(preset.leftIds || []), ...(preset.centerIds || []), ...(preset.rightIds || [])];
         const available = root.querySelector('#available-tokens');
@@ -790,6 +889,10 @@ export class VNDialogBuilder {
         this._scene._effectsManager.setLayer(root, resolveParticlesLayer(preset));
         const piCheck = root.querySelector('#particle-intensity');
         if (piCheck) { piCheck.value = preset.particleIntensity ?? 1; const piVal = piCheck.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val'); if (piVal) piVal.textContent = piCheck.value; }
+        this._scene._effectsManager.setDepth(root, resolveParticleDepth(preset.particleDepth));
+        this._scene._effectsManager.setWind(root, resolveParticleWind(preset.particleWind));
+        const gustsCheck = root.querySelector('#particle-gusts');
+        if (gustsCheck) gustsCheck.checked = preset.particleGusts !== false;
 
         root.querySelectorAll('.vn-token-option').forEach(el => this._applyVisIcon(el, 'visible'));
         // Support both new `visibility` and legacy `hidden` preset formats
@@ -862,6 +965,19 @@ export class VNDialogBuilder {
         }
     }
 
+    /**
+     * Active speakers for a saved preset: the ones of the preset just loaded into the form, otherwise those of the running scene.
+     * The form has no speaker control, so without this every saved preset lost them. A speaker only stays if
+     * that character is still in the same zone of the form.
+     */
+    _gatherSpeakers(idsByPosition) {
+        const source = this._pendingSpeakers ?? (this._scene.state.isActive ? this._scene.state.speakers : null);
+        return Object.fromEntries(VNSceneState.POSITIONS.map(pos => {
+            const id = source?.[pos] ?? null;
+            return [pos, id && idsByPosition[pos].includes(id) ? id : null];
+        }));
+    }
+
     _gatherDialogState(root) {
         const scene = this._scene;
         const getRawIds = (sel) => Array.from(root.querySelectorAll(`${sel} .vn-token-option`))
@@ -910,8 +1026,16 @@ export class VNDialogBuilder {
             visualEffect: root.querySelector('#visual-effect')?.value || 'none',
             particlesLayer: root.querySelector('#particles-layer')?.value || 'back',
             particleIntensity: parseInt(root.querySelector('#particle-intensity')?.value) || 1,
+            particleDepth: root.querySelector('#particle-depth')?.value,
+            particleWind: root.querySelector('#particle-wind')?.value,
+            particleGusts: root.querySelector('#particle-gusts')?.checked ?? true,
             portraitScale: scene.state.portraitScale,
             portraitScales: remappedScales,
+            speakers: this._gatherSpeakers({
+                left: allDeduped.slice(0, leftCount),
+                center: allDeduped.slice(leftCount, leftCount + centerCount),
+                right: allDeduped.slice(leftCount + centerCount),
+            }),
             visibility: visibilityData,
             charFx: charFxData,
             musicUuid: root.querySelector('#vn-music-uuid')?.value || null,
@@ -1005,11 +1129,18 @@ export class VNDialogBuilder {
         const currentVisual = sceneState?.visualEffect || 'none';
         const currentParticlesLayer = sceneState?.particlesLayer ?? 'back';
         const currentParticleIntensity = sceneState?.particleIntensity ?? 1;
+        const currentParticleDepth = sceneState ? resolveParticleDepth(sceneState.particleDepth) : 'soft';
+        const currentParticleWind = resolveParticleWind(sceneState?.particleWind);
+        const currentParticleGusts = sceneState?.particleGusts !== false;
         const currentMusicUuid = sceneState?.musicUuid || null;
         const currentSoundCues = sceneState?.soundCues || [];
 
-        const favHTML = scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean).map(a => VNDialogBuilder.generateActorToken(a)).join('');
-        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" data-token-id="${escapeHtml(t.id)}" data-actor-id="${escapeHtml(t.actor.id)}" data-type="token" data-visibility="visible" data-name="${escapeHtml(t.name.toLowerCase())}">
+        let participantsOpen = true;
+        try { participantsOpen = localStorage.getItem(VNDialogBuilder._PARTICIPANTS_COLLAPSED_KEY) !== '1'; } catch {}
+        const favActors = scene.favoriteActors.map(id => game.actors.get(id)).filter(Boolean);
+        const favCount = favActors.length;
+        const favHTML = favActors.map(a => VNDialogBuilder.generateActorToken(a)).join('');
+        const tokensHTML = tokens.map(t => `<div class="vn-token-option" draggable="true" title="${escapeHtml(t.name)}" data-token-id="${escapeHtml(t.id)}" data-actor-id="${escapeHtml(t.actor.id)}" data-type="token" data-visibility="visible" data-name="${escapeHtml(t.name.toLowerCase())}">
             <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
             ${charFxButton()}
             <div class="vn-token-preview"><img src="${escapeHtml(t.actor.img || t.document.texture.src)}" alt="${escapeHtml(t.name)}" loading="lazy"><div class="vn-token-name">${escapeHtml(t.name)}</div></div></div>`).join('');
@@ -1025,7 +1156,7 @@ export class VNDialogBuilder {
             return aid && game.actors.get(aid);
         }).length;
 
-        return `<div class="vn-scene-dialog vn-scene-dialog--tabs" data-tab="characters">
+        return `<div class="vn-scene-dialog vn-scene-dialog--tabs" data-tab="characters" data-mode="${sceneState ? 'edit' : 'create'}">
             <div class="vn-edit-banner" hidden>
                 <i class="fas fa-pen-to-square"></i>
                 <span class="vn-edit-banner-text"></span>
@@ -1033,58 +1164,59 @@ export class VNDialogBuilder {
                 <button type="button" class="vn-btn vn-btn-sm vn-edit-banner-cancel">${game.i18n.localize('vn.sequence.editCancel')}</button>
             </div>
             <div class="vn-tabs">
-                <button type="button" class="vn-tab-btn active" data-tab="characters"><i class="fas fa-users"></i> ${game.i18n.localize('vn.dialog.tabCharacters')}</button>
-                <button type="button" class="vn-tab-btn" data-tab="background"><i class="fas fa-image"></i> ${game.i18n.localize('vn.dialog.tabBackground')}</button>
-                <button type="button" class="vn-tab-btn" data-tab="effects"><i class="fas fa-wand-magic-sparkles"></i> ${game.i18n.localize('vn.dialog.tabEffects')}</button>
-                <button type="button" class="vn-tab-btn" data-tab="music"><i class="fas fa-music"></i> ${game.i18n.localize('vn.dialog.tabMusic')}</button>
-                <button type="button" class="vn-tab-btn" data-tab="presets"><i class="fas fa-bookmark"></i> ${game.i18n.localize('vn.dialog.tabPresets')}</button>
-                <button type="button" class="vn-tab-btn" data-tab="adventure-io"><i class="fas fa-boxes-stacked"></i> ${game.i18n.localize('vn.dialog.tabAdventures')}</button>
+                <button type="button" class="vn-tab-btn active" data-tab="characters" title="${game.i18n.localize('vn.dialog.tabCharacters')}"><i class="fas fa-users"></i><span class="vn-tab-label">${game.i18n.localize('vn.dialog.tabCharacters')}</span></button>
+                <button type="button" class="vn-tab-btn" data-tab="background" title="${game.i18n.localize('vn.dialog.tabBackground')}"><i class="fas fa-image"></i><span class="vn-tab-label">${game.i18n.localize('vn.dialog.tabBackground')}</span></button>
+                <button type="button" class="vn-tab-btn" data-tab="effects" title="${game.i18n.localize('vn.dialog.tabEffects')}"><i class="fas fa-wand-magic-sparkles"></i><span class="vn-tab-label">${game.i18n.localize('vn.dialog.tabEffects')}</span></button>
+                <button type="button" class="vn-tab-btn" data-tab="music" title="${game.i18n.localize('vn.dialog.tabMusic')}"><i class="fas fa-music"></i><span class="vn-tab-label">${game.i18n.localize('vn.dialog.tabMusic')}</span></button>
+                <button type="button" class="vn-tab-btn" data-tab="presets" title="${game.i18n.localize('vn.dialog.tabPresets')}"><i class="fas fa-bookmark"></i><span class="vn-tab-label">${game.i18n.localize('vn.dialog.tabPresets')}</span></button>
+                <button type="button" class="vn-tab-btn" data-tab="adventure-io" title="${game.i18n.localize('vn.dialog.tabAdventures')}"><i class="fas fa-boxes-stacked"></i><span class="vn-tab-label">${game.i18n.localize('vn.dialog.tabAdventures')}</span></button>
                 <label class="vn-gm-only-toggle" title="${game.i18n.localize('vn.dialog.gmOnlyToggleTitle')}">
                     <input type="checkbox" id="vn-gm-only-toggle"><span class="vn-toggle-track"></span>
-                    <i class="fas fa-eye-slash"></i> ${game.i18n.localize('vn.dialog.gmOnlyLabel')}
+                    <i class="fas fa-eye-slash"></i><span class="vn-gm-label">${game.i18n.localize('vn.dialog.gmOnlyLabel')}</span>
                 </label>
             </div>
             <div class="vn-tab-panel active" data-tab="characters">
-                <div class="vn-dialog-layout">
-                    <div class="vn-dialog-main">
+                <div class="vn-positions-grid">
+                    ${this._positionSection('left', game.i18n.localize('vn.dialog.positionLeft'), 'fa-arrow-left', game.i18n.localize('vn.dialog.positionLeftOrder'))}
+                    ${this._positionSection('center', game.i18n.localize('vn.dialog.positionCenter'), 'fa-bullseye')}
+                    ${this._positionSection('right', game.i18n.localize('vn.dialog.positionRight'), 'fa-arrow-right', game.i18n.localize('vn.dialog.positionRightOrder'))}
+                </div>
+                <details class="vn-participants-strip"${participantsOpen ? ' open' : ''}>
+                    <summary class="vn-participants-header">
+                        <i class="fas fa-users-gear"></i> ${game.i18n.localize('vn.dialog.participantsLabel')} <span class="vn-badge vn-participants-badge">${participantCount}</span>
+                        <span class="vn-participants-hint">${game.i18n.localize('vn.dialog.participantsHint')}</span>
+                        <i class="fas fa-chevron-down vn-chevron"></i>
+                    </summary>
+                    <div class="vn-scene-participants" id="scene-participants" data-empty="${escapeHtml(game.i18n.localize('vn.dialog.participantsEmpty'))}">${participantTokensHtml}</div>
+                </details>
+                <section class="vn-pool">
+                    <div class="vn-pool-bar">
+                        <div class="vn-pool-tabs" role="tablist">
+                            <button type="button" class="vn-pool-tab active" role="tab" aria-selected="true" data-pool="tokens" title="${game.i18n.localize('vn.dialog.tokensOnScene')}"><i class="fas fa-map-marker-alt"></i> ${game.i18n.localize('vn.dialog.poolTabTokens')} <span class="vn-badge">${tokens.length}</span></button>
+                            <button type="button" class="vn-pool-tab" role="tab" aria-selected="false" data-pool="favorites" title="${game.i18n.localize('vn.dialog.favoritesHeader')}"><i class="fas fa-star"></i> ${game.i18n.localize('vn.dialog.poolTabFavorites')} <span class="vn-badge vn-favorites-badge">${favCount}</span></button>
+                        </div>
                         <div class="vn-characters-controls">
                             <input type="text" class="vn-token-search" placeholder="${game.i18n.localize('vn.dialog.tokenSearchPlaceholder')}">
                             <div class="vn-token-size-control">
                                 <i class="fas fa-expand-arrows-alt"></i>
-                                <input type="range" class="vn-token-size-slider" min="32" max="80" step="4" value="48">
+                                <input type="range" class="vn-token-size-slider" min="40" max="96" step="4" value="64">
                             </div>
                         </div>
-                        <details class="vn-collapsible" open>
-                            <summary class="vn-collapsible-header"><i class="fas fa-map-marker-alt"></i> ${game.i18n.localize('vn.dialog.tokensOnScene')} <span class="vn-badge">${tokens.length}</span><i class="fas fa-chevron-down vn-chevron"></i></summary>
-                            <div class="vn-collapsible-body"><div class="vn-available-tokens" id="available-tokens">${tokensHTML || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noTokensOnScene')}</div>`}</div></div>
-                        </details>
-                        <details class="vn-collapsible vn-participants-collapsible" open>
-                            <summary class="vn-collapsible-header"><i class="fas fa-users-gear"></i> ${game.i18n.localize('vn.dialog.participantsLabel')} <span class="vn-badge vn-participants-badge">${participantCount}</span><i class="fas fa-chevron-down vn-chevron"></i></summary>
-                            <div class="vn-collapsible-body">
-                                <p class="vn-participants-hint">${game.i18n.localize('vn.dialog.participantsHint')}</p>
-                                <div class="vn-scene-participants" id="scene-participants">${participantTokensHtml}</div>
-                            </div>
-                        </details>
-                        <div class="vn-positions-grid">
-                            ${this._positionSection('left', game.i18n.localize('vn.dialog.positionLeft'), 'fa-arrow-left', game.i18n.localize('vn.dialog.positionLeftOrder'))}
-                            ${this._positionSection('center', game.i18n.localize('vn.dialog.positionCenter'), 'fa-bullseye')}
-                            ${this._positionSection('right', game.i18n.localize('vn.dialog.positionRight'), 'fa-arrow-right', game.i18n.localize('vn.dialog.positionRightOrder'))}
-                        </div>
                     </div>
-                    <div class="vn-dialog-sidebar">
-                        <div class="vn-favorites-panel">
-                            <div class="vn-panel-header"><i class="fas fa-star"></i> ${game.i18n.localize('vn.dialog.favoritesHeader')}</div>
-                            <div class="vn-favorites-section">${favHTML || `<div class="vn-favorites-empty"><i class="fas fa-arrow-down"></i> ${game.i18n.localize('vn.dialog.dragActorsFromJournal')}</div>`}</div>
-                            <div class="vn-favorites-hint"><i class="fas fa-mouse-pointer"></i> ${game.i18n.localize('vn.dialog.favoritesHint')}</div>
-                        </div>
+                    <div class="vn-pool-panel active" data-pool="tokens">
+                        <div class="vn-available-tokens" id="available-tokens">${tokensHTML || `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.noTokensOnScene')}</div>`}</div>
                     </div>
-                </div>
+                    <div class="vn-pool-panel" data-pool="favorites">
+                        <div class="vn-favorites-hint"><i class="fas fa-mouse-pointer"></i> ${game.i18n.localize('vn.dialog.favoritesHint')}</div>
+                        <div class="vn-favorites-section">${favHTML || `<div class="vn-favorites-empty"><i class="fas fa-arrow-down"></i> ${game.i18n.localize('vn.dialog.dragActorsFromJournal')}</div>`}</div>
+                    </div>
+                </section>
             </div>
             <div class="vn-tab-panel" data-tab="background">
                 ${scene._bgManager.generateSelector(currentBg, currentOverlay, currentVignette, currentFog)}
             </div>
             <div class="vn-tab-panel" data-tab="effects">
-                ${scene._effectsManager.generateTab(currentParticle, currentVisual, currentParticlesLayer, currentParticleIntensity)}
+                ${scene._effectsManager.generateTab(currentParticle, currentVisual, currentParticlesLayer, currentParticleIntensity, currentParticleDepth, currentParticleWind, currentParticleGusts)}
             </div>
             <div class="vn-tab-panel" data-tab="music">
                 ${scene._musicManager.generateTab(currentMusicUuid, currentSoundCues)}
@@ -1108,7 +1240,7 @@ export class VNDialogBuilder {
     static generateActorToken(actor) {
         const id = actor.id || actor._id;
         const img = actor.img || actor.prototypeToken?.texture?.src || FALLBACK_AVATAR;
-        return `<div class="vn-token-option" draggable="true" data-actor-id="${escapeHtml(id)}" data-token-id="" data-type="actor" data-visibility="visible" data-name="${escapeHtml(actor.name.toLowerCase())}">
+        return `<div class="vn-token-option" draggable="true" title="${escapeHtml(actor.name)}" data-actor-id="${escapeHtml(id)}" data-token-id="" data-type="actor" data-visibility="visible" data-name="${escapeHtml(actor.name.toLowerCase())}">
             <button type="button" class="vn-token-hide-btn" title="${game.i18n.localize(VIS_TITLE.visible)}" draggable="false"><i class="fas fa-eye"></i></button>
             ${charFxButton()}
             <div class="vn-token-preview"><img src="${escapeHtml(img)}" alt="${escapeHtml(actor.name)}" loading="lazy"><div class="vn-token-name">${escapeHtml(actor.name)}</div></div></div>`;

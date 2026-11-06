@@ -1,0 +1,561 @@
+/* ══════════════════════════════════════════════════════════
+   VN-FX-PLACES — Места и свет: candlelit, torchlit, windowlight, forest, cave
+   ══════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════
+   CANDLELIT (Свечи и таверна)
+   Тёмная уютная комната: янтарная пелена, две группы свечных пятен у низа кадра мерцают с разными периодами
+   (rays::before / rays::after), широкое тёплое дыхание даёт ambient-light. Анимируется только opacity.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-candlelit .vn-bg-layer {
+    filter: brightness(0.82) saturate(1.15) sepia(0.2) contrast(1.05);
+}
+
+.vn-vfx-candlelit .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at 50% 85%, rgba(230, 130, 40, 0.3) 0%, rgba(170, 90, 25, 0.16) 45%, transparent 80%),
+            radial-gradient(ellipse at center, rgba(120, 60, 20, 0.1) 0%, rgba(60, 30, 10, 0.2) 100%);
+}
+
+.vn-vfx-candlelit .vn-fx-rays {
+    opacity: 1;
+    animation: none;
+    background: none;
+}
+
+.vn-vfx-candlelit .vn-fx-rays::before,
+.vn-vfx-candlelit .vn-fx-rays::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    will-change: opacity;
+}
+
+.vn-vfx-candlelit .vn-fx-rays::before {
+    background:
+            radial-gradient(ellipse 14% 22% at 16% 76%, rgba(255, 190, 90, 0.5) 0%, rgba(255, 150, 50, 0.2) 45%, transparent 100%),
+            radial-gradient(ellipse 16% 24% at 47% 82%, rgba(255, 200, 100, 0.55) 0%, rgba(255, 150, 50, 0.22) 45%, transparent 100%),
+            radial-gradient(ellipse 13% 20% at 82% 72%, rgba(255, 185, 85, 0.45) 0%, rgba(255, 140, 45, 0.18) 45%, transparent 100%);
+    animation: vnCandleFlickA 3.7s ease-in-out infinite;
+}
+
+.vn-vfx-candlelit .vn-fx-rays::after {
+    background:
+            radial-gradient(ellipse 12% 19% at 31% 80%, rgba(255, 195, 95, 0.45) 0%, rgba(255, 145, 45, 0.18) 45%, transparent 100%),
+            radial-gradient(ellipse 15% 22% at 64% 85%, rgba(255, 190, 90, 0.5) 0%, rgba(255, 145, 45, 0.2) 45%, transparent 100%),
+            radial-gradient(ellipse 12% 18% at 93% 78%, rgba(255, 180, 80, 0.4) 0%, rgba(255, 140, 40, 0.16) 45%, transparent 100%);
+    animation: vnCandleFlickB 5.3s ease-in-out infinite;
+}
+
+/* Неровные периоды и неравные шаги: две группы свечей никогда не мерцают в такт */
+@keyframes vnCandleFlickA {
+    0%   { opacity: 0.85; }
+    9%   { opacity: 1; }
+    16%  { opacity: 0.68; }
+    27%  { opacity: 0.95; }
+    35%  { opacity: 0.78; }
+    48%  { opacity: 1; }
+    57%  { opacity: 0.72; }
+    71%  { opacity: 0.92; }
+    83%  { opacity: 0.66; }
+    100% { opacity: 0.85; }
+}
+
+@keyframes vnCandleFlickB {
+    0%   { opacity: 0.7; }
+    12%  { opacity: 0.98; }
+    19%  { opacity: 0.8; }
+    33%  { opacity: 1; }
+    41%  { opacity: 0.64; }
+    55%  { opacity: 0.9; }
+    68%  { opacity: 0.74; }
+    79%  { opacity: 1; }
+    91%  { opacity: 0.8; }
+    100% { opacity: 0.7; }
+}
+
+.vn-vfx-candlelit .vn-vignette {
+    background: radial-gradient(
+            ellipse at 50% 60%,
+            transparent 30%,
+            rgba(45, 22, 8, 0.5) 68%,
+            rgba(15, 6, 0, 0.85) 100%
+    );
+}
+
+.vn-vfx-candlelit .vn-ambient-light {
+    opacity: 0.2 !important;
+    background:
+            radial-gradient(ellipse at 50% 90%, rgba(255, 150, 50, 0.5) 0%, transparent 55%),
+            radial-gradient(ellipse at 20% 70%, rgba(255, 170, 70, 0.3) 0%, transparent 40%),
+            radial-gradient(ellipse at 80% 70%, rgba(255, 160, 60, 0.3) 0%, transparent 40%) !important;
+    animation: vnCandleBreath 7s ease-in-out infinite alternate !important;
+}
+
+@keyframes vnCandleBreath {
+    0%   { opacity: 0.14; }
+    100% { opacity: 0.28; }
+}
+
+.vn-vfx-candlelit .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(50, 24, 6, 0.8) 0%,
+            rgba(60, 28, 8, 0.4) 22%,
+            rgba(60, 28, 8, 0.12) 45%,
+            transparent 75%
+    );
+}
+
+.vn-vfx-candlelit .vn-character.active .vn-character-img {
+    filter: brightness(1) contrast(1.05) saturate(1.1)
+    drop-shadow(0 8px 16px rgba(255, 150, 60, 0.4))
+    drop-shadow(0 0 30px rgba(255, 140, 50, 0.25))
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6)) !important;
+}
+
+.vn-vfx-candlelit .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center bottom,
+            rgba(255, 170, 70, 0.4) 0%,
+            rgba(220, 110, 30, 0.12) 45%,
+            transparent 70%
+    ) !important;
+}
+
+.vn-vfx-candlelit .vn-fx-grain { opacity: 0.09; }
+
+
+/* ══════════════════════════════════════════════════════════
+   TORCHLIT (Факелы и подземелье)
+   Холодный камень по центру, два факела по краям с независимым мерцанием (rays::before слева, rays::after справа),
+   персонажи подсвечены оранжевым с обеих сторон. Анимируется только opacity.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-torchlit .vn-bg-layer {
+    filter: saturate(0.55) brightness(0.74) contrast(1.12) hue-rotate(-6deg);
+}
+
+.vn-vfx-torchlit .vn-fx-tint {
+    opacity: 1;
+    background:
+            linear-gradient(to right, rgba(210, 100, 30, 0.2) 0%, transparent 26%, transparent 74%, rgba(210, 100, 30, 0.2) 100%),
+            radial-gradient(ellipse at center, rgba(40, 70, 120, 0.22) 0%, rgba(20, 35, 75, 0.28) 100%);
+}
+
+.vn-vfx-torchlit .vn-fx-rays {
+    opacity: 1;
+    animation: none;
+    background: none;
+}
+
+.vn-vfx-torchlit .vn-fx-rays::before,
+.vn-vfx-torchlit .vn-fx-rays::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 58%;
+    will-change: opacity;
+}
+
+.vn-vfx-torchlit .vn-fx-rays::before {
+    left: 0;
+    background:
+            radial-gradient(ellipse 9% 12% at 14% 42%, rgba(255, 230, 150, 0.7) 0%, rgba(255, 170, 60, 0.35) 40%, transparent 100%),
+            radial-gradient(ellipse 48% 62% at 14% 42%, rgba(255, 130, 40, 0.4) 0%, rgba(230, 90, 20, 0.14) 50%, transparent 100%);
+    animation: vnTorchFlickL 2.9s ease-in-out infinite;
+}
+
+.vn-vfx-torchlit .vn-fx-rays::after {
+    right: 0;
+    background:
+            radial-gradient(ellipse 9% 12% at 86% 42%, rgba(255, 230, 150, 0.7) 0%, rgba(255, 170, 60, 0.35) 40%, transparent 100%),
+            radial-gradient(ellipse 48% 62% at 86% 42%, rgba(255, 130, 40, 0.4) 0%, rgba(230, 90, 20, 0.14) 50%, transparent 100%);
+    animation: vnTorchFlickR 4.3s ease-in-out infinite;
+}
+
+@keyframes vnTorchFlickL {
+    0%   { opacity: 0.8; }
+    8%   { opacity: 1; }
+    15%  { opacity: 0.62; }
+    26%  { opacity: 0.92; }
+    39%  { opacity: 0.7; }
+    51%  { opacity: 1; }
+    63%  { opacity: 0.66; }
+    78%  { opacity: 0.9; }
+    90%  { opacity: 0.74; }
+    100% { opacity: 0.8; }
+}
+
+@keyframes vnTorchFlickR {
+    0%   { opacity: 0.95; }
+    11%  { opacity: 0.68; }
+    22%  { opacity: 0.88; }
+    30%  { opacity: 0.6; }
+    44%  { opacity: 1; }
+    58%  { opacity: 0.75; }
+    69%  { opacity: 0.96; }
+    81%  { opacity: 0.64; }
+    93%  { opacity: 0.86; }
+    100% { opacity: 0.95; }
+}
+
+.vn-vfx-torchlit .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 38%,
+            rgba(8, 12, 28, 0.55) 75%,
+            rgba(2, 4, 14, 0.88) 100%
+    );
+}
+
+.vn-vfx-torchlit .vn-ambient-light {
+    opacity: 0.14 !important;
+    background:
+            radial-gradient(ellipse at 50% 60%, rgba(70, 100, 170, 0.5) 0%, transparent 55%) !important;
+    animation: none !important;
+}
+
+.vn-vfx-torchlit .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(6, 10, 24, 0.85) 0%,
+            rgba(10, 16, 34, 0.45) 22%,
+            rgba(10, 16, 34, 0.12) 45%,
+            transparent 75%
+    );
+}
+
+.vn-vfx-torchlit .vn-character.active .vn-character-img {
+    filter: brightness(0.95) contrast(1.08) saturate(0.85)
+    drop-shadow(-9px 0 14px rgba(255, 130, 45, 0.5))
+    drop-shadow(9px 0 14px rgba(255, 130, 45, 0.5))
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.7)) !important;
+}
+
+.vn-vfx-torchlit .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(255, 140, 50, 0.3) 0%,
+            rgba(200, 90, 25, 0.1) 40%,
+            transparent 70%
+    ) !important;
+}
+
+.vn-vfx-torchlit .vn-fx-grain { opacity: 0.1; }
+
+
+/* ══════════════════════════════════════════════════════════
+   WINDOWLIGHT (Свет из окна)
+   Сумрачная комната и косые лучи из окна слева сверху. Лучи — это rays::before: крестовина рамы (вертикальные
+   полосы + поперечина через маску), повёрнутая и скошенная статично; пульсирует только opacity слоя.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-windowlight .vn-bg-layer {
+    filter: brightness(0.72) saturate(0.85) contrast(1.08) sepia(0.08);
+}
+
+.vn-vfx-windowlight .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at 12% 8%, rgba(255, 225, 150, 0.22) 0%, transparent 50%),
+            radial-gradient(ellipse at center, rgba(70, 90, 130, 0.12) 0%, rgba(30, 40, 70, 0.22) 100%);
+}
+
+.vn-vfx-windowlight .vn-fx-rays {
+    opacity: 1;
+    overflow: hidden;
+    background: radial-gradient(ellipse 26% 32% at 6% 2%, rgba(255, 238, 190, 0.38) 0%, rgba(255, 220, 140, 0.12) 50%, transparent 100%);
+    animation: vnWindowPulse 14s ease-in-out infinite alternate;
+}
+
+.vn-vfx-windowlight .vn-fx-rays::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    left: -4%;
+    width: 52%;
+    height: 170%;
+    background: linear-gradient(90deg,
+            transparent 0%, rgba(255, 232, 170, 0.3) 4%, rgba(255, 232, 170, 0.3) 45%, transparent 48%,
+            transparent 52%, rgba(255, 232, 170, 0.3) 55%, rgba(255, 232, 170, 0.3) 96%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom,
+            #000 0%, #000 34%, transparent 34.5%, transparent 38.5%, #000 39%, rgba(0, 0, 0, 0.55) 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom,
+            #000 0%, #000 34%, transparent 34.5%, transparent 38.5%, #000 39%, rgba(0, 0, 0, 0.55) 70%, transparent 100%);
+    transform-origin: 0 0;
+    transform: rotate(-34deg) skewX(-22deg);
+}
+
+@keyframes vnWindowPulse {
+    0%   { opacity: 0.72; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-windowlight .vn-fx-edges {
+    opacity: 1;
+    background:
+            linear-gradient(to right, rgba(255, 220, 150, 0.12) 0%, transparent 10%),
+            linear-gradient(to bottom, rgba(255, 220, 150, 0.1) 0%, transparent 8%);
+}
+
+.vn-vfx-windowlight .vn-vignette {
+    background: radial-gradient(
+            ellipse at 20% 15%,
+            transparent 25%,
+            rgba(15, 20, 40, 0.45) 65%,
+            rgba(4, 6, 18, 0.8) 100%
+    );
+}
+
+.vn-vfx-windowlight .vn-ambient-light {
+    opacity: 0.16 !important;
+    background:
+            radial-gradient(ellipse at 22% 20%, rgba(255, 225, 160, 0.5) 0%, transparent 50%),
+            radial-gradient(ellipse at 75% 80%, rgba(90, 110, 160, 0.3) 0%, transparent 45%) !important;
+    animation: none !important;
+}
+
+.vn-vfx-windowlight .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(10, 14, 30, 0.8) 0%,
+            rgba(14, 20, 40, 0.38) 22%,
+            rgba(14, 20, 40, 0.1) 45%,
+            transparent 75%
+    );
+}
+
+.vn-vfx-windowlight .vn-character.active .vn-character-img {
+    filter: brightness(1) contrast(1.06) saturate(0.95)
+    drop-shadow(-8px -4px 16px rgba(255, 225, 160, 0.45))
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.65)) !important;
+}
+
+.vn-vfx-windowlight .vn-character-glow {
+    background: radial-gradient(
+            ellipse at 30% 30%,
+            rgba(255, 228, 165, 0.35) 0%,
+            rgba(200, 170, 110, 0.1) 45%,
+            transparent 70%
+    ) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FOREST (Лес)
+   Зелёно-бирюзовый полумрак, золотисто-зелёные столбы света сверху (rays::before покачивается сдвигом), тёмные
+   кроны по верхнему краю (edges, медленный сдвиг), зелёная дымка у земли. Анимируются opacity и translate.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-forest .vn-bg-layer {
+    filter: brightness(0.8) saturate(0.95) hue-rotate(12deg) contrast(1.05);
+}
+
+.vn-vfx-forest .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at 50% 0%, rgba(150, 190, 70, 0.14) 0%, transparent 60%),
+            radial-gradient(ellipse at center, rgba(40, 110, 80, 0.2) 0%, rgba(15, 60, 45, 0.3) 100%);
+}
+
+.vn-vfx-forest .vn-fx-rays {
+    opacity: 1;
+    overflow: hidden;
+    background: none;
+    animation: vnForestShafts 11s ease-in-out infinite alternate;
+}
+
+.vn-vfx-forest .vn-fx-rays::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -6%;
+    right: -6%;
+    background:
+            linear-gradient(98deg, transparent 8%, rgba(235, 240, 150, 0.34) 12%, rgba(235, 240, 150, 0.34) 15%, transparent 22%),
+            linear-gradient(104deg, transparent 28%, rgba(220, 235, 140, 0.42) 33%, rgba(220, 235, 140, 0.42) 38%, transparent 46%),
+            linear-gradient(97deg, transparent 52%, rgba(240, 235, 150, 0.3) 56%, rgba(240, 235, 150, 0.3) 59%, transparent 66%),
+            linear-gradient(103deg, transparent 72%, rgba(225, 240, 150, 0.36) 76%, rgba(225, 240, 150, 0.36) 80%, transparent 88%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 40%, transparent 85%);
+    mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.7) 40%, transparent 85%);
+    animation: vnForestSway 17s ease-in-out infinite alternate;
+}
+
+@keyframes vnForestShafts {
+    0%   { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+@keyframes vnForestSway {
+    0%   { translate: -1.8% 0; }
+    100% { translate: 1.8% 0; }
+}
+
+/* Кроны: тёмные пятна по верхней кромке, слой шире кадра, чтобы сдвиг не открывал край */
+.vn-vfx-forest .vn-fx-edges {
+    opacity: 1;
+    inset: -2% -4% 0;
+    background:
+            radial-gradient(ellipse 9% 24% at 4% 0%, rgba(3, 20, 10, 0.95) 0%, rgba(3, 20, 10, 0.55) 55%, transparent 100%),
+            radial-gradient(ellipse 8% 13% at 17% 0%, rgba(5, 26, 13, 0.9) 0%, rgba(5, 26, 13, 0.5) 55%, transparent 100%),
+            radial-gradient(ellipse 10% 28% at 30% -2%, rgba(3, 20, 10, 0.95) 0%, rgba(3, 20, 10, 0.55) 55%, transparent 100%),
+            radial-gradient(ellipse 7% 11% at 43% 0%, rgba(4, 22, 12, 0.85) 0%, rgba(4, 22, 12, 0.45) 55%, transparent 100%),
+            radial-gradient(ellipse 11% 22% at 56% -2%, rgba(3, 20, 10, 0.95) 0%, rgba(3, 20, 10, 0.55) 55%, transparent 100%),
+            radial-gradient(ellipse 8% 14% at 69% 0%, rgba(5, 26, 13, 0.9) 0%, rgba(5, 26, 13, 0.5) 55%, transparent 100%),
+            radial-gradient(ellipse 10% 26% at 82% -2%, rgba(3, 20, 10, 0.95) 0%, rgba(3, 20, 10, 0.55) 55%, transparent 100%),
+            radial-gradient(ellipse 8% 17% at 95% 0%, rgba(4, 22, 12, 0.9) 0%, rgba(4, 22, 12, 0.5) 55%, transparent 100%);
+    animation: vnForestCanopy 23s ease-in-out infinite alternate;
+}
+
+@keyframes vnForestCanopy {
+    0%   { translate: -1.2% 0; }
+    100% { translate: 1.2% 0; }
+}
+
+.vn-vfx-forest .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 40%,
+            rgba(6, 28, 18, 0.5) 75%,
+            rgba(2, 12, 8, 0.82) 100%
+    );
+}
+
+.vn-vfx-forest .vn-ambient-light {
+    opacity: 0.16 !important;
+    background:
+            radial-gradient(ellipse at 40% 10%, rgba(210, 230, 120, 0.45) 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 85%, rgba(60, 140, 90, 0.35) 0%, transparent 45%) !important;
+    animation: none !important;
+}
+
+.vn-vfx-forest .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(8, 34, 22, 0.8) 0%,
+            rgba(30, 80, 55, 0.4) 22%,
+            rgba(40, 95, 65, 0.14) 45%,
+            transparent 75%
+    );
+}
+
+.vn-vfx-forest .vn-character.active .vn-character-img {
+    filter: brightness(1) contrast(1.05) saturate(0.95)
+    drop-shadow(0 -4px 18px rgba(220, 235, 130, 0.35))
+    drop-shadow(0 0 40px rgba(60, 140, 90, 0.25))
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6)) !important;
+}
+
+.vn-vfx-forest .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(190, 225, 120, 0.3) 0%,
+            rgba(70, 140, 90, 0.1) 45%,
+            transparent 70%
+    ) !important;
+}
+
+.vn-vfx-forest .vn-fx-grain { opacity: 0.08; }
+
+
+/* ══════════════════════════════════════════════════════════
+   CAVE (Пещера)
+   Холодная тёмная сине-серая гамма, слабое бирюзовое свечение сбоку (rays), сырая бледная дымка понизу и очень
+   редкий дрейфующий туман из плитки --vn-tex-fog (edges::before). Анимируется opacity и translate.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-cave .vn-bg-layer {
+    filter: brightness(0.68) saturate(0.6) contrast(1.12) hue-rotate(-8deg);
+}
+
+.vn-vfx-cave .vn-fx-tint {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse at center, rgba(60, 100, 120, 0.16) 0%, rgba(20, 45, 70, 0.3) 100%);
+}
+
+.vn-vfx-cave .vn-fx-rays {
+    opacity: 1;
+    background:
+            radial-gradient(ellipse 50% 80% at 100% 38%, rgba(120, 220, 230, 0.5) 0%, rgba(70, 160, 190, 0.2) 45%, transparent 100%),
+            radial-gradient(ellipse 20% 28% at 100% 40%, rgba(200, 248, 252, 0.45) 0%, transparent 100%);
+    animation: vnCaveGlow 9s ease-in-out infinite alternate;
+}
+
+@keyframes vnCaveGlow {
+    0%   { opacity: 0.55; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-cave .vn-fx-edges {
+    opacity: 1;
+    overflow: hidden;
+    background: linear-gradient(to top, rgba(150, 190, 205, 0.1) 0%, transparent 35%);
+}
+
+.vn-vfx-cave .vn-fx-edges::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: calc(100% + 1024px);
+    height: 50%;
+    background: rgba(170, 205, 220, 0.55);
+    opacity: 0.6;
+    -webkit-mask: linear-gradient(to top, #000 25%, transparent 100%), var(--vn-tex-fog) 0 0 / 1024px 360px;
+    -webkit-mask-composite: source-in;
+    mask: linear-gradient(to top, #000 25%, transparent 100%), var(--vn-tex-fog) 0 0 / 1024px 360px;
+    mask-composite: intersect;
+    animation: vnFogSlide1024 60s linear infinite;
+}
+
+.vn-vfx-cave .vn-vignette {
+    background: radial-gradient(
+            ellipse at center,
+            transparent 32%,
+            rgba(8, 18, 32, 0.55) 70%,
+            rgba(1, 5, 12, 0.9) 100%
+    );
+}
+
+.vn-vfx-cave .vn-ambient-light {
+    opacity: 0.12 !important;
+    background:
+            radial-gradient(ellipse at 90% 40%, rgba(110, 210, 225, 0.5) 0%, transparent 45%),
+            radial-gradient(ellipse at 20% 80%, rgba(60, 100, 140, 0.3) 0%, transparent 45%) !important;
+    animation: none !important;
+}
+
+.vn-vfx-cave .vn-ground-fog {
+    background: linear-gradient(
+            to top,
+            rgba(150, 188, 204, 0.5) 0%,
+            rgba(110, 150, 170, 0.25) 22%,
+            rgba(80, 120, 145, 0.08) 45%,
+            transparent 75%
+    );
+}
+
+.vn-vfx-cave .vn-character.active .vn-character-img {
+    filter: brightness(0.95) contrast(1.06) saturate(0.7)
+    drop-shadow(6px 0 16px rgba(120, 215, 230, 0.35))
+    drop-shadow(0 0 40px rgba(60, 120, 160, 0.2))
+    drop-shadow(0 5px 15px rgba(0, 0, 0, 0.7)) !important;
+}
+
+.vn-vfx-cave .vn-character-glow {
+    background: radial-gradient(
+            ellipse at center,
+            rgba(130, 215, 230, 0.3) 0%,
+            rgba(70, 130, 160, 0.1) 42%,
+            transparent 70%
+    ) !important;
+}
+
+.vn-vfx-cave .vn-fx-grain { opacity: 0.1; }

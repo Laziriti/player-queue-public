@@ -18,6 +18,15 @@ const MAX_CANVAS_PIXELS = 12e6;
 const absolute = url => new URL(url, document.baseURI).href;
 const WORKER_URL =new URL('./particle-worker.js', import.meta.url);
 
+/** Пикселей на css px: не больше 2 и так, чтобы холст контейнера не превышал MAX_CANVAS_PIXELS */
+function pickRes(container) {
+    const area = container.clientWidth * container.clientHeight;
+    const wanted = Math.min(window.devicePixelRatio || 1, 2);
+    const fit = area ? Math.sqrt(MAX_CANVAS_PIXELS / area) : wanted;
+    // Если предел достигнут — берём шаг в четверть пикселя, чтобы масштаб оставался «круглым»
+    return fit >= wanted ? wanted : Math.max(0.5, Math.floor(fit * 4) / 4);
+}
+
 export class CanvasParticles {
     /** Работающие сейчас движки — для tools/dev (кадр в заданный момент) */
     static instances = new Set();
@@ -27,16 +36,15 @@ export class CanvasParticles {
     /**
      * @param {HTMLElement} back      контейнер под персонажами (.vn-particles)
      * @param {HTMLElement|null} front  контейнер над персонажами (.vn-particles-upper) или null
-     * @param {object} [opts]  { overlay } — оверлей сцены: его класс vn-vfx-dream замедляет частицы до 20 с на круг
+     * @param {object} [opts]  { overlay } — оверлей сцены: его класс vn-vfx-dream замедляет частицы до 20 с на круг;
+     *   { wind } — ветер -5…5, { gusts } — порывами (иначе ровный); { parallax } — частицы с глубиной сдвигаются за мышью
      */
     constructor(back, front = null, opts = {}) {
-        // Пикселей на css px: не больше 2 и так, чтобы холст не превышал MAX_CANVAS_PIXELS
-        const area = back.clientWidth * back.clientHeight;
-        const wanted = Math.min(window.devicePixelRatio || 1, 2);
-        const fit = area ? Math.sqrt(MAX_CANVAS_PIXELS / area) : wanted;
-        // Если предел достигнут — берём шаг в четверть пикселя, чтобы масштаб оставался «круглым»
-        this.res = fit >= wanted ? wanted : Math.max(0.5, Math.floor(fit * 4) / 4);
+        this.res = pickRes(back);
         this.overlay = opts.overlay ?? null;
+        this.wind = opts.wind ?? 0;
+        this.gusts = opts.gusts !== false;
+        this.parallax = !!opts.parallax;
         this.layers = { back: { container: back } };
         if (front) this.layers.front = { container: front };
         for (const layer of Object.values(this.layers)) this.#placeCanvas(layer);
@@ -70,6 +78,13 @@ export class CanvasParticles {
     }
 
     setGhostImages(images) { this.scene.ghost = { images: (images ?? []).map(absolute) }; }
+
+    /** Ветер -5…5 (плюс — вправо), порывами или ровный: рисовальщик плавно переходит к новому значению */
+    setWind(level, gusts = true) {
+        this.wind = level;
+        this.gusts = gusts;
+        this.#post({ type: 'wind', level, gusts });
+    }
 
     addVapor(n) { this.scene.items.push({ t: 'v', n, l: 'back' }); }
 
@@ -105,8 +120,24 @@ export class CanvasParticles {
     #init(canvases) {
         return {
             type: 'init', scene: this.scene, res: this.res, vh: window.innerHeight / 100, vw: window.innerWidth / 100,
-            sizes: this.#sizes(), override: this.#override(), canvases,
+            sizes: this.#sizes(), override: this.#override(), wind: this.wind, gusts: this.gusts, canvases,
         };
+    }
+
+    /** Сдвиг частиц за мышью (только при включённом параллаксе клиента): x, y в -1…1, не чаще раза в 40 мс */
+    #watchMouse() {
+        let enabled = false;
+        try { enabled = !!game.settings.get('player-queue', 'parallaxEnabled'); } catch { /* настройки недоступны */ }
+        if (!this.parallax || !enabled) return;
+        let last = 0;
+        const onMove = e => {
+            const now = performance.now();
+            if (now - last < 40) return;
+            last = now;
+            this.#post({ type: 'look', x: e.clientX / window.innerWidth * 2 - 1, y: e.clientY / window.innerHeight * 2 - 1 });
+        };
+        document.addEventListener('mousemove', onMove, { passive: true });
+        this.observers.push({ disconnect: () => document.removeEventListener('mousemove', onMove) });
     }
 
     #override() { return this.overlay?.classList.contains('vn-vfx-dream') ? 20 : 0; }
@@ -149,12 +180,42 @@ export class CanvasParticles {
         else this.renderer?.handle(msg);
     }
 
+    /** Пересчёт res после смены размера окна или плотности пикселей: с задержкой, чтобы не перепекать спрайты на каждом шаге перетаскивания, и только если res реально изменился */
+    #refreshRes() {
+        clearTimeout(this.resTimer);
+        this.resTimer = setTimeout(() => {
+            const container = this.layers.back.container;
+            if (!container.clientWidth) return; // сцена свёрнута: размера нет, решать не по чему
+            const res = pickRes(container);
+            if (res === this.res) return;
+            this.res = res;
+            this.#post({ type: 'res', res });
+        }, 300);
+    }
+
+    /** ResizeObserver не видит смену devicePixelRatio при том же css-размере (окно на другом мониторе), поэтому слушаем media query и перевзводим её на новое значение */
+    #watchPixelRatio() {
+        const arm = () => {
+            const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+            const onChange = () => { this.#refreshRes(); arm(); };
+            mq.addEventListener('change', onChange, { once: true });
+            this.pixelRatioWatch = { disconnect: () => mq.removeEventListener('change', onChange) };
+        };
+        arm();
+        this.observers.push({ disconnect: () => this.pixelRatioWatch?.disconnect() });
+    }
+
     #observe() {
         for (const [name, layer] of Object.entries(this.layers)) {
-            const ro = new ResizeObserver(() => this.#post({ type: 'resize', layer: name, W: layer.container.clientWidth, H: layer.container.clientHeight, vh: window.innerHeight / 100, vw: window.innerWidth / 100 }));
+            const ro = new ResizeObserver(() => {
+                this.#post({ type: 'resize', layer: name, W: layer.container.clientWidth, H: layer.container.clientHeight, vh: window.innerHeight / 100, vw: window.innerWidth / 100 });
+                if (name === 'back') this.#refreshRes();
+            });
             ro.observe(layer.container);
             this.observers.push(ro);
         }
+        this.#watchPixelRatio();
+        this.#watchMouse();
         if (this.overlay) {
             const mo = new MutationObserver(() => this.#post({ type: 'override', seconds: this.#override() }));
             mo.observe(this.overlay, { attributes: true, attributeFilter: ['class'] });
@@ -177,6 +238,7 @@ export class CanvasParticles {
     }
 
     destroy() {
+        clearTimeout(this.resTimer);
         for (const o of this.observers) o.disconnect();
         this.observers = [];
         this.#post({ type: 'destroy' });

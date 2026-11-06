@@ -5,6 +5,7 @@
 
 import { VNAtmosphere } from '../visual-effects/atmosphere/index.js';
 import { stripEmoji } from '../vn-id-utils.js';
+import { PARTICLE_DEPTHS, PARTICLE_DEPTH_ICONS, windLabel } from '../vn-state.js';
 
 export class VNEffectsManager {
     _renderGrid(groups, labelsMap, iconsMap, current, axis, variantsMap = null, currentVariant = 'all') {
@@ -55,6 +56,16 @@ export class VNEffectsManager {
         </div>`;
     }
 
+    _renderDepthSwitch(current) {
+        return `<div class="vn-particles-layer-switch vn-particle-depth-switch" role="group" title="${game.i18n.localize('vn.bg.particleDepth')}">
+            <input type="hidden" id="particle-depth" value="${current}">
+            <i class="fas fa-cubes-stacked"></i>
+            ${PARTICLE_DEPTHS.map(id =>
+                `<button type="button" class="vn-particles-layer-opt vn-particle-depth-opt${id === current ? ' active' : ''}" data-depth="${id}"><i class="fas ${PARTICLE_DEPTH_ICONS[id]}"></i><span>${game.i18n.localize('vn.bg.particleDepth' + id[0].toUpperCase() + id.slice(1))}</span></button>`
+            ).join('')}
+        </div>`;
+    }
+
     _variantsOf(axis) {
         return axis === 'particle' ? VNAtmosphere.PARTICLE_VARIANTS : VNAtmosphere.VISUAL_VARIANTS;
     }
@@ -99,7 +110,7 @@ export class VNEffectsManager {
         });
     }
 
-    generateTab(currentParticle = 'particles', currentVisual = 'none', currentParticlesLayer = 'back', currentParticleIntensity = 1) {
+    generateTab(currentParticle = 'particles', currentVisual = 'none', currentParticlesLayer = 'back', currentParticleIntensity = 1, currentParticleDepth = 'soft', currentParticleWind = 0, currentParticleGusts = true) {
         const [particleType, particleVariant = 'all'] = currentParticle.split(':');
         const particleGrid = this._renderGrid(VNAtmosphere.PARTICLE_GROUPS, VNAtmosphere.PARTICLE_LABELS, VNAtmosphere.PARTICLE_ICONS, particleType, 'particle', VNAtmosphere.PARTICLE_VARIANTS, particleVariant);
         const [visualType, visualVariant = 'all'] = currentVisual.split(':');
@@ -122,6 +133,16 @@ export class VNEffectsManager {
                     <span class="vn-particle-intensity-label">${game.i18n.localize('vn.bg.particleIntensity')}</span>
                     <input type="range" id="particle-intensity" min="1" max="20" step="1" value="${currentParticleIntensity}">
                     <span class="vn-particle-intensity-val">${currentParticleIntensity}</span>
+                </label>
+                ${this._renderDepthSwitch(currentParticleDepth)}
+                <label class="vn-overlay-toggle vn-particle-intensity-ctrl vn-particle-wind-ctrl" title="${game.i18n.localize('vn.bg.particleWind')}">
+                    <i class="fas fa-wind"></i>
+                    <span class="vn-particle-intensity-label">${game.i18n.localize('vn.bg.particleWind')}</span>
+                    <input type="range" id="particle-wind" min="-5" max="5" step="1" value="${currentParticleWind}">
+                    <span class="vn-particle-intensity-val vn-particle-wind-val">${windLabel(currentParticleWind)}</span>
+                </label>
+                <label class="vn-overlay-toggle" title="${game.i18n.localize('vn.bg.particleGusts')}">
+                    <input type="checkbox" id="particle-gusts" ${currentParticleGusts ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${game.i18n.localize('vn.bg.particleGusts')}</span>
                 </label>
                 <div class="vn-effects-search">
                     <i class="fas fa-magnifying-glass"></i>
@@ -147,7 +168,13 @@ export class VNEffectsManager {
         root._vnEffectsDelegated = true;
 
         root.addEventListener('click', (e) => {
-            const layerOpt = e.target.closest('.vn-particles-layer-opt');
+            const depthOpt = e.target.closest('.vn-particle-depth-opt');
+            if (depthOpt) {
+                this.setDepth(root, depthOpt.dataset.depth);
+                return;
+            }
+
+            const layerOpt = e.target.closest('.vn-particles-layer-opt[data-layer]');
             if (layerOpt) {
                 this.setLayer(root, layerOpt.dataset.layer);
                 return;
@@ -210,6 +237,11 @@ export class VNEffectsManager {
 
         root.addEventListener('input', (e) => {
             if (e.target.classList.contains('vn-effects-search-input')) this._applySearch(root, e.target.value);
+            const windSlider = e.target.closest('#particle-wind');
+            if (windSlider) {
+                const valEl = windSlider.closest('.vn-particle-wind-ctrl')?.querySelector('.vn-particle-wind-val');
+                if (valEl) valEl.textContent = windLabel(Number(windSlider.value));
+            }
             const intensitySlider = e.target.closest('#particle-intensity');
             if (intensitySlider) {
                 const valEl = intensitySlider.closest('.vn-particle-intensity-ctrl')?.querySelector('.vn-particle-intensity-val');
@@ -218,10 +250,24 @@ export class VNEffectsManager {
         });
     }
 
+    setDepth(root, depth) {
+        const input = root.querySelector('#particle-depth');
+        if (input) input.value = depth;
+        root.querySelectorAll('.vn-particle-depth-opt').forEach(o => o.classList.toggle('active', o.dataset.depth === depth));
+    }
+
+    setWind(root, wind) {
+        const input = root.querySelector('#particle-wind');
+        if (!input) return;
+        input.value = wind;
+        const valEl = input.closest('.vn-particle-wind-ctrl')?.querySelector('.vn-particle-wind-val');
+        if (valEl) valEl.textContent = windLabel(Number(wind));
+    }
+
     setLayer(root, layer) {
         const input = root.querySelector('#particles-layer');
         if (input) input.value = layer;
-        root.querySelectorAll('.vn-particles-layer-opt').forEach(o => o.classList.toggle('active', o.dataset.layer === layer));
+        root.querySelectorAll('.vn-particles-layer-opt[data-layer]').forEach(o => o.classList.toggle('active', o.dataset.layer === layer));
     }
 
     _applyAxisValue(root, axis, value) {

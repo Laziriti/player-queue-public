@@ -41,6 +41,15 @@ export const MIGRATIONS = [
             delete result.atmosphereEffect;
             return result;
         }
+    },
+    {
+        // One scene per preset (sceneId / sceneName) -> a list of scenes
+        version: '14.15.0',
+        migrate(preset) {
+            if (!('sceneId' in preset) && !('sceneName' in preset)) return preset;
+            const { sceneId, sceneName, ...rest } = preset;
+            return { ...rest, scenes: sceneId || sceneName ? [{ id: sceneId ?? null, name: sceneName ?? '' }] : [] };
+        }
     }
 ];
 

@@ -98,11 +98,31 @@ const KALEIDO_SWAY_DEG = 6;   // амплитуда качания картин�
 const KALEIDO_SWAY_SEC = 32;  // полный цикл качания
 const KALEIDO_SPIN_SEC = 60;  // полный оборот всего калейдоскопа
 
+// Стена кубов: ширина клетки, доля клеток с выдвигающимся кубом, на сколько px куб выдвигается (мин, макс),
+// наклон точки схода от мыши (% от центра) и сглаживание
+const CUBES_CELL_PX = 150;
+const CUBES_SHARE = 0.16;
+// Вариант `full`: вся сцена нарезана на кубы, они выдвигаются бегущей по диагонали волной (клетка крупнее — слоёв на куб много)
+const CUBES_FULL_CELL_PX = 190;
+const CUBES_WAVE_SEC = 10;
+const CUBES_WAVE_STEP = [0.45, 0.7];  // задержка волны на клетку по горизонтали и по вертикали, с
+const CUBES_PUSH = [60, 160];
+const CUBES_LOOK_PCT = 30;
+const CUBES_LOOK_LERP = 0.08;
+
 export class VisualFXSystem {
     constructor() {
         this._overlayEl = null;
         this._kaleidoResize = null;
         this._kaleidoObserver = null;
+        this._cubesObserver = null;
+        this._cubesFull = false;
+        this._cubesResize = null;
+        this._cubesResizeTimer = null;
+        this._cubesRaf = null;
+        this._cubesMouse = null;
+        this._cubesPausedVideos = new Set();
+        this._cubesUrls = [];
         this._visual = 'none';
         this._flashInterval = null;
         this._glitchInterval = null;
@@ -165,6 +185,9 @@ export class VisualFXSystem {
             case 'kaleidoscope':
                 this._startKaleidoscope(overlayEl);
                 break;
+            case 'cubes':
+                this._startCubes(overlayEl, variant);
+                break;
             case 'vhs':
                 this._startGlitch(overlayEl, variant === 'chewed');
                 break;
@@ -187,6 +210,7 @@ export class VisualFXSystem {
         this._kaleidoResize?.disconnect();
         this._kaleidoResize = null;
         this._overlayEl.querySelectorAll('.vn-kd-wheel').forEach(el => el.remove());
+        this._stopCubes();
 
         // Удалить VFX-классы с overlay
         [...this._overlayEl.classList]
@@ -1001,6 +1025,165 @@ export class VisualFXSystem {
             }
         }
         return Math.max(1.05, need * 1.06);
+    }
+
+    // ─── Cubes ───────────────────────────────────────────────
+
+    // Стена строится внутри каждого .vn-bg-layer (картинка в гранях — CSS inherit, как у калейдоскопа), поэтому смена фона
+    // и переходы работают сами; слои, созданные переходом, наполняем через MutationObserver. Плоская часть стены — сам фон
+    // слоя, а выдвигаются только отдельные кубы: сотни трёхмерных граней дали бы сотни композитных слоёв.
+    _startCubes(overlayEl, variant) {
+        this._cubesFull = variant === 'full';
+        overlayEl.querySelectorAll('.vn-bg-layer').forEach(layer => this._fillCubes(layer));
+
+        this._cubesObserver = new MutationObserver(mutations => {
+            for (const m of mutations) {
+                for (const node of m.addedNodes) {
+                    if (node.nodeType === 1 && node.classList.contains('vn-bg-layer')) this._fillCubes(node);
+                }
+            }
+        });
+        this._cubesObserver.observe(overlayEl, { childList: true });
+
+        // Клетки считаются по размеру кадра: при ресайзе (с задержкой, окно тянут непрерывно) стена собирается заново
+        this._cubesResize = new ResizeObserver(() => {
+            clearTimeout(this._cubesResizeTimer);
+            this._cubesResizeTimer = setTimeout(() => {
+                overlayEl.querySelectorAll('.vn-bg-layer > .vn-cb-wall').forEach(wall => this._buildCubes(wall.parentElement, wall));
+            }, 200);
+        });
+        this._cubesResize.observe(overlayEl);
+
+        // Точка схода следует за мышью: кубы поворачиваются к зрителю гранями. Параллакс фона под этим эффектом отключён (parallax.js)
+        let mx = 0.5, my = 0.5, cx = 50, cy = 50;
+        this._cubesMouse = e => { mx = e.clientX / window.innerWidth; my = e.clientY / window.innerHeight; };
+        document.addEventListener('mousemove', this._cubesMouse, { passive: true });
+        const tick = () => {
+            const tx = 50 + (mx - 0.5) * CUBES_LOOK_PCT, ty = 50 + (my - 0.5) * CUBES_LOOK_PCT;
+            if (Math.abs(tx - cx) > 0.02 || Math.abs(ty - cy) > 0.02) {
+                cx += (tx - cx) * CUBES_LOOK_LERP;
+                cy += (ty - cy) * CUBES_LOOK_LERP;
+                overlayEl.style.setProperty('--cb-ox', `${cx.toFixed(2)}%`);
+                overlayEl.style.setProperty('--cb-oy', `${cy.toFixed(2)}%`);
+            }
+            this._cubesRaf = requestAnimationFrame(tick);
+        };
+        tick();
+    }
+
+    _stopCubes() {
+        this._cubesObserver?.disconnect();
+        this._cubesObserver = null;
+        this._cubesResize?.disconnect();
+        this._cubesResize = null;
+        clearTimeout(this._cubesResizeTimer);
+        if (this._cubesRaf) cancelAnimationFrame(this._cubesRaf);
+        this._cubesRaf = null;
+        if (this._cubesMouse) document.removeEventListener('mousemove', this._cubesMouse);
+        this._cubesMouse = null;
+
+        this._overlayEl?.querySelectorAll('.vn-cb-wall').forEach(el => el.remove());
+        this._overlayEl?.style.removeProperty('--cb-ox');
+        this._overlayEl?.style.removeProperty('--cb-oy');
+        for (const video of this._cubesPausedVideos) video.play?.()?.catch?.(() => {});
+        this._cubesPausedVideos.clear();
+        for (const url of this._cubesUrls) URL.revokeObjectURL(url);
+        this._cubesUrls = [];
+    }
+
+    _fillCubes(layer) {
+        if (layer.querySelector(':scope > .vn-cb-wall')) return;
+        const wall = document.createElement('div');
+        wall.className = 'vn-cb-wall';
+        layer.appendChild(wall);
+
+        const video = layer.querySelector(':scope > .vn-bg-video');
+        if (!video) {
+            this._buildCubes(layer, wall);
+            return;
+        }
+
+        // Видеофон: грани не могут играть видео, поэтому видео ставится на паузу, а в гранях лежит его застывший кадр —
+        // стена и фон вокруг неё совпадают. Снимается кадр на паузе, иначе видео успело бы уйти вперёд
+        const grab = () => {
+            if (!wall.isConnected) return;
+            try {
+                video.pause();
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                canvas.toBlob(blob => {
+                    if (!blob || !wall.isConnected) return;
+                    const url = URL.createObjectURL(blob);
+                    this._cubesUrls.push(url);
+                    this._cubesPausedVideos.add(video);
+                    wall.style.setProperty('--cb-frame', `url("${url}")`);
+                    wall.classList.add('vn-cb-frame');
+                    this._buildCubes(layer, wall);
+                }, 'image/jpeg', 0.92);
+            } catch {
+                // Кадр недоступен (чужой источник без CORS): видео играет как обычно, стена остаётся пустой
+                video.play?.()?.catch?.(() => {});
+            }
+        };
+        video.readyState >= 2 ? grab() : video.addEventListener('loadeddata', grab, { once: true });
+    }
+
+    _buildCubes(layer, wall) {
+        const overlay = this._overlayEl;
+        if (!overlay || !layer) return;
+        const vw = overlay.clientWidth, vh = overlay.clientHeight;
+        if (!vw || !vh) return;
+        wall.textContent = '';
+
+        // Слой фона шире кадра (inset −15px): координаты клеток считаем от его края
+        const ox = -layer.offsetLeft, oy = -layer.offsetTop;
+        const W = layer.clientWidth, H = layer.clientHeight;
+        const full = this._cubesFull;
+        const cols = Math.min(20, Math.max(5, Math.round(vw / (full ? CUBES_FULL_CELL_PX : CUBES_CELL_PX))));
+        const size = vw / cols;
+        // Вся сцена: ряды покрывают кадр целиком (нижний может выйти за край); отдельные кубы: только целые ряды по центру
+        const rows = full ? Math.ceil(vh / size) : Math.max(3, Math.floor(vh / size));
+        const top = full ? oy : oy + (vh - rows * size) / 2;
+
+        const cells = [];
+        if (full) {
+            for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) cells.push([c, r]);
+        } else {
+            // Кубы не соседствуют по сторонам: выдвинутые грани соседних клеток налезали бы друг на друга
+            const want = Math.max(4, Math.round(cols * rows * CUBES_SHARE));
+            const taken = new Set();
+            for (let tries = 0; taken.size < want && tries < want * 40; tries++) {
+                const c = Math.floor(Math.random() * cols), r = Math.floor(Math.random() * rows);
+                if ([[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) => taken.has(`${c + dc},${r + dr}`))) continue;
+                taken.add(`${c},${r}`);
+            }
+            for (const key of taken) cells.push(key.split(',').map(Number));
+        }
+
+        const frag = document.createDocumentFragment();
+        for (const [c, r] of cells) {
+            const x = ox + c * size, y = top + r * size;
+            const push = CUBES_PUSH[0] + Math.random() * (CUBES_PUSH[1] - CUBES_PUSH[0]);
+            // Волна: одинаковый период и задержка по диагонали; одиночные кубы: у каждого свой период и случайная фаза
+            const dur = full ? CUBES_WAVE_SEC : 9 + Math.random() * 8;
+            const delay = full ? -(CUBES_WAVE_SEC - (c * CUBES_WAVE_STEP[0] + r * CUBES_WAVE_STEP[1])) : -Math.random() * dur;
+
+            const cube = document.createElement('div');
+            cube.className = 'vn-cb';
+            cube.style.cssText = `left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;`
+                + `--cb-k:${(push / 100).toFixed(2)};--cb-dur:${dur.toFixed(1)}s;--cb-delay:${delay.toFixed(2)}s;`;
+            cube.innerHTML = '<i class="vn-cb-hole"></i><div class="vn-cb-body">'
+                + '<i class="vn-cb-side vn-cb-top"></i><i class="vn-cb-side vn-cb-bottom"></i>'
+                + '<i class="vn-cb-side vn-cb-left"></i><i class="vn-cb-side vn-cb-right"></i>'
+                + '<div class="vn-cb-front"><i class="vn-cb-img"></i></div></div>';
+            // Картинка в грани — слой целого фона, сдвинутый так, что в клетке виден её же кусок
+            const img = cube.querySelector('.vn-cb-img');
+            img.style.cssText = `left:${(-x).toFixed(1)}px;top:${(-y).toFixed(1)}px;width:${W}px;height:${H}px;`;
+            frag.appendChild(cube);
+        }
+        wall.appendChild(frag);
     }
 
     // ─── Ghosts ──────────────────────────────────────────────

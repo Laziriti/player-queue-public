@@ -143,8 +143,28 @@
 .vn-character:not(.active) .vn-character-img {
     scale: calc(var(--flip-x, 1) * 0.97) 0.97;
     translate: 0 var(--vn-rest-y);
-    filter: brightness(0.45) saturate(0.25) blur(1px)
+    filter: var(--vn-dim) blur(var(--vn-blur))
     drop-shadow(0 5px 15px rgba(0, 0, 0, 0.8)) !important;
+}
+
+/* Затемнение и размытие неактивных — переменные оверлея. Мировые настройки dimInactive / blurInactive (ведущий решает за всех клиентов)
+   выключают их классами .vn-no-dim / .vn-no-blur. «Положение покоя» (масштаб .97, сдвиг) остаётся в любом случае — его повторяют
+   наложения эффектов; свечение и плашка тоже остаются приглушёнными: по ним видно, кто говорит. */
+#vn-scene-overlay {
+    --vn-dim: brightness(0.45) saturate(0.25);
+    --vn-dim-dof: brightness(0.38) saturate(0.18);
+    --vn-blur: 1px;
+    --vn-blur-dof: 2.5px;
+}
+
+#vn-scene-overlay.vn-no-dim {
+    --vn-dim: brightness(1) saturate(1);
+    --vn-dim-dof: brightness(1) saturate(1);
+}
+
+#vn-scene-overlay.vn-no-blur {
+    --vn-blur: 0px;
+    --vn-blur-dof: 0px;
 }
 
 .vn-character:not(.active):not(.vn-entering):not(.vn-exiting) .vn-character-img {
@@ -153,7 +173,7 @@
 
 /* Depth of Field — усиленное размытие при активной камере */
 #vn-scene-overlay.vn-camera-dof .vn-character:not(.active):not(.vn-character-hidden) .vn-character-img {
-    filter: brightness(0.38) saturate(0.18) blur(2.5px)
+    filter: var(--vn-dim-dof) blur(var(--vn-blur-dof))
         drop-shadow(0 5px 15px rgba(0, 0, 0, 0.85)) !important;
 }
 

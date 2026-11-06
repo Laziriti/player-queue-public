@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════
    VN-FX-SPECIAL — Особые и уникальные эффекты атмосферы
-   Группа: carnival, ghosts, hologram, kaleidoscope
+   Группа: carnival, drunk, ghosts, hologram, kaleidoscope, cubes
    ══════════════════════════════════════════════════════════ */
 
 
@@ -485,6 +485,231 @@
         rgba(8, 4, 24, 0.30) 75%,
         rgba(4, 2, 14, 0.62) 100%
     );
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   DRUNK (Опьянение)
+   Мы смотрим на сцену пьяными глазами: кадр плывёт, кренится и двоится. Степень — переменные на оверлее
+   (база «Пьяный», варианты tipsy / wasted). Анимируются только свойства translate / rotate / scale и opacity:
+   transform занят параллаксом, а filter читают переходы фонов (--vn-bg-rest), поэтому «расфокус» — это не анимация
+   фильтра, а полупрозрачные копии фона (как у VHS): одна смещается, вторая заранее размыта и то проступает, то гаснет.
+   Длительности простые числа секунд и не кратны друг другу, чтобы качание не складывалось в заметный ритм.
+   Копии бывают только у картинки: у видеофона остаются качание и колонки.
+   ══════════════════════════════════════════════════════════ */
+
+.vn-vfx-drunk {
+    --dr-x: 11px;       /* размах качания, px */
+    --dr-y: 7px;
+    --dr-rot: 0.7deg;   /* крен кадра */
+    --dr-base: 0.035;   /* запас масштаба, чтобы края слоя не показывались при качании и крене */
+    --dr-zoom: 0.02;    /* «дыхание» масштаба */
+    --dr-split: 15px;   /* на сколько расходится двоение */
+    --dr-ghost: 0.34;   /* непрозрачность двоения */
+    --dr-blur: 5px;     /* размытие второй копии */
+}
+
+.vn-vfx-drunk-tipsy {
+    --dr-x: 5px; --dr-y: 3px; --dr-rot: 0.3deg; --dr-base: 0.022; --dr-zoom: 0.01;
+    --dr-split: 7px; --dr-ghost: 0.18; --dr-blur: 3px;
+}
+
+.vn-vfx-drunk-wasted {
+    --dr-x: 22px; --dr-y: 13px; --dr-rot: 1.5deg; --dr-base: 0.06; --dr-zoom: 0.04;
+    --dr-split: 34px; --dr-ghost: 0.5; --dr-blur: 9px;
+}
+
+.vn-vfx-drunk .vn-bg-layer {
+    filter: saturate(1.1) contrast(1.04);
+    animation:
+        vnDrunkSway 9.3s ease-in-out infinite,
+        vnDrunkTilt 13.7s ease-in-out infinite,
+        vnDrunkBreath 7.1s ease-in-out infinite;
+}
+
+@keyframes vnDrunkSway {
+    0%, 100% { translate: 0 0; }
+    22%      { translate: var(--dr-x) calc(var(--dr-y) * -0.6); }
+    47%      { translate: calc(var(--dr-x) * -0.7) var(--dr-y); }
+    71%      { translate: calc(var(--dr-x) * -1) calc(var(--dr-y) * -0.4); }
+    88%      { translate: calc(var(--dr-x) * 0.5) calc(var(--dr-y) * 0.7); }
+}
+
+@keyframes vnDrunkTilt {
+    0%, 100% { rotate: calc(var(--dr-rot) * -1); }
+    50%      { rotate: var(--dr-rot); }
+}
+
+@keyframes vnDrunkBreath {
+    0%, 100% { scale: calc(1 + var(--dr-base)); }
+    50%      { scale: calc(1 + var(--dr-base) + var(--dr-zoom)); }
+}
+
+/* Колонки с персонажами плывут за кадром с небольшим запозданием: вся картина качается, а не только фон */
+.vn-vfx-drunk .vn-side {
+    animation: vnDrunkSide 9.3s ease-in-out 0.15s infinite;
+}
+
+@keyframes vnDrunkSide {
+    0%, 100% { translate: 0 0; }
+    22%      { translate: calc(var(--dr-x) * 0.8) calc(var(--dr-y) * -0.5); }
+    47%      { translate: calc(var(--dr-x) * -0.6) calc(var(--dr-y) * 0.8); }
+    71%      { translate: calc(var(--dr-x) * -0.8) calc(var(--dr-y) * -0.3); }
+    88%      { translate: calc(var(--dr-x) * 0.4) calc(var(--dr-y) * 0.6); }
+}
+
+.vn-vfx-drunk .vn-bg-layer::before,
+.vn-vfx-drunk .vn-bg-layer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: inherit;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.vn-vfx-drunk .vn-bg-layer::before {
+    animation: vnDrunkGhostA 8.3s ease-in-out infinite;
+}
+
+.vn-vfx-drunk .vn-bg-layer::after {
+    filter: blur(var(--dr-blur));
+    animation: vnDrunkGhostB 11.9s ease-in-out infinite;
+}
+
+@keyframes vnDrunkGhostA {
+    0%, 100% { translate: 0 0;                                                   opacity: 0; }
+    25%      { translate: calc(var(--dr-split) * -1) calc(var(--dr-y) * 0.4);    opacity: var(--dr-ghost); }
+    50%      { translate: calc(var(--dr-split) * 0.6) calc(var(--dr-y) * -0.5);  opacity: calc(var(--dr-ghost) * 0.6); }
+    75%      { translate: var(--dr-split) calc(var(--dr-y) * 0.3);               opacity: var(--dr-ghost); }
+}
+
+@keyframes vnDrunkGhostB {
+    0%, 100% { translate: 0 0;                                                   opacity: 0; }
+    30%      { translate: calc(var(--dr-split) * 0.8) calc(var(--dr-y) * -0.6);  opacity: calc(var(--dr-ghost) * 1.2); }
+    55%      { translate: calc(var(--dr-split) * -1.2) calc(var(--dr-y) * 0.5);  opacity: calc(var(--dr-ghost) * 0.5); }
+    80%      { translate: calc(var(--dr-split) * 0.4) 0;                         opacity: calc(var(--dr-ghost) * 1.2); }
+}
+
+.vn-vfx-drunk .vn-bg-layer:has(> .vn-bg-video)::before,
+.vn-vfx-drunk .vn-bg-layer:has(> .vn-bg-video)::after {
+    display: none;
+}
+
+/* Тёплая муть и тяжёлая виньетка: в таверне мутно и жарко */
+.vn-vfx-drunk .vn-fx-tint {
+    opacity: 1;
+    background: radial-gradient(ellipse at 50% 65%, rgba(255, 185, 105, 0.10) 0%, rgba(110, 40, 60, 0.18) 100%);
+}
+
+.vn-vfx-drunk .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 42%, rgba(25, 8, 12, 0.35) 76%, rgba(12, 3, 6, 0.65) 100%);
+}
+
+.vn-vfx-drunk .vn-fx-grain { opacity: 0.05; }
+
+
+/* ══════════════════════════════════════════════════════════
+   CUBES (Стена из кубов)
+   Фон — плоская стена, из которой выдвигаются отдельные кубы (.vn-cb, строит visual-fx.js внутри .vn-cb-wall каждого
+   .vn-bg-layer). Лицевая грань куба показывает свой кусок того же фона, поэтому в покое куб неотличим от стены.
+   Куб — коробка единичной глубины (100px), растянутая по Z свойством scale: z от 0 до --cb-k, то есть боковины
+   всегда доходят от стены до лицевой грани, а двигается всё через scale/opacity на композиторе.
+   Параллакс фона под этим эффектом отключён (parallax.js), точка схода следует за мышью (--cb-ox / --cb-oy).
+   Видеофон: JS ставит видео на паузу и кладёт его кадр в грани (--cb-frame).
+   ══════════════════════════════════════════════════════════ */
+
+.vn-cb-wall {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    perspective: 1100px;
+    perspective-origin: var(--cb-ox, 50%) var(--cb-oy, 50%);
+    /* Все кубы лежат в одном трёхмерном контексте: браузер сам решает, какой куб ближе, а не порядок в DOM или z-index.
+       Поэтому ни у .vn-cb, ни у его предков до стены нет z-index / overflow / opacity — они «сплющили» бы контекст */
+    transform-style: preserve-3d;
+    background-image: inherit;
+    background-size: 0 0;
+}
+
+.vn-cb {
+    position: absolute;
+    transform-style: preserve-3d;
+    background-image: inherit;
+    background-size: 0 0;
+}
+
+/* Тёмный проём под кубом и его тень на стене вокруг: проступают, пока куб выдвинут */
+.vn-cb-hole {
+    position: absolute;
+    inset: 0;
+    background: #060504;
+    box-shadow: 0 0 36px 14px rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    animation: vnCbHole var(--cb-dur) linear var(--cb-delay) infinite;
+}
+
+.vn-cb-body {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    background-image: inherit;
+    background-size: 0 0;
+    scale: 1 1 0.001;
+    animation: vnCbBody var(--cb-dur) linear var(--cb-delay) infinite;
+}
+
+@keyframes vnCbBody {
+    0%, 16%   { scale: 1 1 0.001; animation-timing-function: cubic-bezier(0.25, 1.2, 0.4, 1); }
+    34%, 64%  { scale: 1 1 var(--cb-k); animation-timing-function: ease-in-out; }
+    84%, 100% { scale: 1 1 0.001; }
+}
+
+@keyframes vnCbHole {
+    0%, 16%   { opacity: 0; animation-timing-function: ease-out; }
+    34%, 64%  { opacity: 1; animation-timing-function: ease-in-out; }
+    84%, 100% { opacity: 0; }
+}
+
+/* Боковины: длина по Z — 100px локально, лежат от стены (z = 0) к лицевой грани; цвет темнеет к стене */
+.vn-cb-side {
+    position: absolute;
+    background: #14110d;
+}
+
+.vn-cb-top    { left: 0; right: 0; top: 0;    height: 100px; transform-origin: 50% 0;    transform: rotateX(90deg);  background: linear-gradient(to bottom, #0b0907, #4a4136); }
+.vn-cb-bottom { left: 0; right: 0; bottom: 0; height: 100px; transform-origin: 50% 100%; transform: rotateX(-90deg); background: linear-gradient(to top,    #060504, #241e18); }
+.vn-cb-left   { top: 0; bottom: 0; left: 0;   width: 100px;  transform-origin: 0 50%;    transform: rotateY(-90deg); background: linear-gradient(to right,  #080605, #382f27); }
+.vn-cb-right  { top: 0; bottom: 0; right: 0;  width: 100px;  transform-origin: 100% 50%; transform: rotateY(90deg);  background: linear-gradient(to left,   #080605, #382f27); }
+
+.vn-cb-front {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    transform: translateZ(100px);
+    background-image: inherit;
+    background-size: 0 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+/* Кусок целого фона: слой размером с фон, смещённый JS так, что в клетке виден её участок; cover/center как у самого фона */
+.vn-cb-img {
+    position: absolute;
+    background-image: inherit;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.vn-cb-wall.vn-cb-frame .vn-cb-img {
+    background-image: var(--cb-frame);
+}
+
+.vn-vfx-cubes .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(8, 6, 4, 0.35) 78%, rgba(4, 3, 2, 0.65) 100%);
 }
 
 

@@ -78,6 +78,7 @@
 /* ── Step editor ── */
 
 .vn-seqed-add { display: flex; gap: 6px; flex-wrap: wrap; }
+
 .vn-seqed-add .vn-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .vn-seqed-steps {
@@ -113,16 +114,23 @@
 .vn-seqed-step.--drop-before::before { top: -5px; }
 .vn-seqed-step.--drop-after::after { bottom: -5px; }
 
-/* One row per step: number, thumbnail, title, and the actions as a 3x2 block on the right
-   (they used to sit in a second row, which made a step 100 px tall and showed only ~1.5 steps) */
+/* One row per step: number, thumbnail, title, and a short row of actions on the right (play, edit in the form,
+   settings, "⋯" with save / duplicate / delete). In a narrow panel the actions drop under the title instead. */
 .vn-seqed-step-main {
     display: grid;
-    grid-template-columns: 20px 84px minmax(0, 1fr) auto;
+    grid-template-columns: 20px 76px minmax(0, 1fr) auto;
     grid-template-areas: "n thumb info actions";
     gap: 8px;
     align-items: center;
     padding: 6px 8px;
     cursor: grab;
+}
+@container vn-panel (max-width: 399px) {
+    .vn-seqed-step-main {
+        grid-template-columns: 20px 76px minmax(0, 1fr);
+        grid-template-areas: "n thumb info" "actions actions actions";
+    }
+    .vn-seqed-step-actions { justify-content: flex-end; }
 }
 
 .vn-seqed-step-n {
@@ -136,7 +144,7 @@
 .vn-seqed-thumb {
     grid-area: thumb;
     position: relative;
-    width: 84px;
+    width: 76px;
     aspect-ratio: 8 / 5;
     border-radius: var(--vn-radius-sm);
     overflow: hidden;
@@ -183,11 +191,20 @@
 
 .vn-seqed-step-actions {
     grid-area: actions;
-    display: grid;
-    grid-template-columns: repeat(3, auto);
+    display: flex;
+    align-items: center;
     gap: 4px;
     cursor: default;
 }
+/* touch-sized hit areas */
+.vn-seqed-step-actions .vn-btn,
+.vn-seqed-step-actions .vn-menu > summary {
+    width: 32px; height: 32px; min-height: 0; padding: 0; margin: 0;
+    justify-content: center;
+    box-sizing: border-box;
+}
+.vn-seqed-menu .vn-menu-body { min-width: 220px; z-index: 30; }
+.vn-seqed-menu .vn-menu-item { white-space: nowrap; }
 
 .vn-seqed-settings {
     display: flex;
@@ -208,6 +225,21 @@
     opacity: 0.8;
 }
 .vn-seqed-field-row { display: flex; gap: 8px; }
+
+/* "Show" block: the transition select takes a full row (its long label and the value must fit), speed and the
+   preload switch share the next one */
+.vn-seqed-options {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    align-items: end;
+}
+.vn-seqed-options .vn-seqed-field--wide { grid-column: 1 / -1; }
+.vn-seqed-options .vn-seqed-check--row { margin: 0; padding: 0; min-height: 32px; align-self: end; }
+.vn-seqed-options .vn-seqed-field > span {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.vn-seqed-options select { height: 32px; }
 
 .vn-seqed-field textarea,
 .vn-seqed-field input,

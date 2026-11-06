@@ -10,8 +10,13 @@
     top: 60px;
     left: 14px;
     z-index: 102;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
+/* Preset name (editable) on top; a plain preset also has its save button here */
+.vn-seq-head,
 .vn-seq-row {
     display: flex;
     align-items: center;
@@ -22,6 +27,39 @@
     padding: 3px;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+}
+
+.vn-seq-head-icon {
+    flex: none;
+    width: 26px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--vn-accent);
+}
+
+.vn-seq-bar .vn-seq-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 190px;
+    height: 32px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid transparent;
+    border-radius: var(--vn-radius-sm);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    transition: background var(--vn-transition), border-color var(--vn-transition);
+}
+.vn-seq-bar .vn-seq-name:hover { background: rgba(255, 255, 255, 0.1); }
+.vn-seq-bar .vn-seq-name:focus {
+    outline: none;
+    background: rgba(0, 0, 0, 0.5);
+    border-color: rgba(136, 192, 208, 0.5);
+    box-shadow: none;
 }
 
 .vn-seq-btn,
@@ -76,7 +114,7 @@
 
 .vn-seq-progress {
     height: 3px;
-    margin-top: 4px;
+    flex: none;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.12);
     overflow: hidden;
@@ -241,6 +279,7 @@
 
 #vn-scene-overlay.vn-lite .vn-caption-text,
 #vn-scene-overlay.vn-lite .vn-seq-row,
+#vn-scene-overlay.vn-lite .vn-seq-head,
 #vn-scene-overlay.vn-lite .vn-seq-picker {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

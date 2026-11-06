@@ -24,6 +24,8 @@
     font-size: 0.8em;
     color: var(--vn-text-dim);
 }
+/* Fixed width: "Штиль" and "← 5" differ in length, and the wind-gusts toggle next to it must not move while dragging */
+.vn-particle-intensity-val.vn-particle-wind-val { flex: 0 0 5em; width: 5em; min-width: 5em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* The tab fills the window: the two effect lists take the free height and scroll inside */
 .vn-tab-panel[data-tab="effects"].active { display: flex; flex-direction: column; }

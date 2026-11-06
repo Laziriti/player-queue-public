@@ -27,15 +27,22 @@
     60%      { opacity: 0.85; }
 }
 
+/* Тон фона плывёт плавно. filter с url() сам не интерполируется (кадры переключались бы скачком),
+   поэтому анимируются три зарегистрированных свойства, а filter собран из них и неподвижен */
+@property --eld-sat { syntax: '<number>'; inherits: false; initial-value: 0.5; }
+@property --eld-hue { syntax: '<angle>';  inherits: false; initial-value: 0deg; }
+@property --eld-br  { syntax: '<number>'; inherits: false; initial-value: 1; }
+
 .vn-vfx-eldritch .vn-bg-layer {
+    filter: saturate(var(--eld-sat)) hue-rotate(var(--eld-hue)) brightness(var(--eld-br)) url(#vn-distort-eldritch);
     animation: vnEldritchDistort 15s ease-in-out infinite !important;
 }
 
 @keyframes vnEldritchDistort {
-    0%, 100% { filter: saturate(0.5) hue-rotate(0deg)                     url(#vn-distort-eldritch); }
-    25%      { filter: saturate(0.6) hue-rotate(5deg)                     url(#vn-distort-eldritch); }
-    50%      { filter: saturate(0.4) hue-rotate(-3deg) brightness(0.95)   url(#vn-distort-eldritch); }
-    75%      { filter: saturate(0.55) hue-rotate(8deg)                    url(#vn-distort-eldritch); }
+    0%, 100% { --eld-sat: 0.5;  --eld-hue: 0deg;  --eld-br: 1; }
+    25%      { --eld-sat: 0.6;  --eld-hue: 5deg;  --eld-br: 1; }
+    50%      { --eld-sat: 0.4;  --eld-hue: -3deg; --eld-br: 0.95; }
+    75%      { --eld-sat: 0.55; --eld-hue: 8deg;  --eld-br: 1; }
 }
 
 .vn-vfx-eldritch .vn-vignette {

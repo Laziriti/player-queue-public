@@ -10,6 +10,8 @@
 //          unit: [w, h] — запечь одну заготовку и растягивать (вытянутые капли); palette — несколько sprite, по номеру частицы
 //          в слое (как :nth-child); stages — [{ u, blur, hue }]: фильтр меняется по ходу пути (берётся ближайшая стадия).
 //          У типов с картинками (images в particles.js) sprite нет: рисуется сама картинка, вписанная в w×h (contain).
+// Флаги типа: depth: false — без глубины (всё на одном плане); wind — доля ветра (по умолчанию 1, 0 — ветер не сносит);
+//          windTilt: true — вытянутая частица (капля) наклоняется по ветру.
 // motion:  дорожки x, y (px), r (градусы), s (масштаб), sx (scaleX), ry (rotateY, градусы), o (прозрачность):
 //          [[u, значение, ease?], …] по доле пути u 0…1, между кадрами линейно (ease — cubic-bezier кадра).
 //          Значение — число или { drift, driftY, rot, rise, vh, vw, px }:
@@ -46,6 +48,16 @@ export const CANVAS_PARTICLES = {
                     o: [[0, 0], [0.2, 1], [0.4, 0.25], [0.6, 1], [0.8, 0.3], [1, 0]],
                 },
             },
+            // Тёплые пылинки: парят и мерцают, ветер почти не сносит
+            motes: {
+                wind: 0.4,
+                sprite: { gradient: radial([[0, 'rgba(255,245,215,1)'], [0.5, 'rgba(255,228,170,0.75)'], [1, 'transparent']]), glow: { blur: 6, color: 'rgba(255,225,160,0.8)' }, blur: 0.3 },
+                motion: {
+                    x: drift(0, 0.3, 0.6, 1), y: driftY(0, 0.3, 0.6, 1),
+                    s: [[0, 0.7], [0.5, 1.1], [1, 0.7]],
+                    o: [[0, 0], [0.12, 1], [0.25, 0.4], [0.4, 1], [0.55, 0.45], [0.7, 1], [0.85, 0.5], [1, 0]],
+                },
+            },
         },
     },
 
@@ -66,15 +78,34 @@ export const CANVAS_PARTICLES = {
             flakes: {
                 sprite: { gradient: radial([[0, 'rgba(255,255,255,0.85)'], [0.55, 'rgba(225,238,255,0.5)'], [1, 'transparent']]), blur: 1.2 },
                 motion: {
-                    x: [[0, 0], [0.25, { drift: 0.25, px: 26 }], [0.5, { drift: 0.5, px: -26 }], [0.75, { drift: 0.75, px: 26 }], [1, { drift: 1 }]],
+                    x: [[0, 0], [1, { drift: 1 }]],
+                    sway: { amp: 22, cycles: 2 },
                     y: [[0, 0], [0.25, { vh: 27 }], [0.5, { vh: 55 }], [0.75, { vh: 82 }], [1, { vh: 110 }]],
                     o: [[0, 0], [0.1, 0.85], [0.9, 0.5], [1, 0]],
+                },
+            },
+            // Буран: вытянутая крупа; сносит и кладёт её ветер сцены, сильнее остальных (wind 1.6)
+            blizzard: {
+                wind: 1.6,
+                windTilt: true,
+                sprite: { unit: [3, 14], gradient: radial([[0, 'rgba(255,255,255,0.95)'], [0.6, 'rgba(225,238,255,0.55)'], [1, 'transparent']], { shape: 'ellipse' }) },
+                motion: { ...FALL, o: [[0, 0], [0.06, 0.8], [0.94, 0.5], [1, 0]] },
+            },
+            // Снежинки-кристаллы (картинки): покачиваются и кружатся
+            crystals: {
+                motion: {
+                    x: [[0, 0], [1, { drift: 1 }]],
+                    sway: { amp: 26, cycles: 1.5 },
+                    y: [[0, 0], [1, { vh: 110 }]],
+                    r: [[0, 0], [1, { rot: 1 }]],
+                    o: [[0, 0], [0.1, 0.9], [0.9, 0.6], [1, 0]],
                 },
             },
         },
     },
 
     rain: {
+        windTilt: true,
         sprite: rainSprite('rgba(180,200,255,0.6)', 'rgba(150,180,240,0.2)'),
         motion: { ...FALL, o: [[0, 0], [0.05, 0.6], [0.95, 0.3], [1, 0]] },
         variants: {
@@ -84,6 +115,80 @@ export const CANVAS_PARTICLES = {
         },
     },
 
+    // Град: короткие плотные крупинки, падают быстрее дождя; строится как дождь (ParticleSystem._rainParams)
+    hail: {
+        windTilt: true,
+        sprite: { round: false, radius: 1.5, unit: [3, 24], gradient: { type: 'linear', stops: [[0, 'rgba(255,255,255,0.95)'], [1, 'rgba(190,220,255,0.55)']] } },
+        motion: { ...FALL, o: [[0, 0], [0.04, 0.85], [0.96, 0.6], [1, 0]] },
+    },
+
+    // Лист (картинка) падает покачиваясь: поворот rot за жизнь и «переворот» через scaleX
+    leaves: {
+        wind: 1.5,
+        motion: {
+            x: [[0, 0], [1, { drift: 1 }]],
+            sway: { amp: 38, cycles: 2.5 },
+            y: [[0, 0], [1, { vh: 112 }]],
+            r: [[0, 0], [1, { rot: 1 }]],
+            flip: { min: 0.4, cycles: 3 },
+            o: [[0, 0], [0.06, 0.95], [0.92, 0.85], [1, 0]],
+        },
+        variants: {
+            gale: {
+                wind: 1.8,
+                motion: {
+                    x: [[0, 0], [1, { drift: 1 }]],
+                    sway: { amp: 60, cycles: 2 },
+                    y: [[0, 0], [0.3, { vh: 28, px: -30 }], [0.6, { vh: 60 }], [1, { vh: 112 }]],
+                    r: [[0, 0], [1, { rot: 1 }]],
+                    flip: { min: 0.4, cycles: 5 },
+                    o: [[0, 0], [0.05, 0.95], [0.93, 0.85], [1, 0]],
+                },
+            },
+        },
+    },
+
+    // Пух и пыльца: парят, качаются, медленно поворачиваются и чуть поднимаются
+    fluff: {
+        wind: 1.3,
+        motion: {
+            x: [[0, 0], [1, { drift: 1 }]],
+            sway: { amp: 26, cycles: 2 },
+            y: [[0, 0], [0.5, { driftY: 0.5, vh: -8 }], [1, { driftY: 1, vh: -16 }]],
+            r: [[0, 0], [1, { rot: 1 }]],
+            s: [[0, 0.8], [0.5, 1], [1, 0.85]],
+            o: [[0, 0], [0.15, 0.9], [0.85, 0.8], [1, 0]],
+        },
+    },
+
+    // Дым и пар: клубы из шума (4 разные формы по очереди), одна заготовка на форму растягивается до любого размера
+    smoke: {
+        depth: false,
+        sprite: { unit: [192, 192], palette: [1, 2, 3, 4].map(seed => ({ noise: { seed, freq: 2.6, octaves: 4, cover: 0.34, soft: 0.38, color: [104, 102, 108], alpha: 0.72 } })) },
+        motion: {
+            x: [[0, 0], [1, { drift: 1 }]],
+            sway: { amp: 30, cycles: 0.5 },
+            y: [[0, 0], [1, { vh: -75 }]],
+            r: [[0, 0], [1, { rot: 1 }]],
+            s: [[0, 0.55], [1, 2.3]],
+            o: [[0, 0], [0.18, 0.55], [0.6, 0.4], [1, 0]],
+        },
+        variants: {
+            steam: {
+                sprite: { unit: [192, 192], palette: [5, 6, 7, 8].map(seed => ({ noise: { seed, freq: 2.8, octaves: 4, cover: 0.38, soft: 0.34, color: [238, 243, 248], alpha: 0.45 } })) },
+                motion: {
+                    x: [[0, 0], [1, { drift: 1 }]],
+                    sway: { amp: 20, cycles: 0.5 },
+                    y: [[0, 0], [1, { vh: -85 }]],
+                    r: [[0, 0], [1, { rot: 1 }]],
+                    s: [[0, 0.5], [1, 2.6]],
+                    o: [[0, 0], [0.15, 0.5], [0.55, 0.32], [1, 0]],
+                },
+            },
+        },
+    },
+
+    // Пылинки: висят и дрейфуют, мерцают
     // ── Огонь и свет ─────────────────────────────────────────
     embers: {
         sprite: {
@@ -194,6 +299,7 @@ export const CANVAS_PARTICLES = {
 
     // ── Вода и пузыри ────────────────────────────────────────
     bubbles: {
+        wind: 0,
         sprite: {
             gradient: radial([[0, 'rgba(200,240,255,0.4)'], [0.4, 'rgba(100,200,255,0.15)'], [0.7, 'rgba(60,160,220,0.08)'], [1, 'transparent']], { at: [0.3, 0.3] }),
             border: { width: 1, color: 'rgba(150,220,255,0.15)' }, blur: 0.5,
@@ -219,6 +325,7 @@ export const CANVAS_PARTICLES = {
     },
 
     abyss_bubbles: {
+        wind: 0,
         // Тень в оригинале пульсирует (10 → 16 → 8 px); здесь она постоянная
         sprite: {
             gradient: radial([[0, 'rgba(80,230,255,0.6)'], [0.3, 'rgba(0,170,220,0.35)'], [0.6, 'rgba(0,90,140,0.15)'], [1, 'transparent']], { at: [0.35, 0.35] }),
@@ -315,6 +422,7 @@ export const CANVAS_PARTICLES = {
     },
 
     cosmic_dust: {
+        wind: 0,
         sprite: {
             gradient: radial([[0, 'rgba(200,150,255,0.9)'], [0.5, 'rgba(120,60,200,0.4)'], [1, 'transparent']]),
             glow: { blur: 3, color: 'rgba(150,100,255,0.5)' }, blur: 0.5,
@@ -381,6 +489,7 @@ export const CANVAS_PARTICLES = {
     },
 
     void_shards: {
+        wind: 0,
         motion: {
             x: drift(0, 1), y: driftY(0, 1),
             r: [[0, 0], [1, { rot: 1 }]],
@@ -408,6 +517,7 @@ export const CANVAS_PARTICLES = {
     },
 
     balloons: {
+        depth: false, wind: 0.5,
         motion: {
             x: [[0, 0], [0.3, { drift: 0.3 }], [0.55, { drift: -0.2 }], [0.8, { drift: 0.65 }], [1, { drift: 1 }]],
             y: [[0, 0], [0.3, { vh: -35 }], [0.55, { vh: -62 }], [0.8, { vh: -92 }], [1, { vh: -115 }]],
@@ -418,10 +528,11 @@ export const CANVAS_PARTICLES = {
     },
 
     // Хвост нарисован в картинке; поворот (--rotation) задан вместе с направлением полёта
-    comets: { motion: starStreak() },
-    shooting_stars: { motion: starStreak() },
+    comets: { depth: false, wind: 0, motion: starStreak() },
+    shooting_stars: { depth: false, wind: 0, motion: starStreak() },
 
     confetti: {
+        depth: false, wind: 0.5,
         parts: {
             // Кусочки — картинки, переворачиваются вокруг вертикальной оси (rotateY)
             piece: {

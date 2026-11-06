@@ -926,11 +926,11 @@
 }
 
 .vn-character:not(.active) .vn-character-fx > .vn-fx-shard {
-    filter: brightness(0.45) saturate(0.25) blur(1px) !important;
+    filter: var(--vn-dim) blur(var(--vn-blur)) !important;
 }
 
 #vn-scene-overlay.vn-camera-dof .vn-character:not(.active):not(.vn-character-hidden) .vn-character-fx > .vn-fx-shard {
-    filter: brightness(0.38) saturate(0.18) blur(2.5px) !important;
+    filter: var(--vn-dim-dof) blur(var(--vn-blur-dof)) !important;
 }
 
 /* При открытии и появлении персонажа inline opacity: 0 ставится только на оригинал: осколки повторяют его */

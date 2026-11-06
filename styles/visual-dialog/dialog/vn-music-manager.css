@@ -1,68 +1,143 @@
 /* ══════════════════════════════════════════════════════════
    Music Tab (VNMusicManager)
+   Two cards: "Музыка сцены" (one background track) and "Звуки сцены" (cue list).
+   Side by side from 900px of tab width, stacked below.
    ══════════════════════════════════════════════════════════ */
 
-.vn-music-section {
-    margin-top: 12px;
-    padding: 10px 12px;
-    border: 1px solid rgba(136, 192, 208, 0.15);
-    border-radius: var(--vn-radius);
-    background: rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.vn-music-tab {
+    container: vn-music / inline-size;
+    padding: 4px;
 }
 
+.vn-music-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+@container vn-music (min-width: 900px) {
+    .vn-music-grid {
+        grid-template-columns: minmax(300px, 5fr) minmax(0, 7fr);
+        align-items: stretch;
+    }
+}
+
+/* ── Card ── */
+.vn-music-section,
+.vn-cues-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius);
+    background: rgba(0, 0, 0, 0.14);
+}
+
+.vn-music-head { display: flex; flex-direction: column; gap: 3px; }
+
 .vn-music-label {
-    font-size: 0.8em;
-    font-weight: 600;
+    font-size: 0.88em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     color: var(--vn-accent);
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
 }
 
-.vn-music-drop-zone {
-    border: 2px dashed rgba(136, 192, 208, 0.3);
-    border-radius: var(--vn-radius-sm);
-    padding: 14px 10px;
+.vn-cues-hint {
+    margin: 0;
+    font-size: max(11px, 0.75em);
+    color: var(--vn-text-dim);
+    line-height: 1.4;
+}
+
+/* ── Drop zones (empty states) ── */
+.vn-music-drop-zone,
+.vn-cue-drop-zone {
+    flex: 1;
+    min-height: 120px;
+    border: 2px dashed rgba(136, 192, 208, 0.28);
+    border-radius: var(--vn-radius);
+    padding: 18px 12px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
+    text-align: center;
     color: var(--vn-text-dim);
-    font-size: 0.78em;
-    font-style: italic;
+    font-size: 0.8em;
     cursor: default;
-    transition: border-color var(--vn-transition), background var(--vn-transition);
+    transition: border-color var(--vn-transition), background var(--vn-transition), color var(--vn-transition);
 }
+.vn-music-drop-zone[hidden] { display: none; }
+
+.vn-drop-icon { font-size: 1.9em; opacity: 0.5; margin-bottom: 2px; transition: opacity var(--vn-transition); }
+.vn-drop-title { font-size: 1.05em; color: var(--vn-text); font-weight: 600; }
+.vn-drop-text { font-style: italic; }
 
 .vn-music-drop-zone.drag-over,
-.vn-music-drop-zone:hover {
+.vn-music-drop-zone:hover,
+.vn-cue-drop-zone.drag-over,
+.vn-cue-drop-zone:hover {
     border-color: var(--vn-accent);
     background: var(--vn-accent-dim);
     color: var(--vn-accent);
 }
+.vn-music-drop-zone:hover .vn-drop-icon,
+.vn-cue-drop-zone:hover .vn-drop-icon,
+.vn-music-drop-zone.drag-over .vn-drop-icon,
+.vn-cue-drop-zone.drag-over .vn-drop-icon { opacity: 0.9; }
 
+.vn-music-pick { margin-top: 6px; font-style: normal; }
+.vn-music-drop-zone:hover .vn-music-pick,
+.vn-cue-drop-zone:hover .vn-music-pick { color: var(--vn-text); }
+
+/* Once there are cues the zone shrinks to a one-line "add more" strip */
+.vn-cues-section:has(.vn-cue-item) .vn-cue-drop-zone {
+    flex: none;
+    min-height: 0;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 8px 12px;
+}
+.vn-cues-section:has(.vn-cue-item) .vn-cue-drop-zone .vn-drop-title { display: none; }
+.vn-cues-section:has(.vn-cue-item) .vn-cue-drop-zone .vn-drop-icon { font-size: 1em; margin: 0; }
+.vn-cues-section:has(.vn-cue-item) .vn-cue-drop-zone .vn-music-pick { margin-top: 0; }
+
+/* ── Selected track ── */
 .vn-music-selected {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    background: rgba(136, 192, 208, 0.08);
-    border: 1px solid rgba(136, 192, 208, 0.25);
-    border-radius: var(--vn-radius-sm);
-    font-size: 0.82em;
+    gap: 12px;
+    padding: 12px 12px;
+    background: linear-gradient(135deg, rgba(136, 192, 208, 0.14), rgba(136, 192, 208, 0.05));
+    border: 1px solid rgba(136, 192, 208, 0.35);
+    border-radius: var(--vn-radius);
+    font-size: 0.9em;
     color: var(--vn-text);
 }
+.vn-music-selected[hidden] { display: none; }
 
-.vn-music-selected > i {
+.vn-music-selected > i.vn-music-selected-icon {
+    flex: none;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--vn-radius-sm);
+    background: var(--vn-accent-dim);
     color: var(--vn-accent);
-    flex-shrink: 0;
+    font-size: 1.1em;
 }
 
 .vn-music-name {
     flex: 1;
+    min-width: 0;
+    font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -91,93 +166,74 @@
     background: var(--vn-danger-dim);
 }
 
-.vn-music-tab {
+/* ── Cue rows ── */
+.vn-cue-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    padding: 4px;
+    gap: 5px;
+    counter-reset: vn-cue;
 }
-
-.vn-cues-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
-    border: 1px solid rgba(136, 192, 208, 0.15);
-    border-radius: var(--vn-radius);
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.vn-cues-hint {
-    margin: 0;
-    font-size: max(11px, 0.75em);
-    color: var(--vn-text-dim);
-    font-style: italic;
-    line-height: 1.4;
-}
-
-.vn-cue-drop-zone {
-    border: 2px dashed rgba(136, 192, 208, 0.25);
-    border-radius: var(--vn-radius-sm);
-    padding: 12px 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: var(--vn-text-dim);
-    font-size: 0.78em;
-    font-style: italic;
-    cursor: default;
-    transition: border-color var(--vn-transition), background var(--vn-transition);
-}
-.vn-cue-drop-zone.drag-over,
-.vn-cue-drop-zone:hover {
-    border-color: var(--vn-accent);
-    background: var(--vn-accent-dim);
-    color: var(--vn-accent);
-}
-
-.vn-cue-list { display: flex; flex-direction: column; gap: 4px; }
 
 .vn-cue-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    background: rgba(0, 0, 0, 0.15);
+    gap: 10px;
+    padding: 6px 8px 6px 6px;
+    background: rgba(0, 0, 0, 0.18);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
-    transition: border-color var(--vn-transition);
+    transition: border-color var(--vn-transition), background var(--vn-transition);
 }
-.vn-cue-item:hover { border-color: var(--vn-border-hover); }
+.vn-cue-item:hover { border-color: var(--vn-border-hover); background: rgba(0, 0, 0, 0.26); }
 
-.vn-cue-icon {
+.vn-cue-index {
+    flex: none;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--vn-accent-dim);
     color: var(--vn-accent);
-    font-size: 0.8em;
-    flex-shrink: 0;
-    opacity: 0.7;
+    font-size: 0.75em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    counter-increment: vn-cue;
 }
+.vn-cue-index::before { content: counter(vn-cue); }
 
 .vn-cue-label-input {
-    flex: 1;
+    flex: 1 1 140px;
     min-width: 0;
-    background: none;
+    background: rgba(0, 0, 0, 0.2);
     border: 1px solid transparent;
-    border-bottom: 1px dashed var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
-    font-size: 0.82em;
-    padding: 3px 6px;
+    font-size: 0.85em;
+    padding: 4px 8px;
     outline: none;
     transition: border-color var(--vn-transition), background var(--vn-transition);
 }
 .vn-cue-label-input:hover { border-color: var(--vn-border); }
-.vn-cue-label-input:focus { border-color: var(--vn-accent); background: rgba(0,0,0,0.2); }
+.vn-cue-label-input:focus { border-color: var(--vn-accent); background: rgba(0,0,0,0.3); }
 .vn-cue-label-input::placeholder { color: var(--vn-text-dim); opacity: 0.5; }
 
-.vn-music-pick { margin-left: 6px; font-style: normal; }
-.vn-music-drop-zone:hover .vn-music-pick,
-.vn-cue-drop-zone:hover .vn-music-pick { color: var(--vn-text); }
+.vn-cue-source {
+    flex: 0 1 38%;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: max(11px, 0.72em);
+    color: var(--vn-text-dim);
+    white-space: nowrap;
+}
+.vn-cue-source > i { flex: none; opacity: 0.6; }
+.vn-cue-source { overflow: hidden; text-overflow: ellipsis; }
+.vn-cue-source.vn-cue-missing { color: var(--vn-danger); }
+.vn-cue-source.vn-cue-missing > i { opacity: 1; }
+
+@container vn-music (max-width: 520px) {
+    .vn-cue-source { display: none; }
+}
 
 /* ── Track picker window ── */
 .vn-pick-sound { display: flex; flex-direction: column; gap: 10px; }

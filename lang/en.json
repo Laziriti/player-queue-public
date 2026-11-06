@@ -165,6 +165,14 @@
     "thumbnailFolder": {
       "name": "Preset thumbnail folder",
       "hint": "Where thumbnails of dialog scene presets are saved. Empty = a separate folder inside the world. Any folder in Data works, including one inside a module, so the thumbnails travel with it. Existing thumbnails keep working after a change; to rebuild them in the new place use \"Regenerate all\" in the Presets tab menu."
+    },
+    "dimInactive": {
+      "name": "🌓 Dim inactive characters",
+      "hint": "Applies to every client. When off, characters who are not speaking are not darkened or desaturated. The speaker is still marked by the glow and the nameplate"
+    },
+    "blurInactive": {
+      "name": "💧 Blur inactive characters",
+      "hint": "Applies to every client. When off, characters who are not speaking are not blurred, even if a player has Depth of Field enabled. Dimming is a separate setting"
     }
   },
   "fxFilters": {
@@ -314,7 +322,14 @@
         "ribbonsOnly": "Streamers only",
         "fallingMotes": "Falling",
         "ascendingMotes": "Ascending",
-        "twinklingMotes": "Twinkling"
+        "twinklingMotes": "Twinkling",
+        "blizzard": "Blizzard",
+        "crystals": "Snowflakes",
+        "fallingLeaves": "Falling leaves",
+        "windblownLeaves": "Windblown leaves",
+        "smoke": "Smoke",
+        "steam": "Steam",
+        "warmMotes": "Warm motes"
       },
       "visualVariants": {
         "classic": "Classic",
@@ -358,7 +373,16 @@
         "eye": "The eye",
         "spiral": "Spiral",
         "shardsFrame": "Shards across the frame",
-        "crackCenter": "Cracks at the centre"
+        "crackCenter": "Cracks at the centre",
+        "drunk": "Drunk",
+        "tipsy": "Tipsy",
+        "wasted": "Wasted",
+        "cubesSingle": "Single cubes",
+        "cubesFull": "Whole scene",
+        "fogMedium": "Fog",
+        "fogLight": "Light haze",
+        "fogDense": "Dense shroud",
+        "fogGround": "Ground mist"
       },
       "groups": {
         "basic": "Basic",
@@ -367,7 +391,9 @@
         "dark": "Dark",
         "chaos": "Chaos",
         "special": "Special",
-        "cinema": "Cinema & style"
+        "cinema": "Cinema & style",
+        "time": "Time of day",
+        "places": "Places & light"
       },
       "particles": {
         "none": "Off",
@@ -399,7 +425,11 @@
         "page_scraps": "Page scraps",
         "balloons": "Balloons",
         "comets": "Comets",
-        "shooting_stars": "Shooting stars"
+        "shooting_stars": "Shooting stars",
+        "hail": "Hail",
+        "leaves": "Falling leaves",
+        "fluff": "Fluff and pollen",
+        "smoke": "Smoke and steam"
       },
       "visual": {
         "none": "Off",
@@ -434,7 +464,20 @@
         "memory": "🕰️ Memory",
         "neon": "🌃 Neon / cyberpunk",
         "vhs": "📼 VHS",
-        "fog": "🌫️ Fog"
+        "fog": "🌫️ Fog",
+        "drunk": "🍺 Drunkenness",
+        "cubes": "🧱 Cube wall",
+        "dawn": "🌅 Dawn",
+        "day": "☀️ Clear day",
+        "sunset": "🌇 Sunset",
+        "dusk": "🌆 Dusk",
+        "overcast": "☁️ Overcast",
+        "candlelit": "🕯️ Candlelight & tavern",
+        "torchlit": "🔥 Torches & dungeon",
+        "windowlight": "🪟 Window light",
+        "forest": "🌲 Forest",
+        "cave": "🦇 Cave",
+        "heat": "🌡️ Heat"
       },
       "effects": {
         "none": "Off",
@@ -511,10 +554,22 @@
       "custom": "Custom",
       "applyPathTitle": "Use this path",
       "cardSizeTitle": "Card size",
-      "cardSizeLabel": "Size"
+      "cardSizeLabel": "Size",
+      "particleDepth": "Particle depth",
+      "particleDepthFlat": "Flat",
+      "particleDepthSoft": "Layered",
+      "particleDepthDeep": "Deep",
+      "particleWind": "Wind",
+      "windCalm": "calm",
+      "particleGusts": "Wind gusts",
+      "look": "Background look",
+      "otherSource": "Other source",
+      "emptyFolder": "No backgrounds in this folder yet",
+      "emptyFolderHint": "Put images or videos here or pick another folder."
     },
     "io": {
-      "loadError": "Failed to load presets from {moduleId}: {msg}"
+      "loadError": "Failed to load presets from {moduleId}: {msg}",
+      "defaultSetName": "Main set"
     },
     "charFx": {
       "none": "No effect",
@@ -615,7 +670,6 @@
       "noModulesFound": "No modules with presets found",
       "noActiveModules": "No active modules",
       "noActiveScenePin": "No active scene",
-      "noActiveSceneForPin": "No active scene to pin to",
       "noScene": "No scene",
       "nothingFound": "Nothing found",
       "presetsDescription": "Save the current character layout and background as a preset.",
@@ -659,7 +713,6 @@
       "presetActionLoad": "Load into dialog",
       "presetActionUpdate": "Update from dialog",
       "presetActionRegen": "Regenerate preset",
-      "presetActionAssign": "Change scene",
       "presetActionMacro": "Generate macro",
       "presetActionTags": "Tags",
       "presetActionRename": "Rename",
@@ -669,7 +722,6 @@
       "panelLabelTags": "Tags",
       "panelTagsExisting": "Existing tags — click to add",
       "tagAddPlaceholder": "Add tag…",
-      "tagBarSearch": "Tags…",
       "macroDialogTitle": "Macro for preset \"{name}\"",
       "macroDialogHint": "Paste this code into a Foundry macro to launch this scene with one click.",
       "macroCopyBtn": "Copy",
@@ -682,11 +734,6 @@
       "updatePresetConfirm": "Overwrite preset \"<strong>{name}</strong>\" with the current dialog settings?",
       "deletePresetTitle": "Delete preset",
       "deletePresetConfirm": "Delete preset \"<strong>{name}</strong>\"?",
-      "assignToSceneLabel": "To \"{sceneName}\"",
-      "unlinkFromScene": "Unlink from scene",
-      "presetSceneLabel": "Preset scene: <strong>{sceneName}</strong>",
-      "currentSceneLabel": "Current scene: <strong>{sceneName}</strong>",
-      "changeSceneDialogTitle": "Change scene: \"{presetName}\"",
       "soundCuesLabel": "Scene sounds",
       "soundCuesHint": "Tracks the GM can trigger right from the scene (toolbar button).",
       "cueLabelPlaceholder": "Name...",
@@ -705,7 +752,7 @@
       "tokenSearchPlaceholder": "Search characters...",
       "tokensOnScene": "Available on scene",
       "participantsLabel": "Scene participants",
-      "participantsHint": "Drag actors from \"Available\" — they are saved in the preset and stay available regardless of the current scene.",
+      "participantsHint": "Saved with the preset, available regardless of the current scene",
       "positionLeft": "Left",
       "positionLeftOrder": "← farther | closer →",
       "positionCenter": "Center",
@@ -734,7 +781,6 @@
       "folderInstalled": "Backgrounds folder set: {folder}",
       "specifyModuleId": "Enter the module ID",
       "selectAtLeastOnePreset": "Select at least one preset",
-      "exportSuccess": "Exported {count} presets to modules/{moduleId}/vn-presets.json",
       "exportError": "Export error: {msg}",
       "downloadingPresets": "Downloading {count} presets…",
       "fileImportWithDupes": "The file has {total} presets ({fresh} new, {dupes} duplicates).",
@@ -767,7 +813,80 @@
       "thumbFolderSet": "Thumbnail folder: {folder}",
       "thumbFolderRebuildTitle": "New thumbnail folder",
       "thumbFolderRebuildConfirm": "Rebuild the thumbnails of all presets in \"{folder}\"? The old files stay where they are.",
-      "fileTooLarge": "The file is too large (maximum {mb} MB)"
+      "fileTooLarge": "The file is too large (maximum {mb} MB)",
+      "setNameLabel": "Set",
+      "setNameTitle": "Name of the preset set inside the adventure. One adventure can hold several sets, the GM picks one on import. A set with the same name is updated, the others stay untouched",
+      "setWillCreate": "New set “{name}”",
+      "setWillUpdate": "Set “{name}” already exists in the module ({count}) and will be updated",
+      "setExisting": "In the module:",
+      "setPick": "Set:",
+      "exportSetCreated": "Created set “{set}”: {count} presets in modules/{moduleId}",
+      "exportSetUpdated": "Set “{set}” updated: {count} presets in modules/{moduleId}",
+      "exportSetNoteCreated": "Created set “{name}”. Sets in the file: {total}",
+      "exportSetNoteUpdated": "Updated set “{name}”. Sets in the file: {total}",
+      "importTagsLabel": "Tag the presets: {tags}",
+      "importTagsTitle": "Every imported preset gets tags: the module name and the set name. The preset own tags are kept",
+      "tagPickerBtn": "Tags",
+      "tagPickerTitle": "Filter by tags: every tag, with search",
+      "tagPickerSearch": "Find a tag…",
+      "tagMatchAll": "All",
+      "tagMatchAny": "Any",
+      "tagMatchTitle": "All — the preset has every picked tag. Any — at least one of them",
+      "tagPickerReset": "Reset",
+      "tagClearTitle": "Clear the tag filter",
+      "tagPickerTotal": "Tags found: {shown} of {total}",
+      "tagPickerMore": "first {n} shown, narrow the search",
+      "tagPickerEmpty": "No tags found",
+      "tagDeleteEverywhere": "Delete the tag from every preset",
+      "btnOpenLibrary": "Adventure library",
+      "libraryHint": "Ready-made scene sets shipped with this module",
+      "librarySearch": "Search by title, author or module ID",
+      "libraryActiveOnly": "Only modules running in this world",
+      "libraryActiveOnlyTitle": "Show only adventures whose module is enabled in this world",
+      "librarySummary": "In the library: {total} · running: {active} · installed but off: {inactive} · not installed: {missing}",
+      "libraryNothing": "Nothing found",
+      "libraryEmpty": "The library is empty. Adventures are added in library/index.json",
+      "libraryError": "Could not read library/index.json: {msg}",
+      "libraryCollections": "collections: {count}",
+      "libraryStatus": {
+        "active": "Running",
+        "activeTitle": "The module is enabled in this world",
+        "inactive": "Off",
+        "inactiveTitle": "The module is installed but not enabled in this world",
+        "missing": "Not installed",
+        "missingTitle": "The module is not among the installed ones"
+      },
+      "libraryWarn": {
+        "inactive": "The module \"{title}\" is installed but off: its backgrounds and portraits will not load until it is enabled.",
+        "missing": "The module \"{title}\" is not installed: its backgrounds and portraits will not load."
+      },
+      "presetActionAssign": "Choose scenes…",
+      "panelLabelScenes": "Scenes",
+      "deleteGroupShared": "<strong>{count}</strong> more presets are linked to other scenes as well: they stay, only the link to this scene is removed.",
+      "ioModeExport": "Export",
+      "ioModeImport": "Import",
+      "ioModeExportHint": "Save presets to a module or a file",
+      "ioModeImportHint": "Take presets from a module, the library or a file",
+      "ioSelectedOf": "Selected: {count} of {total}",
+      "ioExportTarget": "Export target",
+      "ioStepSource": "Where to import from",
+      "ioStepPresets": "Choose presets",
+      "ioImportEmpty": "Pick a source above and press “Load” — its presets will appear here.",
+      "poolTabTokens": "Tokens",
+      "poolTabFavorites": "Favorites",
+      "btnBackgroundOnlyHint": "Start the scene with the background only, no characters",
+      "btnRemoveCharactersHint": "Remove every character from the scene; background and effects stay",
+      "musicHint": "Background track: plays while the scene is open.",
+      "cuesEmptyTitle": "No sounds yet",
+      "cueMissing": "track not found",
+      "presetLaunchShort": "Launch",
+      "hintMusic": "Music",
+      "panelBack": "Back to list",
+      "participantsEmpty": "Drop actors here from Tokens or Favorites",
+      "presetActionDuplicate": "Duplicate",
+      "presetActionDuplicateTitle": "Make a copy of this preset (a composite one with all its steps)",
+      "presetCopyName": "{name} (copy)",
+      "presetDuplicated": "Copy created: “{name}”"
     },
     "folders": {
       "modeScenes": "By scene",
@@ -866,7 +985,9 @@
       "editBanner": "Editing step {n} of \"{name}\": change the scene, then save",
       "editSave": "Save to step",
       "editCancel": "Cancel editing",
-      "editLost": "The step was not found — it may have been deleted"
+      "editLost": "The step was not found — it may have been deleted",
+      "barNameTitle": "Step name (empty = automatic; Enter to apply, Esc to cancel)",
+      "stepMore": "More actions"
     },
     "scenePresets": {
       "title": "Scene dialogs: {scene}",
@@ -874,6 +995,24 @@
       "noScene": "No scene on canvas",
       "unnamed": "Unnamed",
       "notFound": "Preset not found"
+    },
+    "presetLink": {
+      "save": "Save the current scene state into this preset",
+      "saved": "Preset \"{name}\" saved",
+      "gone": "The preset no longer exists, nowhere to save",
+      "nameTitle": "Preset name (Enter to rename, Esc to cancel)"
+    },
+    "scenePicker": {
+      "title": "Scenes of the preset \"{presetName}\"",
+      "search": "Search by scene name",
+      "current": "Current",
+      "currentTitle": "The scene open on the canvas",
+      "clear": "Clear all",
+      "folderTitle": "Tick all shown scenes of the folder",
+      "nothing": "No scenes found",
+      "save": "Apply",
+      "count": "Selected: {count}",
+      "missing": "Not in this world (the link is kept)"
     }
   }
 }

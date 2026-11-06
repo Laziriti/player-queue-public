@@ -27,6 +27,9 @@ const featherBlackImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/feathers/bla
 const featherWhiteImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/feathers/white_feather_${n}.webp`);
 const pageFragmentImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/page_fragments/page_fragment_${n}.webp`);
 const parchmentScrapImages = [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/parchment_scraps/parchment_scrap_${n}.webp`);
+const snowflakeImages = [1, 2, 3].map(n => `${PARTICLES_PATH}/snowflakes/snowflake_${n}.webp`);
+const leafImages = [1, 2, 3, 4, 5, 6].map(n => `${PARTICLES_PATH}/leaves/leaf_${n}.webp`);
+const fluffImages = [1, 2, 3].map(n => `${PARTICLES_PATH}/fluff/fluff_${n}.webp`);
 
 export const PARTICLE_CONFIGS = {
     particles: {
@@ -48,6 +51,13 @@ export const PARTICLE_CONFIGS = {
                 sizeMin: 1,
                 sizeRange: 2.5,
                 spawn: () => ({ left: R(100), top: R(100), delay: R(8), duration: 3 + R(5), drift: RD(24), driftY: RD(24) }),
+            },
+            // Тёплые пылинки парят по всему кадру и мерцают
+            motes: {
+                count: 60,
+                sizeMin: 2,
+                sizeRange: 3,
+                spawn: () => ({ left: R(100), top: R(100), delay: R(8), duration: 12 + R(12), drift: RD(50), driftY: RD(36) }),
             },
         },
     },
@@ -83,6 +93,19 @@ export const PARTICLE_CONFIGS = {
                 sizeRange: 9,
                 spawn: () => ({ left: R(100), top: -5, delay: R(18), duration: 14 + R(10), drift: RD(120) }),
             },
+            // Буран: мелкая быстрая крупа почти отвесно; снос и наклон даёт ветер сцены (у вьюги наклон зашит в траекторию)
+            blizzard: {
+                count: 170,
+                spawn: () => { const s = 0.9 + R(1.3); return { w: s, h: s * 4.5, left: R(100), top: -5, delay: R(4), duration: 1.1 + R(1.3), drift: RD(50) }; },
+            },
+            // Редкие крупные снежинки-кристаллы: медленно кружатся
+            crystals: {
+                count: 14,
+                sizeMin: 11,
+                sizeRange: 10,
+                spawn: () => ({ left: R(100), top: -5, delay: R(14), duration: 14 + R(10), drift: RD(100), rotation: RD(360) }),
+                images: snowflakeImages,
+            },
         },
     },
 
@@ -99,6 +122,54 @@ export const PARTICLE_CONFIGS = {
         },
     },
 
+    // Град строит ParticleSystem._rainParams, как дождь: короткие плотные частые крупинки, падают быстро и круто
+    hail: {
+        count: 120,
+        drop: { width: [2.2, 3.4], height: [7, 13], duration: [0.26, 0.5], drift: [-24, -8], skew: false },
+    },
+
+    // Лист падает покачиваясь и кувыркаясь: rotation — полный угол поворота за жизнь (градусы)
+    leaves: {
+        count: 22,
+        sizeMin: 24,
+        sizeRange: 18,
+        spawn: () => ({ left: R(100), top: -5, delay: R(14), duration: 9 + R(9), drift: RD(150), rotation: R(720) - 360 }),
+        images: leafImages,
+        variants: {
+            // Листья на ветру: летят косо и быстро, больше вращения
+            gale: {
+                count: 34,
+                spawn: () => ({ left: R(130) - 25, top: -5, delay: R(8), duration: 3.5 + R(4), drift: 260 + R(380), rotation: R(1440) - 720 }),
+            },
+        },
+    },
+
+    // Пух и пыльца парят: почти не падают, чуть поднимаются, качаются и медленно поворачиваются
+    fluff: {
+        count: 18,
+        sizeMin: 34,
+        sizeRange: 26,
+        spawn: () => ({ left: R(100), top: 10 + R(90), delay: R(20), duration: 16 + R(14), drift: RD(180), driftY: RD(60), rotation: RD(80) }),
+        images: fluffImages,
+    },
+
+    // Дым: крупные клубы поднимаются, растут и тают; форму каждому даёт шум (sprite.noise в particle-canvas.js)
+    smoke: {
+        count: 30,
+        sizeMin: 90,
+        sizeRange: 110,
+        spawn: () => ({ left: R(100), bottom: -12, delay: R(14), duration: 12 + R(10), drift: RD(160), rotation: RD(120) }),
+        variants: {
+            steam: {
+                count: 28,
+                sizeMin: 80,
+                sizeRange: 90,
+                spawn: () => ({ left: R(100), bottom: -12, delay: R(8), duration: 6 + R(6), drift: RD(120), rotation: RD(160) }),
+            },
+        },
+    },
+
+    // Пылинки висят в воздухе и мерцают: хороши в лучах света
     embers: {
         count: 30,
         sizeMin: 1,

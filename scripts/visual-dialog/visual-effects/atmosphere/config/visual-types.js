@@ -7,11 +7,13 @@
  */
 export const VISUAL_GROUPS = [
     { id: 'basic',   label: 'vn.atmosphere.groups.basic',   types: ['none', 'warm', 'cold'] },
-    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['storm', 'underwater', 'moonlight', 'sandstorm', 'frost', 'fog', 'earthquake'] },
+    { id: 'time',    label: 'vn.atmosphere.groups.time',    types: ['dawn', 'day', 'sunset', 'dusk', 'overcast'] },
+    { id: 'places',  label: 'vn.atmosphere.groups.places',  types: ['candlelit', 'torchlit', 'windowlight', 'forest', 'cave'] },
+    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['storm', 'underwater', 'moonlight', 'sandstorm', 'frost', 'fog', 'heat', 'earthquake'] },
     { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine', 'sacred', 'dream', 'ethereal'] },
     { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['eldritch', 'dark', 'corruption', 'abyss', 'shadow_intrigue'] },
     { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['fire', 'apocalypse', 'blood_moon', 'cosmic_horror', 'void_breach', 'glass_shatter'] },
-    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['carnival', 'ghosts', 'hologram', 'kaleidoscope'] },
+    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['carnival', 'drunk', 'ghosts', 'hologram', 'kaleidoscope', 'cubes'] },
     { id: 'cinema',  label: 'vn.atmosphere.groups.cinema',  types: ['noir', 'memory', 'neon', 'vhs'] },
 ];
 
@@ -50,13 +52,26 @@ export const VISUAL_LABELS = {
     ghosts:          'vn.atmosphere.visual.ghosts',
     hologram:        'vn.atmosphere.visual.hologram',
     kaleidoscope:    'vn.atmosphere.visual.kaleidoscope',
-    frost:           'vn.atmosphere.visual.frost',
+    drunk:           'vn.atmosphere.visual.drunk',
+    cubes:           'vn.atmosphere.visual.cubes',
+    frost:          'vn.atmosphere.visual.frost',
     fog:             'vn.atmosphere.visual.fog',
     earthquake:      'vn.atmosphere.visual.earthquake',
     noir:            'vn.atmosphere.visual.noir',
     memory:          'vn.atmosphere.visual.memory',
     neon:            'vn.atmosphere.visual.neon',
     vhs:             'vn.atmosphere.visual.vhs',
+    dawn:            'vn.atmosphere.visual.dawn',
+    day:             'vn.atmosphere.visual.day',
+    sunset:          'vn.atmosphere.visual.sunset',
+    dusk:            'vn.atmosphere.visual.dusk',
+    overcast:        'vn.atmosphere.visual.overcast',
+    candlelit:       'vn.atmosphere.visual.candlelit',
+    torchlit:        'vn.atmosphere.visual.torchlit',
+    windowlight:     'vn.atmosphere.visual.windowlight',
+    forest:          'vn.atmosphere.visual.forest',
+    cave:            'vn.atmosphere.visual.cave',
+    heat:            'vn.atmosphere.visual.heat',
 };
 
 /**
@@ -83,6 +98,13 @@ export const VISUAL_VARIANTS = {
         { id: 'all',       label: 'vn.atmosphere.visualVariants.rime' },
         { id: 'blizzard',  label: 'vn.atmosphere.visualVariants.blizzard' },
         { id: 'hoarfrost', label: 'vn.atmosphere.visualVariants.hoarfrost' },
+    ],
+    // Базовый вид — прежний «Густой туман»; `light` реже и прозрачнее, `dense` — сплошная пелена, `ground` — только понизу
+    fog: [
+        { id: 'all',    label: 'vn.atmosphere.visualVariants.fogMedium' },
+        { id: 'light',  label: 'vn.atmosphere.visualVariants.fogLight' },
+        { id: 'dense',  label: 'vn.atmosphere.visualVariants.fogDense' },
+        { id: 'ground', label: 'vn.atmosphere.visualVariants.fogGround' },
     ],
     dream: [
         { id: 'all',       label: 'vn.atmosphere.visualVariants.lucid' },
@@ -126,6 +148,17 @@ export const VISUAL_VARIANTS = {
     glass_shatter: [
         { id: 'all',    label: 'vn.atmosphere.visualVariants.shardsFrame' },
         { id: 'center', label: 'vn.atmosphere.visualVariants.crackCenter' },
+    ],
+    // Базовый вид — «Пьяный»: середина лестницы, как у портретного эффекта drunk
+    drunk: [
+        { id: 'all',    label: 'vn.atmosphere.visualVariants.drunk' },
+        { id: 'tipsy',  label: 'vn.atmosphere.visualVariants.tipsy' },
+        { id: 'wasted', label: 'vn.atmosphere.visualVariants.wasted' },
+    ],
+    // Базовый вид — отдельные кубы, выдвигающиеся из плоской стены; `full` — вся сцена нарезана на кубы
+    cubes: [
+        { id: 'all',  label: 'vn.atmosphere.visualVariants.cubesSingle' },
+        { id: 'full', label: 'vn.atmosphere.visualVariants.cubesFull' },
     ],
     // Базовый вид — случайные толчки: ближайший к прежнему поведению (серии толчков с паузами)
     earthquake: [
@@ -171,6 +204,8 @@ export const VISUAL_ICONS = {
     ghosts: 'fa-ghost',
     hologram: 'fa-cube',
     kaleidoscope: 'fa-snowflake',
+    drunk: 'fa-beer-mug-empty',
+    cubes: 'fa-cubes',
     frost: 'fa-temperature-low',
     fog: 'fa-smog',
     earthquake: 'fa-house-crack',
@@ -178,4 +213,15 @@ export const VISUAL_ICONS = {
     memory: 'fa-clock-rotate-left',
     neon: 'fa-city',
     vhs: 'fa-tape',
+    dawn: 'fa-cloud-sun',
+    day: 'fa-sun',
+    sunset: 'fa-mountain-sun',
+    dusk: 'fa-star',
+    overcast: 'fa-cloud',
+    candlelit: 'fa-fire-flame-simple',
+    torchlit: 'fa-dungeon',
+    windowlight: 'fa-window-maximize',
+    forest: 'fa-tree',
+    cave: 'fa-mountain',
+    heat: 'fa-temperature-high',
 };

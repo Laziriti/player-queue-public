@@ -23,6 +23,7 @@ export class VNBackgroundManager {
     static MODULE_ID = 'player-queue';
     static FOLDER_SETTING = 'backgroundFolder';
     static LAST_PATH_KEY = 'player-queue.bg-last-folder';
+    static DEFAULT_THUMB = 150;
     static SEARCH_MAX_RESULTS = 240;
     static INDEX_MAX_FOLDERS = 3000;
 
@@ -473,53 +474,58 @@ export class VNBackgroundManager {
     generateSelector(currentBg = null, currentOverlay = true, currentVignette = true, currentFog = true) {
         const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
         const customFolder = VNBackgroundManager.getCustomFolder();
-        const folderLabel = customFolder
-            ? customFolder.split('/').pop() || customFolder
-            : `${this.moduleId}/assets/scenes`;
-        const thumbSize = parseInt(localStorage.getItem('player-queue.bg-thumb-size')) || 120;
+        const thumbSize = parseInt(localStorage.getItem('player-queue.bg-thumb-size')) || VNBackgroundManager.DEFAULT_THUMB;
+        const customPath = currentBg && currentBg !== 'none' && !currentBg.startsWith('modules/') ? currentBg : '';
 
         const inGallery = !currentBg || currentBg === 'none' || this.available.some(i => i.path === currentBg);
         const holder = inGallery
             ? `<input type="radio" name="background" class="vn-bg-holder" value="none" hidden>`
             : `<input type="radio" name="background" class="vn-bg-holder" value="${esc(currentBg)}" data-label="${esc(VNBackgroundManager._fileLabel(currentBg))}" checked hidden>`;
 
+        const chip = (id, checked, icon, label) => `<label class="vn-bg-chip">
+                            <input type="checkbox" id="${id}" ${checked ? 'checked' : ''}><i class="fas ${icon}"></i><span>${label}</span>
+                        </label>`;
+
         return `<details class="vn-collapsible vn-bg-section" open>
             <summary class="vn-collapsible-header"><i class="fas fa-image"></i> ${loc('vn.bg.header')} <i class="fas fa-chevron-down vn-chevron"></i></summary>
             <div class="vn-collapsible-body">
-                <div class="vn-bg-toolbar">
-                  <div class="vn-bg-toolbar-row">
-                    <label class="vn-overlay-toggle">
-                        <input type="checkbox" id="background-overlay" ${currentOverlay ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${loc('vn.bg.overlay')}</span>
-                    </label>
-                    <label class="vn-overlay-toggle">
-                        <input type="checkbox" id="background-vignette" ${currentVignette ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${loc('vn.bg.vignette')}</span>
-                    </label>
-                    <label class="vn-overlay-toggle">
-                        <input type="checkbox" id="background-fog" ${currentFog ? 'checked' : ''}><span class="vn-toggle-track"></span><span>${loc('vn.bg.groundFog')}</span>
-                    </label>
-                    ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${esc(sceneBg)}"><i class="fas fa-map"></i> ${loc('vn.bg.currentScene')}</button>` : ''}
-                    <div class="vn-custom-path">
-                        <input type="text" id="custom-background-path" placeholder="${loc('vn.bg.pathPlaceholder')}"
-                               value="${currentBg && !currentBg.startsWith('modules/') ? esc(currentBg) : ''}">
-                        <button type="button" class="vn-btn vn-btn-sm vn-apply-path-btn" title="${loc('vn.bg.applyPathTitle')}"><i class="fas fa-check"></i></button>
+                <div class="vn-bg-top">
+                    <div class="vn-bg-current">${holder}<div class="vn-bg-current-body">${this._currentBarHtml(currentBg, inGallery ? '' : VNBackgroundManager._fileLabel(currentBg))}</div></div>
+                    <div class="vn-bg-look" role="group" aria-label="${loc('vn.bg.look')}">
+                        <span class="vn-bg-look-title">${loc('vn.bg.look')}</span>
+                        <div class="vn-bg-look-chips">
+                        ${chip('background-overlay', currentOverlay, 'fa-circle-half-stroke', loc('vn.bg.overlay'))}
+                        ${chip('background-vignette', currentVignette, 'fa-expand', loc('vn.bg.vignette'))}
+                        ${chip('background-fog', currentFog, 'fa-smog', loc('vn.bg.groundFog'))}
+                        </div>
                     </div>
-                  </div>
-                <div class="vn-folder-row">
-                    <i class="fas fa-folder-open"></i>
-                    <span class="vn-folder-row-label" title="${esc(customFolder || this._defaultPath)}">${esc(folderLabel)}</span>
-                    <button type="button" class="vn-btn vn-btn-sm vn-pick-folder-btn" title="${loc('vn.bg.pickFolderTitle')}"><i class="fas fa-folder-tree"></i> ${loc('vn.bg.pickFolder')}</button>
-                    ${customFolder ? `<button type="button" class="vn-btn vn-btn-sm vn-reset-folder-btn" title="${loc('vn.bg.resetFolderTitle')}"><i class="fas fa-undo"></i></button>` : ''}
-                    <div class="vn-bg-search">
-                        <i class="fas fa-search"></i>
-                        <input type="text" class="vn-bg-search-input" placeholder="${loc('vn.bg.searchPlaceholder')}" autocomplete="off" spellcheck="false">
-                        <button type="button" class="vn-bg-search-clear" title="${loc('vn.bg.searchClear')}" hidden><i class="fas fa-xmark"></i></button>
+                </div>
+                <div class="vn-bg-browser">
+                    <div class="vn-bg-toolbar">
+                        <div class="vn-bg-crumbs">${this._crumbsHtml()}</div>
+                        <div class="vn-bg-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" class="vn-bg-search-input" placeholder="${loc('vn.bg.searchPlaceholder')}" autocomplete="off" spellcheck="false">
+                            <button type="button" class="vn-bg-search-clear" title="${loc('vn.bg.searchClear')}" hidden><i class="fas fa-xmark"></i></button>
+                        </div>
+                        <label class="vn-bg-size-ctrl" title="${loc('vn.bg.cardSizeTitle')}"><i class="fas fa-th-large"></i><span class="vn-bg-size-label">${loc('vn.bg.cardSizeLabel')}</span><input type="range" class="vn-bg-size-slider" min="72" max="240" step="8" value="${thumbSize}"></label>
+                        <div class="vn-bg-folder-btns">
+                            <button type="button" class="vn-btn vn-btn-sm vn-pick-folder-btn" title="${esc(`${loc('vn.bg.pickFolderTitle')}: ${customFolder || this._defaultPath}`)}"><i class="fas fa-folder-tree"></i> ${loc('vn.bg.pickFolder')}</button>
+                            ${customFolder ? `<button type="button" class="vn-btn vn-btn-sm vn-reset-folder-btn" title="${loc('vn.bg.resetFolderTitle')}"><i class="fas fa-undo"></i></button>` : ''}
+                        </div>
                     </div>
-                    <label class="vn-bg-size-ctrl" title="${loc('vn.bg.cardSizeTitle')}"><i class="fas fa-th-large"></i><span class="vn-bg-size-label">${loc('vn.bg.cardSizeLabel')}</span><input type="range" class="vn-bg-size-slider" min="72" max="240" step="8" value="${thumbSize}"></label>
+                    <div class="vn-background-gallery" style="--vn-bg-thumb-w: ${thumbSize}px">${this.generateGalleryContent(currentBg)}</div>
                 </div>
-                </div>
-                <div class="vn-bg-crumbs">${this._crumbsHtml()}</div>
-                <div class="vn-bg-current">${holder}<div class="vn-bg-current-body">${this._currentBarHtml(currentBg, inGallery ? '' : VNBackgroundManager._fileLabel(currentBg))}</div></div>
-                <div class="vn-background-gallery" style="--vn-bg-thumb-w: ${thumbSize}px">${this.generateGalleryContent(currentBg)}</div>
+                <details class="vn-bg-source"${customPath ? ' open' : ''}>
+                    <summary><i class="fas fa-link"></i> ${loc('vn.bg.otherSource')} <i class="fas fa-chevron-down vn-bg-source-chevron"></i></summary>
+                    <div class="vn-bg-source-body">
+                        ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${esc(sceneBg)}"><i class="fas fa-map"></i> ${loc('vn.bg.currentScene')}</button>` : ''}
+                        <div class="vn-custom-path">
+                            <input type="text" id="custom-background-path" placeholder="${loc('vn.bg.pathPlaceholder')}" value="${esc(customPath)}">
+                            <button type="button" class="vn-btn vn-btn-sm vn-apply-path-btn" title="${loc('vn.bg.applyPathTitle')}"><i class="fas fa-check"></i></button>
+                        </div>
+                    </div>
+                </details>
             </div></details>`;
     }
 
@@ -579,6 +585,9 @@ export class VNBackgroundManager {
             html += item.type === 'folder'
                 ? this._folderNavBtn('navigate', 'fa-folder', item.displayName, item.path)
                 : this._bgOption(item.path, item.displayName, null, currentBg);
+        }
+        if (!this.available.length) {
+            html += `<div class="vn-bg-empty"><i class="fas fa-folder-open"></i><strong>${loc('vn.bg.emptyFolder')}</strong><span>${loc('vn.bg.emptyFolderHint')}</span></div>`;
         }
         return html;
     }

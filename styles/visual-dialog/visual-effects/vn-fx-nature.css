@@ -844,3 +844,184 @@
 .vn-vfx-frost-hoarfrost .vn-ground-fog {
     background: linear-gradient(to top, rgba(255, 232, 218, 0.55) 0%, rgba(235, 228, 245, 0.25) 14%, transparent 38%);
 }
+
+
+/* ── FOG · Лёгкая дымка (.vn-vfx-fog-light) ──
+   Тот же туман, но реже и прозрачнее: фон почти не выцветает, клубы едва различимы. */
+
+.vn-vfx-fog-light .vn-bg-layer {
+    filter: saturate(0.88) brightness(0.97) contrast(0.96);
+}
+
+.vn-vfx-fog-light .vn-fx-tint {
+    background: radial-gradient(ellipse at center, rgba(222, 228, 234, 0.05) 0%, rgba(175, 186, 198, 0.14) 100%);
+}
+
+.vn-vfx-fog-light .vn-fx-rays {
+    animation-name: vnFogBreathLight;
+}
+
+@keyframes vnFogBreathLight {
+    0%   { opacity: 0.2; }
+    100% { opacity: 0.45; }
+}
+
+.vn-vfx-fog-light .vn-fx-flash {
+    opacity: 0.4;
+    background: rgba(208, 215, 224, 0.06);
+}
+
+.vn-vfx-fog-light .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 132, 146, 0.18) 82%, rgba(80, 92, 106, 0.32) 100%);
+}
+
+.vn-vfx-fog-light .vn-ground-fog {
+    background: linear-gradient(to top, rgba(226, 232, 238, 0.4) 0%, rgba(205, 213, 222, 0.14) 20%, transparent 45%);
+}
+
+
+/* ── FOG · Плотная пелена (.vn-vfx-fog-dense) ──
+   Сплошной туман: выцветший фон, густая дымка поверх всего и ещё два медленных слоя клубов позади персонажей. */
+
+.vn-vfx-fog-dense .vn-bg-layer {
+    filter: saturate(0.4) brightness(0.8) contrast(0.85);
+}
+
+.vn-vfx-fog-dense .vn-fx-tint {
+    background: radial-gradient(ellipse at center, rgba(215, 222, 230, 0.22) 0%, rgba(160, 172, 186, 0.4) 100%);
+}
+
+.vn-vfx-fog-dense .vn-fx-rays {
+    animation-name: vnFogBreathDense;
+}
+
+@keyframes vnFogBreathDense {
+    0%   { opacity: 0.85; }
+    100% { opacity: 1; }
+}
+
+.vn-vfx-fog-dense .vn-fx-flash {
+    background: rgba(208, 215, 224, 0.28);
+}
+
+.vn-vfx-fog-dense .vn-fx-flash::before {
+    opacity: 0.62;
+}
+
+.vn-vfx-fog-dense .vn-fx-edges {
+    opacity: 1;
+    overflow: hidden;
+}
+
+.vn-vfx-fog-dense .vn-fx-edges::before,
+.vn-vfx-fog-dense .vn-fx-edges::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 1024px);
+    height: 100%;
+    background: rgba(226, 232, 238, 0.55);
+    -webkit-mask: var(--vn-tex-fog) 0 0 / 1024px 420px;
+    mask: var(--vn-tex-fog) 0 0 / 1024px 420px;
+    animation: vnFogSlide1024 34s linear infinite;
+}
+
+.vn-vfx-fog-dense .vn-fx-edges::after {
+    width: calc(100% + 1536px);
+    opacity: 0.7;
+    -webkit-mask-size: 1536px 620px;
+    mask-size: 1536px 620px;
+    animation: vnFogSlide1536 52s linear infinite reverse;
+}
+
+.vn-vfx-fog-dense .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(120, 132, 146, 0.45) 75%, rgba(80, 92, 106, 0.75) 100%);
+}
+
+.vn-vfx-fog-dense .vn-ground-fog {
+    background: linear-gradient(to top, rgba(226, 232, 238, 0.9) 0%, rgba(205, 213, 222, 0.55) 26%, transparent 60%);
+}
+
+
+/* ── FOG · Стелющийся туман (.vn-vfx-fog-ground) ──
+   Воздух чистый, туман лежит только у земли: слой клубов за персонажами и более редкий перед ними, у самых ног.
+   Общей дымки и верхних слоёв базового тумана нет. */
+
+.vn-vfx-fog-ground .vn-bg-layer {
+    filter: saturate(0.92) brightness(0.97);
+}
+
+.vn-vfx-fog-ground .vn-fx-tint {
+    background: linear-gradient(to top, rgba(200, 210, 222, 0.22) 0%, transparent 45%);
+}
+
+.vn-vfx-fog-ground .vn-fx-rays {
+    display: none;
+}
+
+/* За персонажами */
+.vn-vfx-fog-ground .vn-fx-edges {
+    opacity: 1;
+    overflow: hidden;
+    top: auto;
+    height: 46%;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.8) 38%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.8) 38%, transparent 100%);
+}
+
+.vn-vfx-fog-ground .vn-fx-edges::before,
+.vn-vfx-fog-ground .vn-fx-edges::after,
+.vn-vfx-fog-ground .vn-fx-flash::before,
+.vn-vfx-fog-ground .vn-fx-flash::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: calc(100% + 1536px);
+    background: rgba(232, 237, 242, 0.85);
+    -webkit-mask: var(--vn-tex-fog) 0 0 / 1536px 340px;
+    mask: var(--vn-tex-fog) 0 0 / 1536px 340px;
+    animation: vnFogSlide1536 62s linear infinite;
+}
+
+.vn-vfx-fog-ground .vn-fx-edges::after {
+    width: calc(100% + 1024px);
+    opacity: 0.7;
+    -webkit-mask-size: 1024px 250px;
+    mask-size: 1024px 250px;
+    animation: vnFogSlide1024 38s linear infinite reverse;
+}
+
+/* Перед персонажами: тонкая полоса у ног, чтобы имена оставались читаемыми */
+.vn-vfx-fog-ground .vn-fx-flash {
+    overflow: hidden;
+    top: auto;
+    height: 24%;
+    background: none;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
+}
+
+.vn-vfx-fog-ground .vn-fx-flash::before {
+    opacity: 0.5;
+    width: calc(100% + 1024px);
+    -webkit-mask-size: 1024px 220px;
+    mask-size: 1024px 220px;
+    animation: vnFogSlide1024 30s linear infinite;
+}
+
+.vn-vfx-fog-ground .vn-fx-flash::after {
+    opacity: 0.32;
+    animation: vnFogSlide1536 46s linear infinite reverse;
+}
+
+.vn-vfx-fog-ground .vn-vignette {
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 132, 146, 0.2) 82%, rgba(80, 92, 106, 0.38) 100%);
+}
+
+.vn-vfx-fog-ground .vn-ground-fog {
+    height: 30vh;
+    background: linear-gradient(to top, rgba(226, 232, 238, 0.55) 0%, rgba(205, 213, 222, 0.2) 24%, transparent 55%);
+}

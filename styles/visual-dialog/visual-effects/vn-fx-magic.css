@@ -741,8 +741,8 @@
 
 
 /* ── DIVINE · Лучи собора (.vn-vfx-divine-cathedral) ──
-   Неподвижные косые столбы света из высоких окон слева: золотые, голубые и розовые полосы, как от витража,
-   в них поднимается пыль. Вместо вращающихся лучей базового вида. */
+   Неподвижные косые столбы света из высоких окон слева: золотые, голубые и розовые полосы, как от витража.
+   Вместо вращающихся лучей базового вида. */
 
 .vn-vfx-divine-cathedral .vn-fx-tint {
     background: radial-gradient(ellipse at 22% -10%, rgba(255, 225, 150, 0.38) 0%, rgba(255, 190, 90, 0.12) 40%, transparent 70%);
@@ -766,33 +766,9 @@
     100% { opacity: 1;    translate: 26px 0; }
 }
 
-/* Пыль в лучах: плитка из точек поднимается на свой размер (300px) — бесшовный цикл */
 .vn-vfx-divine-cathedral .vn-fx-edges {
     background: radial-gradient(ellipse at 22% 0%, rgba(255, 215, 120, 0.2) 0%, transparent 55%);
-    overflow: hidden;
 }
-
-.vn-vfx-divine-cathedral .vn-fx-edges::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: calc(100% + 300px);
-    background:
-        radial-gradient(circle at 34px 52px,  rgba(255, 245, 210, 0.95) 0 1.6px, transparent 3.2px),
-        radial-gradient(circle at 128px 140px, rgba(255, 238, 190, 0.8) 0 1.2px, transparent 2.6px),
-        radial-gradient(circle at 196px 36px, rgba(255, 245, 210, 0.9) 0 1.8px, transparent 3.4px),
-        radial-gradient(circle at 76px 232px, rgba(255, 238, 190, 0.7) 0 1.1px, transparent 2.4px),
-        radial-gradient(circle at 170px 262px, rgba(255, 245, 210, 0.85) 0 1.5px, transparent 3px),
-        radial-gradient(circle at 214px 168px, rgba(255, 238, 190, 0.75) 0 1.2px, transparent 2.6px);
-    background-size: 240px 300px;
-    -webkit-mask-image: linear-gradient(115deg, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 100%);
-    mask-image: linear-gradient(115deg, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 100%);
-    animation: vnCathedralDust 46s linear infinite;
-}
-
-@keyframes vnCathedralDust { to { translate: 0 -300px; } }
 
 .vn-vfx-divine-cathedral .vn-fx-bloom {
     background:

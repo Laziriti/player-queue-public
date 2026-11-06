@@ -9,18 +9,82 @@ const INTEGRATION_SUBPATH = 'integrations/player-queue';
 
 export class VNAdventureIO {
 
-    // Write selected presets to modules/<moduleId>/integrations/player-queue/vn-presets.json
-    static async exportToModule(presets, moduleId) {
+    static sameSetName(a, b) {
+        return String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+    }
+
+    // Any supported file shape -> [{ name, implicit, presets, folders }].
+    // v3 { sets: [...] } is the native shape; v1/v2 { presets, folders } (and a bare array) is one set called `fallbackName`.
+    // implicit = the name was not written in the file (it is `fallbackName` or derived from it), so it says nothing about the content.
+    static normalizeSets(data, fallbackName = '') {
+        const asList = v => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+        if (Array.isArray(data?.sets)) {
+            return data.sets
+                .filter(set => set && typeof set === 'object')
+                .map((set, i) => {
+                    const written = String(set.name ?? '').trim();
+                    return {
+                        name: written || (i === 0 ? fallbackName : `${fallbackName} ${i + 1}`),
+                        implicit: !written,
+                        presets: asList(set.presets),
+                        folders: Array.isArray(set.folders) ? set.folders : [],
+                    };
+                });
+        }
+        return [{
+            name: fallbackName,
+            implicit: true,
+            presets: Array.isArray(data) ? data : asList(data?.presets),
+            folders: Array.isArray(data?.folders) ? data.folders : [],
+        }];
+    }
+
+    // Adds `tags` to a preset (existing tags stay, comparison is case-insensitive)
+    static withTags(preset, tags) {
+        const have = Array.isArray(preset.tags) ? preset.tags : [];
+        const seen = new Set(have.map(t => String(t).trim().toLowerCase()));
+        // A comma would split the tag in the list (data-tags is comma-joined); the length matches what a person can type by hand
+        const added = tags.map(t => String(t).replace(/[,\s]+/g, ' ').trim().slice(0, 48)).filter(t => t && !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
+        return added.length ? { ...preset, tags: [...have, ...added] } : preset;
+    }
+
+    // Sets stored in modules/<moduleId>/<file>. A missing file is an empty list; with strict=true any other failure throws
+    // (an export must never overwrite a file it could not read), otherwise it is swallowed (used only to show hints).
+    static async readSets(moduleId, file = `${INTEGRATION_SUBPATH}/${PRESETS_FILE}`, { strict = false } = {}) {
+        try {
+            const resp = await fetch(`modules/${moduleId}/${file}`, { cache: 'no-cache' });
+            if (resp.status === 404) return [];
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return VNAdventureIO.normalizeSets(await resp.json(), game.i18n.localize('vn.io.defaultSetName'));
+        } catch (err) {
+            if (strict) throw err;
+            return [];
+        }
+    }
+
+    // Write the presets as the set `setName` of modules/<moduleId>/integrations/player-queue/vn-presets.json.
+    // The other sets in the file are kept; a set with the same name (case-insensitive) is replaced in place.
+    // Returns { created, sets } — created=false means an existing set was updated.
+    static async exportToModule(presets, moduleId, setName) {
+        const name = String(setName ?? '').trim().slice(0, 80) || game.i18n.localize('vn.io.defaultSetName');
         const base = `modules/${moduleId}`;
+        const sets = await VNAdventureIO.readSets(moduleId, `${INTEGRATION_SUBPATH}/${PRESETS_FILE}`, { strict: true });
+
+        const folders = Object.values(VNFolders.getAll());
+        const at = sets.findIndex(s => VNAdventureIO.sameSetName(s.name, name));
+        // An update keeps the stored spelling of the name
+        const set = { name: at >= 0 ? sets[at].name : name, presets, folders };
+        if (at >= 0) sets[at] = set; else sets.push(set);
+
         // Ensure nested dirs exist (createDirectory is idempotent — throws if already exists, that's fine)
         try { await FilePicker.createDirectory('data', `${base}/integrations`); } catch {}
         try { await FilePicker.createDirectory('data', `${base}/${INTEGRATION_SUBPATH}`); } catch {}
 
-        const folders = Object.values(VNFolders.getAll());
-        const payload = JSON.stringify({ version: 2, presets, folders }, null, 2);
+        const payload = JSON.stringify({ version: 3, sets }, null, 2);
         const blob = new Blob([payload], { type: 'application/json' });
         const file = new File([blob], PRESETS_FILE, { type: 'application/json' });
         await FilePicker.upload('data', `${base}/${INTEGRATION_SUBPATH}`, file, {});
+        return { created: at < 0, sets };
     }
 
     // Find all active modules that declared a vn-presets file in their flags
@@ -50,20 +114,81 @@ export class VNAdventureIO {
         return found;
     }
 
-    // Fetch and parse presets JSON from a module path
-    // Returns { presets: [], folders: [] }
-    static async fetchPresets(moduleId, presetsFile = `${INTEGRATION_SUBPATH}/${PRESETS_FILE}`) {
+    // Fetch the sets of an adventure module; shows an error notification when the file cannot be read
+    static async fetchSets(moduleId, presetsFile = `${INTEGRATION_SUBPATH}/${PRESETS_FILE}`) {
         try {
-            const resp = await fetch(`modules/${moduleId}/${presetsFile}`, { cache: 'no-cache' });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const data = await resp.json();
-            const presets = Array.isArray(data.presets) ? data.presets
-                : (data.presets && typeof data.presets === 'object' ? Object.values(data.presets) : []);
-            const folders = Array.isArray(data.folders) ? data.folders : [];
-            return { presets, folders };
+            const sets = await VNAdventureIO.readSets(moduleId, presetsFile, { strict: true });
+            if (!sets.length) throw new Error('HTTP 404');
+            return sets;
         } catch (err) {
             ui.notifications.error(game.i18n.format('vn.io.loadError', { moduleId, msg: err.message }));
-            return { presets: [], folders: [] };
+            return [];
+        }
+    }
+
+    // ── Built-in library ──────────────────────────────────────
+    // modules/player-queue/library/index.json lists adventures kept inside this module: { "adventures": [ { id, title, author,
+    // description, file, setName, nameplateImage, backgroundFolder } ] } (the last two are optional, as in a module's flags). Entries sharing one `id` (the adventure module id) are one adventure with several
+    // collections; each `file` is an export file in the same sets format as an adventure module's vn-presets.json.
+
+    static LIBRARY_PATH = `modules/${MODULE_ID}/library`;
+
+    /** 'active' | 'inactive' (installed, switched off) | 'missing' */
+    static moduleStatus(id) {
+        const mod = game.modules.get(id);
+        return !mod ? 'missing' : mod.active ? 'active' : 'inactive';
+    }
+
+    // Reads the index and groups it by module id (case-insensitive). A missing index is an empty library.
+    static async readLibrary() {
+        const resp = await fetch(`${VNAdventureIO.LIBRARY_PATH}/index.json`, { cache: 'no-cache' });
+        if (resp.status === 404) return [];
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const list = Array.isArray(data) ? data : data?.adventures;
+        const text = v => String(v ?? '').trim();
+        // `file` stays inside library/: no absolute paths, no "..", no schemes
+        const safeFile = f => f && !/^([a-z][a-z0-9+.-]*:|[\\/])/i.test(f) && !f.split(/[\\/]/).includes('..');
+
+        const groups = new Map();
+        for (const raw of Array.isArray(list) ? list : []) {
+            const entry = { id: text(raw?.id), title: text(raw?.title), author: text(raw?.author), description: text(raw?.description), file: text(raw?.file), setName: text(raw?.setName), nameplate: text(raw?.nameplateImage), backgroundFolder: text(raw?.backgroundFolder) };
+            if (!entry.id || !safeFile(entry.file)) continue;
+            const key = entry.id.toLowerCase();
+            const group = groups.get(key) ?? { id: entry.id, title: '', author: '', description: '', nameplate: '', backgroundFolder: '', entries: [] };
+            group.title ||= entry.title;
+            group.author ||= entry.author;
+            group.description ||= entry.description;
+            group.nameplate ||= entry.nameplate;
+            group.backgroundFolder ||= entry.backgroundFolder;
+            group.entries.push(entry);
+            groups.set(key, group);
+        }
+        return [...groups.values()].map(group => ({ ...group, title: group.title || game.modules.get(group.id)?.title || group.id }));
+    }
+
+    // Reads every collection file of a library adventure into one list of sets (same shape as fetchSets).
+    // `setName` of an entry names the file's set when the file holds exactly one. Equal set names get " (2)", " (3)"…
+    static async fetchLibrarySets(adventure) {
+        try {
+            const fallback = game.i18n.localize('vn.io.defaultSetName');
+            const sets = [];
+            for (const entry of adventure.entries) {
+                const resp = await fetch(`${VNAdventureIO.LIBRARY_PATH}/${entry.file}`, { cache: 'no-cache' });
+                if (!resp.ok) throw new Error(`${entry.file}: HTTP ${resp.status}`);
+                const part = VNAdventureIO.normalizeSets(await resp.json(), entry.setName || fallback);
+                if (entry.setName && part.length === 1) { part[0].name = entry.setName; part[0].implicit = false; }
+                for (const set of part) {
+                    const base = set.name;
+                    for (let n = 2; sets.some(s => VNAdventureIO.sameSetName(s.name, set.name)); n++) set.name = `${base} (${n})`;
+                    sets.push(set);
+                }
+            }
+            if (!sets.length) throw new Error('empty');
+            return sets;
+        } catch (err) {
+            ui.notifications.error(game.i18n.format('vn.io.loadError', { moduleId: adventure.id, msg: err.message }));
+            return [];
         }
     }
 
@@ -71,7 +196,8 @@ export class VNAdventureIO {
     // overwrite=false: skip duplicates; overwrite=true: replace existing by id
     // folderOpts: null = keep folderIds as-is; { importFolders: true, folders: [] } = recreate structure;
     //             { importFolders: false } = set all folderIds to null
-    static async mergeImport(presets, overwrite = false, folderOpts = null, { replace = false } = {}) {
+    // tags: strings added to every imported preset (e.g. module and set names)
+    static async mergeImport(presets, overwrite = false, folderOpts = null, { replace = false, tags = [] } = {}) {
         const { VNPresets } = await import('./vn-state.js');
 
         let folderIdMap = new Map();
@@ -80,11 +206,14 @@ export class VNAdventureIO {
         }
 
         // folderOpts === null: keep folderIds as they are
-        const transform = folderOpts === null ? null : (p) => {
+        const moveToFolder = folderOpts === null ? null : (p) => {
             if (!folderOpts.importFolders) return { ...p, folderId: null };
             if (p.folderId) return { ...p, folderId: folderIdMap.get(p.folderId) ?? null };
             return p;
         };
+        const transform = (moveToFolder || tags.length)
+            ? (p) => VNAdventureIO.withTags(moveToFolder ? moveToFolder(p) : p, tags)
+            : null;
         return VNPresets.importMany(presets, { overwrite, replace, transform });
     }
 

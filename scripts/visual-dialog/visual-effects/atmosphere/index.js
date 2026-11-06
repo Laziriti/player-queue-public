@@ -36,6 +36,7 @@ class VNAtmosphere {
     constructor() {
         this._active = false;
         this._particle = 'particles';
+        this._look = null;
         this._visual = 'none';
         this._overlayEl = null;
 
@@ -56,13 +57,15 @@ class VNAtmosphere {
      * @param {number} particleIntensity — множитель количества частиц (1–20)
      * @param {string} particlesLayer — 'back' | 'front' | 'mix'; при 'mix' часть частиц
      *   случайно создаётся в верхнем контейнере .vn-particles-upper (над персонажами)
+     * @param {{depth?: 'flat'|'soft'|'deep', wind?: number, gusts?: boolean}} [look] — глубина частиц и ветер (-5…5, плюс — вправо; порывами или ровный)
      */
-    init(overlayEl, particle = 'particles', visual = 'none', particleIntensity = 1, particlesLayer = 'back') {
+    init(overlayEl, particle = 'particles', visual = 'none', particleIntensity = 1, particlesLayer = 'back', look = null) {
         if (!overlayEl) return;
 
         this._active = true;
         this._particle = particle;
         this._visual = visual;
+        this._look = look;
         this._overlayEl = overlayEl;
 
         // Лёгкий режим (клиентская настройка): без частиц, визуальных эффектов, параллакса и камеры.
@@ -73,7 +76,7 @@ class VNAtmosphere {
         const particleContainer = overlayEl.querySelector('.vn-particles');
         if (particleContainer && !lite && !isFxDisabled('particle', particle)) {
             const upper = particlesLayer === 'mix' ? overlayEl.querySelector('.vn-particles-upper') : null;
-            this._particles.fill(particleContainer, particle, particleIntensity, upper);
+            this._particles.fill(particleContainer, particle, particleIntensity, upper, look);
         }
 
         this._visualFX.apply(overlayEl, lite || isFxDisabled('visual', visual) ? 'none' : visual);
@@ -107,15 +110,23 @@ class VNAtmosphere {
     /**
      * Сменить только частицы (тип, интенсивность или слой 'mix'); визуальный эффект, параллакс и камера не трогаются.
      */
-    setParticles(particle, particleIntensity = 1, particlesLayer = 'back') {
+    setParticles(particle, particleIntensity = 1, particlesLayer = 'back', look = undefined) {
         if (!this._active || !this._overlayEl) return;
         this._particle = particle;
+        // Вызов без look оставляет прежние глубину и ветер
+        if (look !== undefined) this._look = look;
         const container = this._overlayEl.querySelector('.vn-particles');
         if (!container) return;
         this._particles.clear();
         if (game.settings.get('player-queue', 'liteMode') || isFxDisabled('particle', particle)) return;
         const upper = particlesLayer === 'mix' ? this._overlayEl.querySelector('.vn-particles-upper') : null;
-        this._particles.fill(container, particle, particleIntensity, upper);
+        this._particles.fill(container, particle, particleIntensity, upper, this._look);
+    }
+
+    /** Сменить только ветер (-5…5, порывами или ровный): частицы не пересоздаются, рисовальщик плавно переходит к новому значению */
+    setWind(level, gusts = true) {
+        this._look = { ...this._look, wind: level, gusts };
+        this._particles.setWind(level, gusts);
     }
 
     /**

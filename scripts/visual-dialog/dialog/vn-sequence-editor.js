@@ -38,17 +38,17 @@ export class VNSequenceEditor {
         return `<hr class="vn-panel-section-divider">
             <div class="vn-panel-section">
                 <label class="vn-panel-label">${loc('vn.sequence.optionsLabel')}</label>
-                <div class="vn-seqed-field-row">
-                    <label class="vn-seqed-field">
-                        <span>${loc('vn.sequence.transition')}</span>
+                <div class="vn-seqed-options">
+                    <label class="vn-seqed-field vn-seqed-field--wide">
+                        <span title="${loc('vn.sequence.transition')}">${loc('vn.sequence.transition')}</span>
                         <select data-seqopt="transition">${options(VNTransitions.TRANSITION_TYPES, preset.transition || 'dissolve', 'vn.sequence.transitions.')}</select>
                     </label>
                     <label class="vn-seqed-field">
-                        <span>${loc('vn.sequence.speedLabel')}</span>
+                        <span title="${loc('vn.sequence.speedLabel')}">${loc('vn.sequence.speedLabel')}</span>
                         <select data-seqopt="transitionSpeed">${options(Object.keys(VNTransitions.SPEEDS), preset.transitionSpeed || 'normal', 'vn.sequence.speeds.')}</select>
                     </label>
                     <label class="vn-seqed-check vn-seqed-check--row" title="${loc('vn.sequence.preloadHint')}">
-                        <input type="checkbox" data-seqopt="preload"${preset.preload === false ? '' : ' checked'}> ${loc('vn.sequence.preload')}
+                        <input type="checkbox" data-seqopt="preload"${preset.preload === false ? '' : ' checked'}> <span>${loc('vn.sequence.preload')}</span>
                     </label>
                 </div>
             </div>`;
@@ -100,7 +100,9 @@ export class VNSequenceEditor {
             : '<div class="vn-seqed-thumb-empty"><i class="fas fa-image"></i></div>';
         const pips = buildActorPipsHtml(stepIds(shown), shown.portraitImages ?? {}, shown.portraitNames ?? {}, 3);
         const btn = (action, icon, key, extra = '') =>
-            `<button type="button" class="vn-btn vn-btn-xs ${extra}" data-step-action="${action}" title="${loc(key)}"><i class="fas ${icon}"></i></button>`;
+            `<button type="button" class="vn-btn vn-btn-xs ${extra}" data-step-action="${action}" title="${loc(key)}" aria-label="${loc(key)}"><i class="fas ${icon}"></i></button>`;
+        const menuItem = (action, icon, key, extra = '') =>
+            `<button type="button" class="vn-menu-item ${extra}" data-step-action="${action}"><i class="fas ${icon}"></i> ${loc(key)}</button>`;
         const open = this._openSettings.has(step.id);
 
         return `<div class="vn-seqed-step${step.id === this._loadedStepId ? ' --loaded' : ''}" data-step-id="${step.id}">
@@ -114,10 +116,15 @@ export class VNSequenceEditor {
                 <div class="vn-seqed-step-actions">
                     ${btn('play', 'fa-play', 'vn.sequence.stepPlay', 'vn-btn-accent')}
                     ${btn('load', 'fa-pen-to-square', 'vn.sequence.stepLoad')}
-                    ${btn('save', 'fa-floppy-disk', 'vn.sequence.stepSave')}
                     ${btn('settings', 'fa-sliders', 'vn.sequence.stepSettings')}
-                    ${btn('duplicate', 'fa-clone', 'vn.sequence.stepDuplicate')}
-                    ${btn('delete', 'fa-trash', 'vn.sequence.stepDelete', 'vn-btn-danger')}
+                    <details class="vn-menu vn-seqed-menu">
+                        <summary class="vn-btn vn-btn-xs" title="${loc('vn.sequence.stepMore')}" aria-label="${loc('vn.sequence.stepMore')}"><i class="fas fa-ellipsis"></i></summary>
+                        <div class="vn-menu-body">
+                            ${menuItem('save', 'fa-floppy-disk', 'vn.sequence.stepSave')}
+                            ${menuItem('duplicate', 'fa-clone', 'vn.sequence.stepDuplicate')}
+                            ${menuItem('delete', 'fa-trash', 'vn.sequence.stepDelete', 'vn-menu-item--danger')}
+                        </div>
+                    </details>
                 </div>
             </div>
             <div class="vn-seqed-settings"${open ? '' : ' hidden'}>${this._settingsHtml(step, index, shown)}</div>
@@ -161,6 +168,12 @@ export class VNSequenceEditor {
         panel._seqEditorAttached = true;
 
         panel.addEventListener('click', (e) => this._onClick(e, panel, root));
+        // The "⋯" menu of a step closes after choosing an item and on a click anywhere else
+        panel.addEventListener('click', (e) => {
+            panel.querySelectorAll('.vn-seqed-menu[open]').forEach(menu => {
+                if (e.target.closest('.vn-menu-item') || !menu.contains(e.target)) menu.removeAttribute('open');
+            });
+        });
         panel.addEventListener('change', (e) => this._onChange(e, panel, root));
         panel.addEventListener('keydown', (e) => {
             // Enter in a settings input would submit the surrounding DialogV2 form

@@ -7,7 +7,7 @@ import { SoundTestApp } from './sound-test.js';
 import { registerSettings, applyNameplateImage } from './settings.js';
 import { VisualNovelScene } from './visual-dialog/visual-novel-scene.js';
 import { VNPresets } from './visual-dialog/vn-state.js';
-import { escapeHtml } from './visual-dialog/vn-id-utils.js';
+import { escapeHtml, presetScenes } from './visual-dialog/vn-id-utils.js';
 
 // ============================================================
 // Scene Control Buttons
@@ -191,7 +191,7 @@ window.openScenePresets = async () => {
     }
 
     const allPresets = await VNPresets.getSorted();
-    const scenePresets = allPresets.filter(p => p.sceneId === currentScene.id);
+    const scenePresets = allPresets.filter(p => presetScenes(p).some(s => s.id === currentScene.id));
 
     const gmOnlyLabel = game.i18n.localize('vn.dialog.gmOnlyLabel');
     const gmOnlyTitle = game.i18n.localize('vn.dialog.gmOnlyToggleTitle');

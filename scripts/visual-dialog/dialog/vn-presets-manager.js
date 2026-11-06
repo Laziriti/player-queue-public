@@ -4,20 +4,28 @@
 
 import { VNPresets, VNFolders, MODULE_ID } from '../vn-state.js';
 import { countPendingMigrations } from '../vn-migrations.js';
-import { buildActorPipsHtml, groupPresetsByScene, escapeHtml } from '../vn-id-utils.js';
+import { buildActorPipsHtml, groupPresetsByScene, escapeHtml, presetScenes, presetSceneNames } from '../vn-id-utils.js';
 import { VNSequenceEditor } from './vn-sequence-editor.js';
+import { VNScenePicker } from './vn-scene-picker.js';
+import { VISUAL_LABELS, VISUAL_ICONS } from '../visual-effects/atmosphere/config/visual-types.js';
+import { PARTICLE_LABELS, PARTICLE_ICONS } from '../visual-effects/atmosphere/config/particle-types.js';
 
 const esc = escapeHtml;
 
 const FOLDER_STORAGE_KEY = 'player-queue.vn-presets-folder';
+// Foundry keeps a client-scope setting in localStorage under "<module>.<key>" (JSON) and only after it was set explicitly
+const VIEW_SETTING_STORAGE_KEY = `${MODULE_ID}.vnPresetsViewMode`;
 
 export class VNPresetsManager {
     constructor() {
         this._sequenceEditor = new VNSequenceEditor(this);
         this.searchQuery = '';
         this.sceneFilter = false;
-        this.tagFilter = null;
-        this.viewMode = 'list';
+        this.tagFilters = new Set();   // tags picked in the tag picker
+        this.tagMatch = 'all';         // 'all' = a preset must have every picked tag, 'any' = at least one
+        this._tagCounts = new Map();   // tag -> number of presets, rebuilt from the list by _refreshTagFilterBar
+        this._tagOutsideListener = null;
+        this.viewMode = 'cards';
         this.sortMode = 'newest';
         this.groupMode = 'scenes';
         this.selectedPresetId = null;
@@ -41,6 +49,22 @@ export class VNPresetsManager {
         } catch { return null; }
     }
 
+    /**
+     * Cards are the default look. The setting is registered with the default "list", so a stored "list" only counts as
+     * the user's own choice when the client storage really holds the entry; otherwise it is just that old default.
+     */
+    _restoreViewMode() {
+        try {
+            const raw = localStorage.getItem(VIEW_SETTING_STORAGE_KEY);
+            if (raw != null) {
+                const stored = JSON.parse(raw);
+                if (stored === 'list' || stored === 'cards') return stored;
+            }
+        } catch {}
+        try { if (game.settings.get(MODULE_ID, 'vnPresetsViewMode') === 'cards') return 'cards'; } catch {}
+        return 'cards';
+    }
+
     _confirmDialog(title, content, yesLabel, yesIcon) {
         return foundry.applications.api.DialogV2.confirm({
             window: { title },
@@ -53,7 +77,7 @@ export class VNPresetsManager {
 
     generateTab(sorted) {
         try { this.groupMode = game.settings.get(MODULE_ID, 'vnPresetsGroupMode') || 'scenes'; } catch {}
-        try { this.viewMode = game.settings.get(MODULE_ID, 'vnPresetsViewMode') || 'list'; } catch {}
+        this.viewMode = this._restoreViewMode();
         this.selectedPresetId = null;
         this._currentFolderId = this._restoreFolderId();
         return this._generateSection(sorted);
@@ -71,7 +95,7 @@ export class VNPresetsManager {
         return `<div class="vn-presets-content">
             <div class="vn-presets-split">
                 <div class="vn-presets-list-pane">
-                    <div class="vn-preset-save-row">
+                    <div class="vn-preset-save-row" role="group" aria-label="${esc(game.i18n.localize('vn.dialog.btnSavePreset'))}">
                         <input type="text" id="vn-preset-name" placeholder="${game.i18n.localize('vn.dialog.presetNamePlaceholder')}">
                         <button type="button" class="vn-btn vn-btn-xs vn-preset-scene-pin${hasCurrent ? ' active' : ''}" id="vn-preset-scene-pin"
                             title="${hasCurrent ? game.i18n.format('vn.dialog.pinToScene', {sceneName: currentSceneName}) : game.i18n.localize('vn.dialog.noActiveScenePin')}"
@@ -91,15 +115,41 @@ export class VNPresetsManager {
                             <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this.viewMode === 'list' ? 'active' : ''}" data-view="list" title="${game.i18n.localize('vn.dialog.viewList')}"><i class="fas fa-list"></i><span class="vn-btn-label">${game.i18n.localize('vn.dialog.viewList')}</span></button>
                             <button type="button" class="vn-btn vn-btn-xs vn-preset-view-btn ${this.viewMode === 'cards' ? 'active' : ''}" data-view="cards" title="${game.i18n.localize('vn.dialog.viewCards')}"><i class="fas fa-th-large"></i><span class="vn-btn-label">${game.i18n.localize('vn.dialog.viewCards')}</span></button>
                         </div>
-                        <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter${this.sceneFilter ? ' active' : ''}" title="${game.i18n.format('vn.dialog.filterBySceneTitle', {sceneName: currentSceneName || game.i18n.localize('vn.dialog.thisSceneDefault')})}" data-scene-id="${currentSceneId || ''}">
-                            <i class="fas fa-map"></i> ${game.i18n.localize('vn.dialog.thisScene')}
-                        </button>
                         <select class="vn-preset-sort" title="${game.i18n.localize('vn.dialog.sortingTitle')}">
                             <option value="newest"${this.sortMode === 'newest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortNewest')}</option>
                             <option value="oldest"${this.sortMode === 'oldest' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortOldest')}</option>
                             <option value="az"${this.sortMode === 'az' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortAZ')}</option>
                             <option value="za"${this.sortMode === 'za' ? ' selected' : ''}>${game.i18n.localize('vn.dialog.sortZA')}</option>
                         </select>
+                        <button type="button" class="vn-btn vn-btn-sm vn-preset-scene-filter${this.sceneFilter ? ' active' : ''}" title="${game.i18n.format('vn.dialog.filterBySceneTitle', {sceneName: currentSceneName || game.i18n.localize('vn.dialog.thisSceneDefault')})}" data-scene-id="${currentSceneId || ''}">
+                            <i class="fas fa-map"></i><span class="vn-preset-scene-filter-label">${game.i18n.localize('vn.dialog.thisScene')}</span>
+                        </button>
+                        <div class="vn-preset-tag-bar" hidden>
+                            <button type="button" class="vn-btn vn-btn-xs vn-tag-picker-btn" title="${esc(game.i18n.localize('vn.dialog.tagPickerTitle'))}">
+                                <i class="fas fa-tags"></i><span class="vn-tag-picker-btn-label">${game.i18n.localize('vn.dialog.tagPickerBtn')}</span> <span class="vn-badge vn-tag-picker-count" hidden></span> <i class="fas fa-caret-down"></i>
+                            </button>
+                            <div class="vn-tag-bar-picked" hidden>
+                                <div class="vn-tag-bar-active"></div>
+                                <button type="button" class="vn-btn vn-btn-xs vn-tag-bar-clear" title="${esc(game.i18n.localize('vn.dialog.tagClearTitle'))}" hidden><i class="fas fa-xmark"></i></button>
+                            </div>
+                            <div class="vn-tag-picker" hidden>
+                                <div class="vn-tag-picker-head">
+                                    <label class="vn-tag-picker-search">
+                                        <i class="fas fa-magnifying-glass"></i>
+                                        <input type="text" class="vn-tag-picker-input" placeholder="${esc(game.i18n.localize('vn.dialog.tagPickerSearch'))}" autocomplete="off" spellcheck="false">
+                                    </label>
+                                    <div class="vn-tag-match" title="${esc(game.i18n.localize('vn.dialog.tagMatchTitle'))}">
+                                        <button type="button" class="vn-btn vn-btn-xs vn-tag-match-btn" data-match="all">${game.i18n.localize('vn.dialog.tagMatchAll')}</button>
+                                        <button type="button" class="vn-btn vn-btn-xs vn-tag-match-btn" data-match="any">${game.i18n.localize('vn.dialog.tagMatchAny')}</button>
+                                    </div>
+                                </div>
+                                <div class="vn-tag-picker-list"></div>
+                                <div class="vn-tag-picker-foot">
+                                    <span class="vn-tag-picker-total"></span>
+                                    <button type="button" class="vn-btn vn-btn-xs vn-tag-picker-reset">${game.i18n.localize('vn.dialog.tagPickerReset')}</button>
+                                </div>
+                            </div>
+                        </div>
                         <span class="vn-badge vn-preset-count" title="${game.i18n.localize('vn.dialog.savedPresetsHeader')}">${sorted.length}</span>
                         <details class="vn-menu vn-preset-menu">
                             <summary class="vn-btn vn-btn-xs" title="${game.i18n.localize('vn.dialog.presetsMenu')}"><i class="fas fa-ellipsis"></i></summary>
@@ -111,15 +161,9 @@ export class VNPresetsManager {
                             </div>
                         </details>
                     </div>
-                    <div class="vn-preset-tag-bar" hidden>
-                        <input type="text" class="vn-tag-bar-search" placeholder="${game.i18n.localize('vn.dialog.tagBarSearch') || '…'}" autocomplete="off" spellcheck="false">
-                        <div class="vn-tag-bar-chips"></div>
-                    </div>
                     <div class="vn-preset-list${this.viewMode === 'cards' ? ' vn-preset-list--cards' : ''}${isFolder ? ' vn-preset-list--folder-mode' : ''}">${itemsHtml}</div>
                 </div>
-                <div class="vn-preset-detail-panel">
-                    <div class="vn-panel-empty-hint"><i class="fas fa-hand-point-left"></i><span>${game.i18n.localize('vn.dialog.panelSelectHint')}</span></div>
-                </div>
+                <div class="vn-preset-detail-panel" hidden></div>
             </div>
         </div>`;
     }
@@ -137,6 +181,21 @@ export class VNPresetsManager {
             case 'za':     return copy.sort((a, b) => (b.name || '').localeCompare(a.name || '', 'ru'));
             default:       return copy.sort((a, b) => (b.createdAt || b.savedAt || 0) - (a.createdAt || a.savedAt || 0));
         }
+    }
+
+    // The sort mode orders the scene groups too (they were always alphabetical, so the selector looked dead); "no scene" stays last
+    _sortSceneGroups(groups) {
+        const time = p => p.createdAt || p.savedAt || 0;
+        const newest = g => Math.max(...g.presets.map(time));
+        const oldest = g => Math.min(...g.presets.map(time));
+        const byKey = (a, b) => a.key.localeCompare(b.key, 'ru');
+        const cmp = {
+            az: byKey,
+            za: (a, b) => byKey(b, a),
+            oldest: (a, b) => oldest(a) - oldest(b),
+            newest: (a, b) => newest(b) - newest(a),
+        }[this.sortMode] ?? byKey;
+        return [...groups].sort((a, b) => (!a.key) - (!b.key) || cmp(a, b));
     }
 
     _buildFolderViewHtml(allPresets) {
@@ -222,7 +281,7 @@ export class VNPresetsManager {
             : folderItems;
 
         // Preset items in current folder (cards are draggable for drop-to-folder)
-        const folderPresets = allPresets.filter(p => this._folderOf(p) === currentId);
+        const folderPresets = this._sortPresets(allPresets.filter(p => this._folderOf(p) === currentId));
         const presetsHtml = folderPresets.length
             ? (isCards
                 ? `<div class="vn-preset-cards">${folderPresets.map(p => this._buildPresetCardHtml(p, true)).join('')}</div>`
@@ -243,7 +302,7 @@ export class VNPresetsManager {
         if (!sortedPresets.length) return '';
         sortedPresets = this._sortPresets(sortedPresets);
         const isCards = this.viewMode === 'cards';
-        const hasAnyScene = sortedPresets.some(p => p.sceneName);
+        const hasAnyScene = sortedPresets.some(p => presetSceneNames(p).length);
 
         // Items are always draggable: besides dropping into folders they can be dropped into a composite preset's step list
         if (!hasAnyScene) {
@@ -252,7 +311,7 @@ export class VNPresetsManager {
                 : sortedPresets.map(p => this._buildPresetListItemHtml(p, false, true)).join('');
         }
 
-        return groupPresetsByScene(sortedPresets).map(({ key, presets: group }) => {
+        return this._sortSceneGroups(groupPresetsByScene(sortedPresets)).map(({ key, presets: group }) => {
             const label = esc(key || game.i18n.localize('vn.dialog.noScene'));
             const items = isCards
                 ? `<div class="vn-preset-cards">${group.map(p => this._buildPresetCardHtml(p, true)).join('')}</div>`
@@ -285,9 +344,7 @@ export class VNPresetsManager {
     }
 
     _buildPresetListItemHtml(p, grouped = false, draggable = false) {
-        const sceneTag = (!grouped && p.sceneName)
-            ? `<span class="vn-preset-scene-tag"><i class="fas fa-map-pin"></i>${esc(p.sceneName)}</span>`
-            : '';
+        const sceneTag = grouped ? '' : this._sceneTagHtml(p);
         const createdStr = this._formatDate(p.createdAt || p.savedAt);
         const updatedStr = (p.updatedAt && p.updatedAt !== p.createdAt) ? this._formatDate(p.updatedAt) : null;
         const dateText = updatedStr
@@ -300,25 +357,110 @@ export class VNPresetsManager {
         const seqTag = isSeq
             ? `<span class="vn-preset-seq-tag" title="${game.i18n.format('vn.sequence.badgeTitle', { count: p.steps?.length ?? 0 })}"><i class="fas fa-film"></i> ${game.i18n.localize('vn.sequence.tagLabel')} · ${p.steps?.length ?? 0}</span>`
             : '';
-        const metaHtml = (sceneTag || dateText || versionHtml || migrationHtml || seqTag)
-            ? `<div class="vn-preset-meta">${seqTag}${sceneTag}<span class="vn-preset-dates">${dateText}</span>${versionHtml}${migrationHtml}</div>`
-            : '';
-        const tagsHtml = p.tags?.length
-            ? `<div class="vn-preset-tags">${p.tags.map(t => `<span class="vn-tag-chip" data-tag="${esc(t)}">${esc(t)}</span>`).join('')}</div>`
-            : '';
-        return `<div class="vn-preset-item${isSeq ? ' vn-preset-item--seq' : ''}" data-preset="${p.id}" data-preset-name="${esc(p.name)}" data-scene-id="${p.sceneId || ''}" data-tags="${esc((p.tags || []).join(','))}"${draggable ? ' draggable="true"' : ''}>
+        // One line under the name: kind, effect/music hints, scene, date, then the tags in whatever room is left
+        const shortDate = this._formatDate(p.updatedAt || p.createdAt || p.savedAt).split(' ')[0];
+        const dateHtml = shortDate ? `<span class="vn-preset-dates" title="${esc(dateText)}"><i class="fas fa-clock"></i>${shortDate}</span>` : '';
+        const metaHtml = `<div class="vn-preset-meta">${seqTag}${this._hintsHtml(p)}${sceneTag}${dateHtml}${versionHtml}${migrationHtml}</div>`;
+        const tagsHtml = this._presetTagsHtml(p);
+        const bgSrc = this._previewSrc(p);
+        const thumbHtml = bgSrc
+            ? `<img src="${esc(bgSrc)}" loading="lazy" decoding="async" alt="" draggable="false">`
+            : '<i class="fas fa-film"></i>';
+        return `<div class="vn-preset-item${isSeq ? ' vn-preset-item--seq' : ''}" data-preset="${p.id}" data-preset-name="${esc(p.name)}" data-scene-ids="${this._sceneIdsAttr(p)}" data-tags="${esc((p.tags || []).join(','))}"${draggable ? ' draggable="true"' : ''}>
+            <div class="vn-preset-thumb">${thumbHtml}</div>
             <div class="vn-preset-info">
                 <span class="vn-preset-name" title="${esc(p.name)}">${esc(p.name)}</span>
-                ${metaHtml}${tagsHtml}
+                <div class="vn-preset-sub">${metaHtml}${tagsHtml}</div>
             </div>
             <div class="vn-preset-actions">${this._presetActionButtons(p.id)}</div>
         </div>`;
     }
 
+    _previewSrc(p) {
+        return p.thumbnailData || (p.background && p.background !== 'none' ? p.background : null);
+    }
+
+    /** Icons for what the scene brings along: visual effect, particles, music. Empty when it has none of them. */
+    _hintsHtml(p) {
+        const loc = (k) => game.i18n.localize(k);
+        const one = (cls, icon, title) => `<span class="vn-preset-hint ${cls}" title="${esc(title)}"><i class="fas ${icon}"></i></span>`;
+        const visual = String(p.visualEffect || 'none').split(':')[0];
+        const particle = String(p.particleEffect || 'none').split(':')[0];
+        const hints = [];
+        if (visual !== 'none' && VISUAL_LABELS[visual]) hints.push(one('--visual', VISUAL_ICONS[visual] || 'fa-wand-magic-sparkles', loc(VISUAL_LABELS[visual])));
+        if (particle !== 'none' && PARTICLE_LABELS[particle]) hints.push(one('--particle', PARTICLE_ICONS[particle] || 'fa-circle', loc(PARTICLE_LABELS[particle])));
+        if (p.musicUuid) hints.push(one('--music', 'fa-music', loc('vn.dialog.hintMusic')));
+        return hints.length ? `<span class="vn-preset-hints">${hints.join('')}</span>` : '';
+    }
+
+    /** First linked scene (alphabetically) and "+N" for the rest; the tooltip lists them all */
+    _sceneTagHtml(p) {
+        const names = presetSceneNames(p);
+        if (!names.length) return '';
+        const more = names.length > 1 ? `<span class="vn-preset-scene-more">+${names.length - 1}</span>` : '';
+        return `<span class="vn-preset-scene-tag" title="${esc(names.join(', '))}"><i class="fas fa-map-pin"></i><span class="vn-preset-scene-name">${esc(names[0])}</span>${more}</span>`;
+    }
+
+    _sceneIdsAttr(p) {
+        return esc(presetScenes(p).map(s => s.id).filter(Boolean).join(','));
+    }
+
+    /** Every tag of a preset in one row; _fitPresetTags then hides the ones that do not fit and adds "+N" */
+    _presetTagsHtml(p) {
+        if (!p.tags?.length) return '';
+        return `<div class="vn-preset-tags">${p.tags.map(t => `<span class="vn-tag-chip" data-tag="${esc(t)}" title="${esc(t)}"><span>${esc(t)}</span></span>`).join('')}</div>`;
+    }
+
+    /**
+     * Keeps the tags under every visible list item / card to a single row: shows as many as fit (the first one is always shown,
+     * shortened with an ellipsis if it alone is wider than the row) and a "+N" badge for the rest, whose tooltip lists them.
+     * Three passes (reset, measure, apply) so the whole list costs one layout, not one per item.
+     */
+    _fitPresetTags(root) {
+        const rows = [...root.querySelectorAll('.vn-preset-tags')].filter(el => el.offsetParent !== null && el.clientWidth > 0);
+        if (!rows.length) return;
+
+        for (const el of rows) {
+            el.querySelector('.vn-preset-tags-more')?.remove();
+            el.querySelectorAll('.vn-tag-overflow').forEach(c => c.classList.remove('vn-tag-overflow'));
+            el.classList.add('is-measuring');
+            const more = document.createElement('span');
+            more.className = 'vn-preset-tags-more';
+            more.textContent = `+${el.querySelectorAll('.vn-tag-chip').length}`; // the widest the badge can get
+            el.appendChild(more);
+        }
+
+        const plans = rows.map(el => {
+            const room = el.clientWidth - 1;
+            const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+            const chips = [...el.querySelectorAll('.vn-tag-chip')];
+            const moreW = el.querySelector('.vn-preset-tags-more').offsetWidth;
+            let used = 0, shown = 0;
+            for (let i = 0; i < chips.length; i++) {
+                const next = used + (i ? gap : 0) + Math.min(chips[i].offsetWidth, room);
+                const needsBadge = i < chips.length - 1;
+                if (i > 0 && next + (needsBadge ? gap + moreW : 0) > room) break;
+                used = next;
+                shown = i + 1;
+            }
+            return { el, chips, shown };
+        });
+
+        for (const { el, chips, shown } of plans) {
+            el.classList.remove('is-measuring');
+            const more = el.querySelector('.vn-preset-tags-more');
+            if (shown >= chips.length) { more.remove(); continue; }
+            const hidden = chips.slice(shown);
+            hidden.forEach(c => c.classList.add('vn-tag-overflow'));
+            more.textContent = `+${hidden.length}`;
+            more.title = hidden.map(c => c.dataset.tag).join(', ');
+        }
+    }
+
     _buildPresetCardHtml(p, draggable = false) {
-        const bgSrc = p.thumbnailData || (p.background && p.background !== 'none' ? p.background : null);
+        const bgSrc = this._previewSrc(p);
         const imgHtml = bgSrc
-            ? `<img class="vn-preset-card-img" src="${esc(bgSrc)}" loading="lazy" decoding="async" alt="">`
+            ? `<img class="vn-preset-card-img" src="${esc(bgSrc)}" loading="lazy" decoding="async" alt="" draggable="false">`
             : `<div class="vn-preset-card-placeholder"><i class="fas fa-film"></i></div>`;
 
         const allIds = [...(p.leftIds || []), ...(p.centerIds || []), ...(p.rightIds || [])];
@@ -329,19 +471,17 @@ export class VNPresetsManager {
             ? `<div class="vn-preset-card-ver --migration">${migrationIcon}${p.version ? `v${p.version}` : ''}</div>`
             : '';
 
-        const MAX_CARD_TAGS = 3;
-        const visibleTags = (p.tags || []).slice(0, MAX_CARD_TAGS);
-        const hiddenCount = (p.tags?.length || 0) - visibleTags.length;
-        const tagsHtml = visibleTags.length
-            ? `<div class="vn-preset-tags">${visibleTags.map(t => `<span class="vn-tag-chip" data-tag="${esc(t)}">${esc(t)}</span>`).join('')}${hiddenCount > 0 ? `<span class="vn-preset-tags-more">+${hiddenCount}</span>` : ''}</div>`
-            : '';
+        const tagsHtml = this._presetTagsHtml(p);
+        const hintsHtml = this._hintsHtml(p);
+        // Only outside the scene grouping (folders / search), where nothing else says which scene the card belongs to
+        const sceneTag = this.groupMode === 'folders' ? this._sceneTagHtml(p) : '';
 
         const isSeq = VNPresets.isSequence(p);
         const seqHtml = isSeq
             ? `<div class="vn-preset-card-seq" title="${game.i18n.format('vn.sequence.badgeTitle', { count: p.steps?.length ?? 0 })}"><i class="fas fa-film"></i> ${p.steps?.length ?? 0}</div>`
             : '';
 
-        return `<div class="vn-preset-card${isSeq ? ' vn-preset-card--seq' : ''}" data-preset="${p.id}" data-preset-name="${esc(p.name)}" data-scene-id="${p.sceneId || ''}" data-tags="${esc((p.tags || []).join(','))}"${draggable ? ' draggable="true"' : ''}>
+        return `<div class="vn-preset-card${isSeq ? ' vn-preset-card--seq' : ''}" data-preset="${p.id}" data-preset-name="${esc(p.name)}" data-scene-ids="${this._sceneIdsAttr(p)}" data-tags="${esc((p.tags || []).join(','))}"${draggable ? ' draggable="true"' : ''}>
             <div class="vn-preset-card-poster">
                 ${imgHtml}
                 ${pipsHtml}
@@ -351,9 +491,10 @@ export class VNPresetsManager {
                     <div class="vn-preset-card-name" title="${esc(p.name)}">${esc(p.name)}</div>
                 </div>
                 <div class="vn-preset-card-overlay">
-                    <button type="button" class="vn-preset-card-launch vn-preset-action" data-action="launch" data-preset="${p.id}" title="${game.i18n.localize('vn.dialog.presetActionLaunch')}"><i class="fas fa-play"></i></button>
+                    <button type="button" class="vn-preset-card-launch vn-preset-action" data-action="launch" data-preset="${p.id}" title="${game.i18n.localize('vn.dialog.presetActionLaunch')}" aria-label="${game.i18n.localize('vn.dialog.presetActionLaunch')}"><i class="fas fa-play"></i></button>
                 </div>
             </div>
+            ${hintsHtml ? `<div class="vn-preset-card-sub">${hintsHtml}${sceneTag}</div>` : ''}
             ${tagsHtml}
         </div>`;
     }
@@ -372,16 +513,17 @@ export class VNPresetsManager {
     _applyPresetFilters(root) {
         const q = this.searchQuery.toLowerCase();
         const filterScene = this.sceneFilter;
-        const activeTag = this.tagFilter;
+        const pickedTags = [...this.tagFilters];
         const currentSceneId = root.querySelector('.vn-preset-scene-filter')?.dataset.sceneId || null;
         let anyVisible = false;
 
         root.querySelectorAll('.vn-preset-item, .vn-preset-card').forEach(item => {
             const name = (item.dataset.presetName || '').toLowerCase();
             const itemTags = (item.dataset.tags || '').split(',').filter(Boolean);
-            const matchSearch = !q || name.includes(q) || itemTags.some(t => t.includes(q));
-            const matchScene = !filterScene || item.dataset.sceneId === currentSceneId;
-            const matchTag = !activeTag || itemTags.includes(activeTag);
+            const matchSearch = !q || name.includes(q) || itemTags.some(t => t.toLowerCase().includes(q));
+            const matchScene = !filterScene || (item.dataset.sceneIds || '').split(',').includes(currentSceneId);
+            const matchTag = !pickedTags.length
+                || (this.tagMatch === 'all' ? pickedTags.every(t => itemTags.includes(t)) : pickedTags.some(t => itemTags.includes(t)));
             const visible = matchSearch && matchScene && matchTag;
             item.style.display = visible ? '' : 'none';
             if (visible) anyVisible = true;
@@ -392,6 +534,8 @@ export class VNPresetsManager {
             const hasVisible = [...group.querySelectorAll('.vn-preset-item, .vn-preset-card')].some(c => c.style.display !== 'none');
             group.style.display = hasVisible ? '' : 'none';
         });
+
+        this._fitPresetTags(root);
 
         const list = root.querySelector('.vn-preset-list');
         if (!list) return;
@@ -408,17 +552,15 @@ export class VNPresetsManager {
         }
     }
 
-    static PRESET_ACTIONS = [
-        { action: 'launch', icon: 'fa-play',  extra: 'vn-btn-accent', title: 'vn.dialog.presetActionLaunch' },
-        { action: 'delete', icon: 'fa-trash', extra: 'vn-btn-danger',  title: 'vn.dialog.presetActionDelete' },
-    ];
-
-    _presetBtn(action, presetId, icon, extraClass = '', title = '') {
-        return `<button type="button" class="vn-btn vn-btn-xs ${extraClass} vn-preset-action" data-action="${action}" data-preset="${presetId}" title="${title}"><i class="fas ${icon}"></i></button>`;
-    }
-
+    /**
+     * A list row has one obvious action, the big "launch" button; deleting is a small, quiet icon next to it
+     * (still behind a confirmation). Everything else lives in the detail panel.
+     */
     _presetActionButtons(presetId) {
-        return VNPresetsManager.PRESET_ACTIONS.map(a => this._presetBtn(a.action, presetId, a.icon, a.extra, game.i18n.localize(a.title))).join('');
+        const launch = game.i18n.localize('vn.dialog.presetActionLaunch');
+        const del = game.i18n.localize('vn.dialog.presetActionDelete');
+        return `<button type="button" class="vn-btn vn-btn-accent vn-preset-action vn-preset-launch" data-action="launch" data-preset="${presetId}" title="${launch}" aria-label="${launch}"><i class="fas fa-play"></i><span class="vn-preset-launch-label">${game.i18n.localize('vn.dialog.presetLaunchShort')}</span></button>`
+            + `<button type="button" class="vn-btn vn-btn-xs vn-btn-danger vn-preset-action vn-preset-delete" data-action="delete" data-preset="${presetId}" title="${del}" aria-label="${del}"><i class="fas fa-trash"></i></button>`;
     }
 
     attachListeners(root, hooks = {}) {
@@ -448,41 +590,18 @@ export class VNPresetsManager {
             this._applyPresetFilters(root);
         });
 
-        root.querySelector('.vn-preset-tag-bar')?.addEventListener('click', (e) => {
-            const chip = e.target.closest('.vn-tag-filter-chip');
-            if (!chip) return;
-            const tag = chip.dataset.tag;
-            this.tagFilter = this.tagFilter === tag ? null : tag;
-            this._refreshTagFilterBar(root);
-            this._applyPresetFilters(root);
-        });
-
-        root.querySelector('.vn-preset-tag-bar')?.addEventListener('input', (e) => {
-            if (!e.target.classList.contains('vn-tag-bar-search')) return;
-            this._refreshTagFilterBar(root);
-        });
-
-        root.querySelector('.vn-preset-tag-bar')?.addEventListener('contextmenu', async (e) => {
-            const chip = e.target.closest('.vn-tag-filter-chip');
-            if (!chip) return;
-            e.preventDefault();
-            const tag = chip.dataset.tag;
-            const confirmed = await this._confirmDialog(
-                game.i18n.localize('vn.dialog.deleteTagGlobalTitle'),
-                `<p>${game.i18n.format('vn.dialog.deleteTagGlobalConfirm', { tag: esc(tag) })}</p>`,
-                game.i18n.localize('vn.dialog.btnDelete'), 'fas fa-trash'
-            );
-            if (!confirmed) return;
-            const presets = await VNPresets.getAll();
-            const affected = Object.values(presets).filter(p => (p.tags || []).includes(tag));
-            for (const p of affected) {
-                await VNPresets.setTags(p.id, (p.tags || []).filter(t => t !== tag));
-            }
-            if (this.tagFilter === tag) this.tagFilter = null;
-            this.refresh(root);
-        });
-
+        this._attachTagBarListeners(root);
         this._refreshTagFilterBar(root);
+
+        // The tag rows depend on the list width (window resize, panel open/close, switching to the tab, list <-> cards)
+        const listEl = root.querySelector('.vn-preset-list');
+        if (listEl && typeof ResizeObserver !== 'undefined') {
+            let frame = 0;
+            new ResizeObserver(() => {
+                cancelAnimationFrame(frame);
+                frame = requestAnimationFrame(() => this._fitPresetTags(root));
+            }).observe(listEl);
+        }
 
         // "⋯" menu: closes after choosing an item and when clicking anywhere else
         root.addEventListener('click', (e) => {
@@ -573,8 +692,9 @@ export class VNPresetsManager {
             const attachScene = root.querySelector('#vn-preset-scene-pin')?.classList.contains('active') ?? true;
             const gatheredState = this._hooks.gatherState(root);
             const saveOpts = this.groupMode === 'folders' ? { folderId: this.currentFolderId } : {};
-            await VNPresets.save(name, gatheredState, attachScene, saveOpts);
+            const created = await VNPresets.save(name, gatheredState, attachScene, saveOpts);
             this._hooks.syncPresetActors?.(gatheredState.presetActors);
+            this._hooks.onPresetCreated?.(created);
             nameInput.value = '';
             this.refresh(root);
         });
@@ -724,11 +844,8 @@ export class VNPresetsManager {
             }
 
             const tagChip = e.target.closest('.vn-tag-chip[data-tag]');
-            if (tagChip && !tagChip.closest('.vn-tag-popover')) {
-                const tag = tagChip.dataset.tag;
-                this.tagFilter = this.tagFilter === tag ? null : tag;
-                this._refreshTagFilterBar(root);
-                this._applyPresetFilters(root);
+            if (tagChip) {
+                this._toggleTagFilter(root, tagChip.dataset.tag);
                 return;
             }
 
@@ -818,9 +935,6 @@ export class VNPresetsManager {
                 this.refresh(root, sorted);
                 break;
             }
-            case 'tags':
-                await this._handlePresetTags(btn, presetId, root);
-                break;
             case 'rename':
                 this._handlePresetRename(btn, presetId, root);
                 break;
@@ -834,6 +948,16 @@ export class VNPresetsManager {
                 if (!confirmed) return;
                 await VNPresets.delete(presetId);
                 this.refresh(root);
+                break;
+            }
+            case 'duplicate': {
+                const source = await VNPresets.load(presetId);
+                if (!source) return;
+                const copy = await VNPresets.duplicate(presetId, game.i18n.format('vn.dialog.presetCopyName', { name: source.name }));
+                if (!copy) return;
+                await this.refresh(root);
+                await this._selectPreset(root, copy.id);
+                ui.notifications.info(game.i18n.format('vn.dialog.presetDuplicated', { name: copy.name }));
                 break;
             }
             case 'macro': {
@@ -885,39 +1009,12 @@ export class VNPresetsManager {
             case 'assign': {
                 const preset = await VNPresets.load(presetId);
                 if (!preset) return;
-                const curId = canvas?.scene?.id ?? null;
-                const curName = canvas?.scene?.name ?? null;
-                const alreadyOnCurrent = curId && curId === preset.sceneId;
-
-                const buttons = [];
-                if (curId && !alreadyOnCurrent)
-                    buttons.push({ action: 'assign', label: game.i18n.format('vn.dialog.assignToSceneLabel', {sceneName: curName}), icon: 'fas fa-map-pin', default: true });
-                if (preset.sceneId)
-                    buttons.push({ action: 'unlink', label: game.i18n.localize('vn.dialog.unlinkFromScene'), icon: 'fas fa-link-slash', default: !curId || !!alreadyOnCurrent });
-                buttons.push({ action: 'cancel', label: game.i18n.localize('vn.dialog.btnCancel'), icon: 'fas fa-times' });
-
-                if (!curId && !preset.sceneId) { ui.notifications.warn(game.i18n.localize('vn.dialog.noActiveSceneForPin')); return; }
-
-                const presetSceneHtml = preset.sceneName ? `<p style="margin:4px 0">${game.i18n.format('vn.dialog.presetSceneLabel', {sceneName: esc(preset.sceneName)})}</p>` : '';
-                const curSceneHtml = curName ? `<p style="margin:4px 0">${game.i18n.format('vn.dialog.currentSceneLabel', {sceneName: esc(curName)})}</p>` : '';
-
-                const choice = await new Promise(resolve => {
-                    const dlg = new foundry.applications.api.DialogV2({
-                        window: { title: game.i18n.format('vn.dialog.changeSceneDialogTitle', {presetName: preset.name}) },
-                        classes: ['vn-confirm-dialog'],
-                        content: `<div style="padding:6px 0">${presetSceneHtml}${curSceneHtml}</div>`,
-                        buttons,
-                        rejectClose: false,
-                        submit: result => resolve(result),
-                    });
-                    dlg.addEventListener('close', () => resolve('cancel'), { once: true });
-                    dlg.render({ force: true });
+                const chosen = await VNScenePicker.pick({
+                    title: game.i18n.format('vn.scenePicker.title', { presetName: preset.name }),
+                    linked: presetScenes(preset),
                 });
-
-                if (!choice || choice === 'cancel') return;
-                const sorted = choice === 'assign'
-                    ? await VNPresets.setScene(presetId, curId, curName)
-                    : await VNPresets.setScene(presetId, null, null);
+                if (!chosen) return;
+                const sorted = await VNPresets.setScenes(presetId, chosen);
                 this.refresh(root, sorted);
                 this._hooks.onChanged?.(root);
                 break;
@@ -969,85 +1066,197 @@ export class VNPresetsManager {
         input.addEventListener('blur', commit);
     }
 
-    async _handlePresetTags(btn, presetId, root) {
-        root.querySelector('.vn-tag-popover')?.remove();
+    // ══════════════════════════════════════════════════════════
+    // Tag filter: button + active chips + picker window
+    // ══════════════════════════════════════════════════════════
 
-        const preset = await VNPresets.load(presetId);
-        if (!preset) return;
-        const tags = [...(preset.tags || [])];
+    static TAG_PICKER_MAX_ROWS = 300;
 
-        const popover = document.createElement('div');
-        popover.className = 'vn-tag-popover';
-
-        const render = () => {
-            popover.innerHTML = `
-                <div class="vn-tag-popover-chips">
-                    ${tags.map((t, i) => `<span class="vn-tag-chip vn-tag-chip--rm"><span>${esc(t)}</span><button type="button" class="vn-tag-rm-btn" data-index="${i}" title="Remove">×</button></span>`).join('')}
-                </div>
-                <div class="vn-tag-popover-input">
-                    <input type="text" class="vn-tag-input" placeholder="New tag…" autocomplete="off" spellcheck="false">
-                    <button type="button" class="vn-btn vn-btn-xs vn-tag-add-btn" title="Add"><i class="fas fa-plus"></i></button>
-                </div>`;
-            popover.querySelector('.vn-tag-input')?.focus();
-        };
-
-        const addTag = () => {
-            const input = popover.querySelector('.vn-tag-input');
-            const val = input.value.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 32);
-            if (val && !tags.includes(val)) { tags.push(val); render(); }
-            else input.value = '';
-        };
-
-        const commit = async () => {
-            document.removeEventListener('mousedown', onOutside, true);
-            const sorted = await VNPresets.setTags(presetId, tags);
-            popover.remove();
-            if (sorted) this.refresh(root, sorted);
-        };
-
-        const onOutside = (e) => {
-            if (!popover.contains(e.target) && e.target !== btn) commit();
-        };
-
-        popover.addEventListener('click', (e) => {
-            const rmBtn = e.target.closest('.vn-tag-rm-btn');
-            if (rmBtn) { tags.splice(Number(rmBtn.dataset.index), 1); render(); return; }
-            if (e.target.closest('.vn-tag-add-btn')) addTag();
+    /** Tags present in the list with the number of presets that carry each */
+    _countListTags(root) {
+        const counts = new Map();
+        root.querySelectorAll('.vn-preset-item[data-tags], .vn-preset-card[data-tags]').forEach(item => {
+            for (const t of (item.dataset.tags || '').split(',').filter(Boolean)) counts.set(t, (counts.get(t) || 0) + 1);
         });
-        popover.addEventListener('keydown', (e) => {
-            if (!e.target.classList.contains('vn-tag-input')) return;
-            if (e.key === 'Enter') { e.preventDefault(); addTag(); }
-            else if (e.key === 'Escape') { e.preventDefault(); commit(); }
+        return counts;
+    }
+
+    _toggleTagFilter(root, tag) {
+        if (this.tagFilters.has(tag)) this.tagFilters.delete(tag);
+        else this.tagFilters.add(tag);
+        this._refreshTagFilterBar(root);
+        this._applyPresetFilters(root);
+    }
+
+    _clearTagFilters(root) {
+        this.tagFilters.clear();
+        this._refreshTagFilterBar(root);
+        this._applyPresetFilters(root);
+    }
+
+    _openTagPicker(root) {
+        const picker = root.querySelector('.vn-tag-picker');
+        if (!picker || !picker.hidden) return;
+        picker.hidden = false;
+        this._placeTagPicker(root, picker);
+        this._renderTagPicker(root);
+        const input = picker.querySelector('.vn-tag-picker-input');
+        input?.focus();
+        input?.select();
+        this._tagOutsideListener = (e) => {
+            if (picker.contains(e.target) || e.target.closest('.vn-tag-picker-btn')) return;
+            this._closeTagPicker(root);
+        };
+        document.addEventListener('mousedown', this._tagOutsideListener, true);
+    }
+
+    // The bar is `display: contents`, so the picker is positioned from the button's rect: under the button, kept inside the list pane
+    _placeTagPicker(root, picker) {
+        const btn = root.querySelector('.vn-tag-picker-btn');
+        const host = picker.offsetParent;
+        if (!btn || !host) return;
+        const pane = root.querySelector('.vn-presets-list-pane')?.getBoundingClientRect() ?? host.getBoundingClientRect();
+        const h = host.getBoundingClientRect();
+        const b = btn.getBoundingClientRect();
+        const width = Math.min(420, pane.width);
+        const left = Math.max(pane.left, Math.min(b.left, pane.right - width));
+        picker.style.width = `${width}px`;
+        picker.style.left = `${left - h.left}px`;
+        picker.style.top = `${b.bottom - h.top + 2}px`;
+    }
+
+    _closeTagPicker(root) {
+        const picker = root.querySelector('.vn-tag-picker');
+        if (picker) picker.hidden = true;
+        if (this._tagOutsideListener) document.removeEventListener('mousedown', this._tagOutsideListener, true);
+        this._tagOutsideListener = null;
+    }
+
+    _attachTagBarListeners(root) {
+        const bar = root.querySelector('.vn-preset-tag-bar');
+        if (!bar) return;
+
+        bar.addEventListener('click', (e) => {
+            if (e.target.closest('.vn-tag-picker-btn')) {
+                bar.querySelector('.vn-tag-picker')?.hidden ? this._openTagPicker(root) : this._closeTagPicker(root);
+                return;
+            }
+            if (e.target.closest('.vn-tag-bar-clear') || e.target.closest('.vn-tag-picker-reset')) {
+                this._clearTagFilters(root);
+                return;
+            }
+            const matchBtn = e.target.closest('.vn-tag-match-btn');
+            if (matchBtn) {
+                this.tagMatch = matchBtn.dataset.match === 'any' ? 'any' : 'all';
+                this._refreshTagFilterBar(root);
+                this._applyPresetFilters(root);
+                return;
+            }
+            const del = e.target.closest('.vn-tag-picker-del');
+            if (del) {
+                e.preventDefault();
+                this._deleteTagEverywhere(root, del.closest('.vn-tag-picker-row')?.dataset.tag);
+                return;
+            }
+            // Active chip (also its ×): drop that tag from the filter
+            const chip = e.target.closest('.vn-tag-bar-active .vn-tag-chip');
+            if (chip) this._toggleTagFilter(root, chip.dataset.tag);
         });
 
-        render();
-        btn.closest('.vn-preset-item, .vn-preset-card')?.appendChild(popover);
-        setTimeout(() => document.addEventListener('mousedown', onOutside, true), 0);
+        bar.addEventListener('change', (e) => {
+            const row = e.target.closest('.vn-tag-picker-row');
+            if (row && e.target.matches('input[type="checkbox"]')) this._toggleTagFilter(root, row.dataset.tag);
+        });
+
+        bar.addEventListener('input', (e) => {
+            if (e.target.classList.contains('vn-tag-picker-input')) this._renderTagPicker(root);
+        });
+
+        bar.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape' || bar.querySelector('.vn-tag-picker')?.hidden) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this._closeTagPicker(root);
+            bar.querySelector('.vn-tag-picker-btn')?.focus();
+        });
+    }
+
+    /** Removes a tag from every preset after a confirmation */
+    async _deleteTagEverywhere(root, tag) {
+        if (!tag) return;
+        const confirmed = await this._confirmDialog(
+            game.i18n.localize('vn.dialog.deleteTagGlobalTitle'),
+            `<p>${game.i18n.format('vn.dialog.deleteTagGlobalConfirm', { tag: esc(tag) })}</p>`,
+            game.i18n.localize('vn.dialog.btnDelete'), 'fas fa-trash'
+        );
+        if (!confirmed) return;
+        const presets = await VNPresets.getAll();
+        for (const p of Object.values(presets).filter(p => (p.tags || []).includes(tag))) {
+            await VNPresets.setTags(p.id, (p.tags || []).filter(t => t !== tag));
+        }
+        this.tagFilters.delete(tag);
+        this.refresh(root);
+    }
+
+    /** The picker rows for the current search; the open window is only redrawn, never closed */
+    _renderTagPicker(root) {
+        const picker = root.querySelector('.vn-tag-picker');
+        if (!picker) return;
+        const query = (picker.querySelector('.vn-tag-picker-input')?.value || '').trim().toLowerCase();
+        const all = [...this._tagCounts.keys()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        const found = query ? all.filter(t => t.toLowerCase().includes(query)) : all;
+        const shown = found.slice(0, VNPresetsManager.TAG_PICKER_MAX_ROWS);
+
+        const list = picker.querySelector('.vn-tag-picker-list');
+        const keepScroll = list.scrollTop;
+        const delTitle = esc(game.i18n.localize('vn.dialog.tagDeleteEverywhere'));
+        list.innerHTML = shown.length
+            ? shown.map(t => {
+                const on = this.tagFilters.has(t);
+                return `<label class="vn-tag-picker-row${on ? ' is-on' : ''}" data-tag="${esc(t)}">
+                    <input type="checkbox"${on ? ' checked' : ''}>
+                    <span class="vn-tag-picker-name" title="${esc(t)}">${esc(t)}</span>
+                    <span class="vn-tag-picker-n">${this._tagCounts.get(t)}</span>
+                    <button type="button" class="vn-tag-picker-del" title="${delTitle}"><i class="fas fa-trash-can"></i></button>
+                </label>`;
+            }).join('')
+            : `<div class="vn-empty-hint">${game.i18n.localize('vn.dialog.tagPickerEmpty')}</div>`;
+        list.scrollTop = keepScroll;
+
+        const more = found.length > shown.length
+            ? ` · ${game.i18n.format('vn.dialog.tagPickerMore', { n: shown.length })}` : '';
+        picker.querySelector('.vn-tag-picker-total').textContent =
+            game.i18n.format('vn.dialog.tagPickerTotal', { shown: found.length, total: all.length }) + more;
+        picker.querySelector('.vn-tag-picker-reset').disabled = !this.tagFilters.size;
+        picker.querySelectorAll('.vn-tag-match-btn').forEach(b => b.classList.toggle('active', b.dataset.match === this.tagMatch));
     }
 
     _refreshTagFilterBar(root) {
         const bar = root.querySelector('.vn-preset-tag-bar');
         if (!bar) return;
-        const chipsEl = bar.querySelector('.vn-tag-bar-chips');
-        const allTags = new Set();
-        root.querySelectorAll('.vn-preset-item[data-tags], .vn-preset-card[data-tags]').forEach(item => {
-            (item.dataset.tags || '').split(',').filter(Boolean).forEach(t => allTags.add(t));
-        });
-        if (!allTags.size) {
-            if (chipsEl) chipsEl.innerHTML = '';
+        this._tagCounts = this._countListTags(root);
+        if (!this._tagCounts.size) {
+            this._closeTagPicker(root);
+            bar.querySelector('.vn-tag-bar-active').innerHTML = '';
             bar.hidden = true;
-            if (this.tagFilter) this.tagFilter = null;
+            this.tagFilters.clear();
             return;
         }
         bar.hidden = false;
-        if (this.tagFilter && !allTags.has(this.tagFilter)) this.tagFilter = null;
-        const query = (bar.querySelector('.vn-tag-bar-search')?.value || '').trim().toLowerCase();
-        const visible = [...allTags].sort().filter(t => !query || t.includes(query));
-        if (chipsEl) {
-            chipsEl.innerHTML = visible.map(tag =>
-                `<button type="button" class="vn-tag-filter-chip${this.tagFilter === tag ? ' active' : ''}" data-tag="${esc(tag)}">${esc(tag)}</button>`
-            ).join('');
-        }
+        for (const t of [...this.tagFilters]) if (!this._tagCounts.has(t)) this.tagFilters.delete(t);
+
+        const n = this.tagFilters.size;
+        const badge = bar.querySelector('.vn-tag-picker-count');
+        badge.hidden = !n;
+        badge.textContent = n;
+        bar.querySelector('.vn-tag-bar-clear').hidden = !n;
+        bar.querySelector('.vn-tag-bar-picked').hidden = !n;
+        bar.querySelector('.vn-tag-bar-active').innerHTML = [...this.tagFilters].map(t =>
+            `<span class="vn-tag-chip vn-tag-chip--rm" data-tag="${esc(t)}" title="${esc(t)}"><span>${esc(t)}</span><button type="button" class="vn-tag-rm-btn">×</button></span>`
+        ).join('');
+
+        if (!bar.querySelector('.vn-tag-picker').hidden) this._renderTagPicker(root);
+        else bar.querySelectorAll('.vn-tag-match-btn').forEach(b => b.classList.toggle('active', b.dataset.match === this.tagMatch));
     }
 
     // ══════════════════════════════════════════════════════════
@@ -1080,10 +1289,15 @@ export class VNPresetsManager {
         const panel = root.querySelector('.vn-preset-detail-panel');
         if (!panel) return;
 
+        const split = panel.closest('.vn-presets-split');
+        // The panel exists only while a preset is open: with nothing selected the list gets the whole width
+        panel.hidden = !preset;
+        split?.classList.toggle('has-panel', !!preset);
+
         if (!preset) {
             panel.removeAttribute('data-preset-id');
             panel.removeAttribute('data-preset-name');
-            panel.innerHTML = `<div class="vn-panel-empty-hint"><i class="fas fa-hand-point-left"></i><span>${game.i18n.localize('vn.dialog.panelSelectHint')}</span></div>`;
+            panel.innerHTML = '';
             return;
         }
 
@@ -1106,13 +1320,17 @@ export class VNPresetsManager {
             `<button type="button" class="vn-panel-tag-suggest" data-tag="${esc(t)}">${esc(t)}</button>`
         ).join('');
 
+        const scenes = presetScenes(preset);
+        const sceneChipsHtml = scenes.map((s, i) => `<span class="vn-scene-chip" title="${esc(s.name || s.id)}"><i class="fas fa-map-pin"></i><span>${esc(s.name || s.id)}</span><button type="button" class="vn-scene-rm-btn" data-index="${i}">×</button></span>`).join('');
+
         const isSequence = VNPresets.isSequence(preset);
         const panelAction = (action, icon, key, extra = '') =>
             `<button type="button" class="vn-btn vn-btn-sm ${extra} vn-panel-action" data-action="${action}" data-preset="${preset.id}"><i class="fas ${icon}"></i> ${game.i18n.localize(key)}</button>`;
         // A sequence is launched, not loaded into the form; its content is edited step by step instead
+        const launchAction = panelAction('launch', 'fa-play', 'vn.dialog.presetActionLaunch', 'vn-btn-accent vn-panel-action--launch');
         const primaryActions = isSequence
-            ? panelAction('launch', 'fa-play', 'vn.dialog.presetActionLaunch', 'vn-btn-accent')
-            : panelAction('load', 'fa-upload', 'vn.dialog.presetActionLoad') + panelAction('update', 'fa-arrows-rotate', 'vn.dialog.presetActionUpdate');
+            ? launchAction
+            : launchAction + panelAction('load', 'fa-upload', 'vn.dialog.presetActionLoad') + panelAction('update', 'fa-arrows-rotate', 'vn.dialog.presetActionUpdate');
         const optionsHtml = isSequence ? this._sequenceEditor.optionsHtml(preset) : '';
         const stepsHtml = isSequence ? this._sequenceEditor.stepsHtml(preset) : '';
 
@@ -1126,7 +1344,7 @@ export class VNPresetsManager {
                         ${primaryActions}
                         <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="regen" data-preset="${preset.id}"><i class="fas fa-camera"></i> ${game.i18n.localize('vn.dialog.presetActionRegen')}</button>
                         <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="macro" data-preset="${preset.id}"><i class="fas fa-code"></i> ${game.i18n.localize('vn.dialog.presetActionMacro')}</button>
-                        <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="assign" data-preset="${preset.id}"><i class="fas fa-location-dot"></i> ${game.i18n.localize('vn.dialog.presetActionAssign')}</button>
+                        <button type="button" class="vn-btn vn-btn-sm vn-panel-action" data-action="duplicate" data-preset="${preset.id}" title="${esc(game.i18n.localize('vn.dialog.presetActionDuplicateTitle'))}"><i class="fas fa-clone"></i> ${game.i18n.localize('vn.dialog.presetActionDuplicate')}</button>
                         <button type="button" class="vn-btn vn-btn-sm vn-btn-danger vn-panel-action vn-panel-action--delete" data-action="delete" data-preset="${preset.id}"><i class="fas fa-trash"></i> ${game.i18n.localize('vn.dialog.presetActionDelete')}</button>
                     </div>
                 </div>`;
@@ -1138,8 +1356,13 @@ export class VNPresetsManager {
                         ${preset.version ? `<span class="vn-panel-info-row"><i class="fas fa-code-branch"></i><span>v${preset.version}</span></span>` : ''}
                         ${dateCreated ? `<span class="vn-panel-info-row"><i class="fas fa-calendar-plus"></i><span>${dateCreated}</span></span>` : ''}
                         ${dateUpdated ? `<span class="vn-panel-info-row"><i class="fas fa-calendar-check"></i><span>${dateUpdated}</span></span>` : ''}
-                        ${preset.sceneName ? `<span class="vn-panel-info-row"><i class="fas fa-map-pin"></i><span>${esc(preset.sceneName)}</span></span>` : ''}
                     </div>
+                </div>
+                <hr class="vn-panel-section-divider">
+                <div class="vn-panel-section">
+                    <label class="vn-panel-label">${game.i18n.localize('vn.dialog.panelLabelScenes')} <span class="vn-badge">${scenes.length}</span></label>
+                    <div class="vn-panel-scenes">${sceneChipsHtml}</div>
+                    <button type="button" class="vn-btn vn-btn-sm vn-panel-action vn-panel-scenes-btn" data-action="assign" data-preset="${preset.id}"><i class="fas fa-location-dot"></i> ${game.i18n.localize('vn.dialog.presetActionAssign')}</button>
                 </div>
                 <hr class="vn-panel-section-divider">
                 <div class="vn-panel-section">
@@ -1161,7 +1384,7 @@ export class VNPresetsManager {
         panel.innerHTML = `
             <div class="vn-panel-header--preset-detail">
                 <span class="vn-panel-title"><i class="fas ${isSequence ? 'fa-film' : 'fa-pen-to-square'}"></i> ${esc(preset.name)}</span>
-                <button type="button" class="vn-btn vn-btn-xs vn-panel-close-btn" title="${game.i18n.localize('vn.dialog.btnClose')}"><i class="fas fa-times"></i></button>
+                <button type="button" class="vn-btn vn-btn-xs vn-panel-close-btn" title="${game.i18n.localize('vn.dialog.btnClose')}" aria-label="${game.i18n.localize('vn.dialog.btnClose')}"><i class="fas fa-times vn-panel-close-icon"></i><i class="fas fa-arrow-left vn-panel-back-icon"></i><span class="vn-panel-back-label">${game.i18n.localize('vn.dialog.panelBack')}</span></button>
             </div>
             ${body}`;
 
@@ -1198,6 +1421,16 @@ export class VNPresetsManager {
                 return;
             }
 
+            const sceneRm = e.target.closest('.vn-scene-rm-btn');
+            if (sceneRm) {
+                const presetId = this.selectedPresetId;
+                const preset = presetId ? await VNPresets.load(presetId) : null;
+                if (!preset) return;
+                const sorted = await VNPresets.setScenes(presetId, presetScenes(preset).filter((_, i) => i !== Number(sceneRm.dataset.index)));
+                if (sorted) { this.refresh(root, sorted); this._hooks.onChanged?.(root); }
+                return;
+            }
+
             const suggest = e.target.closest('.vn-panel-tag-suggest');
             if (suggest) {
                 const presetId = this.selectedPresetId;
@@ -1228,7 +1461,7 @@ export class VNPresetsManager {
             );
             const allTags = this._getAllExistingTags(root);
             const available = allTags.filter(t => !currentTags.has(t));
-            const filtered = query ? available.filter(t => t.includes(query)) : available;
+            const filtered = query ? available.filter(t => t.toLowerCase().includes(query)) : available;
             const dropdown = panel.querySelector('.vn-panel-tag-dropdown');
             if (dropdown) {
                 dropdown.innerHTML = filtered.map(t =>
@@ -1243,7 +1476,10 @@ export class VNPresetsManager {
                 e.preventDefault();
                 const presetId = this.selectedPresetId;
                 if (!presetId) return;
-                const val = e.target.value.trim().toLowerCase().replace(/\s+/g, '-').slice(0, 32);
+                const typed = e.target.value.trim().replace(/,+/g, '');
+                // An existing tag typed in other letter case (imported tags keep capitals and spaces) is reused, not duplicated
+                const val = this._getAllExistingTags(root).find(t => t.toLowerCase() === typed.toLowerCase())
+                    ?? typed.toLowerCase().replace(/\s+/g, '-').slice(0, 32);
                 if (!val) return;
                 const preset = await VNPresets.load(presetId);
                 if (!preset) return;
@@ -1295,10 +1531,16 @@ export class VNPresetsManager {
     async _handleGroupDelete(btn, root) {
         const groupKey = btn.dataset.groupKey;
         const label = groupKey || game.i18n.localize('vn.dialog.noScene');
-        const count = btn.closest('.vn-preset-scene-group')?.querySelectorAll('.vn-preset-item, .vn-preset-card').length || 0;
+        // A preset linked to other scenes too is not deleted with this group, it only loses this scene
+        const members = Object.values(await VNPresets.getAll()).filter(p => {
+            const names = presetSceneNames(p);
+            return groupKey ? names.includes(groupKey) : !names.length;
+        });
+        const shared = members.filter(p => presetSceneNames(p).length > 1).length;
+        const count = members.length - shared;
         const confirmed = await this._confirmDialog(
             game.i18n.localize('vn.dialog.deleteGroupDialogTitle'),
-            `<p>${game.i18n.format('vn.dialog.deleteGroupConfirm', {count, label: esc(label)})}</p>`,
+            `<p>${game.i18n.format('vn.dialog.deleteGroupConfirm', {count, label: esc(label)})}</p>${shared ? `<p>${game.i18n.format('vn.dialog.deleteGroupShared', { count: shared })}</p>` : ''}`,
             game.i18n.localize('vn.dialog.btnDeleteGroup'), 'fas fa-trash-can'
         );
         if (!confirmed) return;

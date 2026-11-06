@@ -155,12 +155,73 @@ function bakeBody(w, h, res, spec) {
     return canvas;
 }
 
+// ── Шумовое тело (дым, пар) ───────────────────────────────────
+// Детерминированный value-noise по целочисленной решётке: один и тот же seed рисует тот же клуб в воркере и на главном потоке.
+function hash2(ix, iy, seed) {
+    let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263) ^ Math.imul(seed, 2147483647);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+function valueNoise(x, y, seed) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = hash2(ix, iy, seed), b = hash2(ix + 1, iy, seed), c = hash2(ix, iy + 1, seed), d = hash2(ix + 1, iy + 1, seed);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+
+const smooth = (lo, hi, v) => { const t = clamp01((v - lo) / (hi - lo)); return t * t * (3 - 2 * t); };
+
+/**
+ * Тело-клуб из шума: неровный облачный силуэт, плотнее к середине и прозрачный по краю.
+ * noise: { seed, freq (клеток шума поперёк), octaves, cover (порог плотности), soft (мягкость края порога), color: [r, g, b], alpha (макс.) }
+ */
+function bakeNoiseBody(w, h, res, noise) {
+    const { seed = 1, freq = 3, octaves = 4, cover = 0.32, soft = 0.4, color = [90, 88, 92], alpha = 0.5 } = noise;
+    const cw = Math.max(1, Math.ceil(w * res)), ch = Math.max(1, Math.ceil(h * res));
+    const canvas = makeCanvas(cw, ch);
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(cw, ch);
+    const px = img.data;
+    for (let j = 0; j < ch; j++) {
+        const ny = (j + 0.5) / ch;
+        for (let i = 0; i < cw; i++) {
+            const nx = (i + 0.5) / cw;
+            const r = Math.hypot(nx - 0.5, ny - 0.5) * 2;
+            if (r >= 1) continue;
+            // Огибающая: широкая, к самому краю истончается; сама форма — из шума, а не из круга
+            const env = 1 - smooth(0.45, 1, r);
+            // Искажение координат вторым шумом даёт завитки вместо круглых «комков»
+            const wx = valueNoise(nx * freq * 1.6 + 7.3, ny * freq * 1.6, seed + 99) - 0.5;
+            const wy = valueNoise(nx * freq * 1.6, ny * freq * 1.6 + 3.1, seed + 131) - 0.5;
+            let n = 0, amp = 0.5, f = freq, norm = 0;
+            for (let o = 0; o < octaves; o++) {
+                n += amp * valueNoise(nx * f + wx * 2.2, ny * f + wy * 2.2, seed + o * 31);
+                norm += amp; amp *= 0.5; f *= 2;
+            }
+            const density = (n / norm) * 0.85 + env * 0.3;
+            const a = smooth(cover, cover + soft, density) * env ** 0.5 * alpha;
+            if (a <= 0.002) continue;
+            // Объём: середина светлее, края темнее
+            const shade = 0.8 + 0.35 * smooth(cover, cover + soft + 0.3, density);
+            const o4 = (j * cw + i) * 4;
+            px[o4] = Math.min(255, color[0] * shade);
+            px[o4 + 1] = Math.min(255, color[1] * shade);
+            px[o4 + 2] = Math.min(255, color[2] * shade);
+            px[o4 + 3] = a * 255 + 0.5;
+        }
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvas;
+}
+
 /** Размытие готового рисунка (CSS filter: blur / тень). Если браузер не умеет ctx.filter — рисунок остаётся как есть. */
 function blurred(source, filter, pad) {
     const out = makeCanvas(source.width + pad * 2, source.height + pad * 2);
     const ctx = out.getContext('2d');
     if ('filter' in ctx) ctx.filter = filter;
     ctx.drawImage(source, pad, pad);
+    if ('filter' in ctx) ctx.filter = 'none';   // иначе вырез тени (destination-out) тоже размоется и тень останется под телом
     return out;
 }
 
@@ -174,7 +235,7 @@ function blurred(source, filter, pad) {
 export function bakeSprite(spec, w, h, res) {
     const round = spec.round ?? true;
     const radius = spec.radius ?? 0;
-    const body = bakeBody(w, h, res, spec);
+    const body = spec.noise ? bakeNoiseBody(w, h, res, spec.noise) : bakeBody(w, h, res, spec);
     const blur = spec.blur ?? 0;
     const hue = spec.hue ?? 0;
     const glows = [].concat(spec.glow ?? []);

@@ -23,14 +23,14 @@ export const FX_TIERS = ['heavy', 'medium', 'light'];
  */
 export const FX_PERF = {
     visual: {
-        heavy:  ['underwater', 'dream', 'eldritch', 'kaleidoscope', 'void_breach', 'earthquake', 'glass_shatter', 'cosmic_horror', 'ghosts', 'ethereal', 'apocalypse'],
-        medium: ['divine', 'sacred', 'abyss', 'fire', 'blood_moon', 'corruption', 'shadow_intrigue', 'storm', 'hologram', 'neon', 'vhs', 'sandstorm', 'frost', 'fog'],
-        light:  ['warm', 'cold', 'moonlight', 'dark', 'carnival', 'noir', 'memory'],
+        heavy:  ['underwater', 'dream', 'eldritch', 'kaleidoscope', 'cubes', 'void_breach', 'earthquake', 'glass_shatter', 'cosmic_horror', 'ghosts', 'ethereal', 'apocalypse'],
+        medium: ['divine', 'sacred', 'abyss', 'fire', 'blood_moon', 'corruption', 'shadow_intrigue', 'storm', 'hologram', 'neon', 'vhs', 'sandstorm', 'frost', 'fog', 'drunk', 'candlelit', 'torchlit', 'heat'],
+        light:  ['warm', 'cold', 'moonlight', 'dark', 'carnival', 'noir', 'memory', 'dawn', 'day', 'sunset', 'dusk', 'overcast', 'windowlight', 'forest', 'cave'],
     },
     particle: {
-        heavy:  ['ghosts', 'shadow_wisps', 'ether_wisps', 'dream_orbs', 'bokeh'],
+        heavy:  ['ghosts', 'shadow_wisps', 'ether_wisps', 'dream_orbs', 'bokeh', 'smoke'],
         medium: ['sakura', 'embers', 'fireflies', 'sparks', 'divine_motes', 'eldritch_spores', 'blood_motes', 'apocalypse_debris', 'void_shards', 'cosmic_dust', 'abyss_bubbles', 'glass_dust', 'comets', 'shooting_stars', 'confetti'],
-        light:  ['particles', 'snow', 'rain', 'bubbles', 'ash', 'sand_grains', 'feathers', 'page_scraps', 'balloons'],
+        light:  ['particles', 'snow', 'rain', 'bubbles', 'ash', 'sand_grains', 'feathers', 'page_scraps', 'balloons', 'hail', 'leaves', 'fluff'],
     },
     charfx: {
         heavy:  ['vhs', 'glass', 'fire', 'possessed'],

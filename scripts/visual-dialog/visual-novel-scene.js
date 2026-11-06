@@ -2,7 +2,7 @@
 // visual-novel-scene.js — v4.0 (refactored core)
 // ============================================================
 
-import { VNSceneState, VNPresets, VNFolders, PARTICLE_LAYERS, resolveParticlesLayer } from './vn-state.js';
+import { VNSceneState, VNPresets, VNFolders, PARTICLE_LAYERS, resolveParticlesLayer, PARTICLE_DEPTHS, resolveParticleDepth, resolveParticleWind, windLabel } from './vn-state.js';
 import { VNAtmosphere } from './visual-effects/atmosphere/index.js';
 import { QueueBridge } from './vn-queue-bridge.js';
 import { VNTransitions } from './visual-effects/vn-transitions.js';
@@ -18,6 +18,7 @@ import { stripDupSuffix, parseActorId, parsePlaylistUuid, escapeHtml } from './v
 import { VNChatPanel } from './vn-chat-panel.js';
 import { VNSceneHTML } from './vn-scene-html.js';
 import { VNSequence } from './vn-sequence.js';
+import { VNPresetLink } from './vn-preset-link.js';
 import { VNPreloader } from './vn-preload.js';
 
 const VN_DEBUG = false;
@@ -69,6 +70,7 @@ class VisualNovelScene {
 
         this._chatPanel = new VNChatPanel(() => this.$overlay);
         this._sequence = new VNSequence(this);
+        this._presetLink = new VNPresetLink(this);
         this._html = new VNSceneHTML(this, VisualNovelScene.ROW_CONFIG);
         this._persistStateDebounced = VisualNovelScene.debounce(() => this._persistState(), 400);
     }
@@ -223,6 +225,20 @@ class VisualNovelScene {
         catch { return false; }
     }
 
+    /** World settings `dimInactive` / `blurInactive`: false = inactive characters are not darkened / not blurred (the GM's choice, same on every client). */
+    get inactiveLook() {
+        const on = key => { try { return game.settings.get(VisualNovelScene.ID, key) !== false; } catch { return true; } };
+        return { dim: on('dimInactive'), blur: on('blurInactive') };
+    }
+
+    applyInactiveLook() {
+        const overlay = this.$overlay?.[0];
+        if (!overlay) return;
+        const { dim, blur } = this.inactiveLook;
+        overlay.classList.toggle('vn-no-dim', !dim);
+        overlay.classList.toggle('vn-no-blur', !blur);
+    }
+
     /** Applies a changed `liteMode` to a scene that is already open on this client. */
     applyLiteMode() {
         const overlay = this.$overlay?.[0];
@@ -293,7 +309,7 @@ class VisualNovelScene {
         if (!game.user.isGM) return;
         try {
             await game.settings.set(VisualNovelScene.ID, 'activeScene',
-                this.state.isActive ? { ...this.state.toPayload(), sequence: this._sequence.snapshot() } : {});
+                this.state.isActive ? { ...this.state.toPayload(), sequence: this._sequence.snapshot(), presetLink: this._presetLink.snapshot() } : {});
         } catch (e) { console.error('VN: Failed to persist state:', e); }
     }
 
@@ -306,6 +322,7 @@ class VisualNovelScene {
             this._sceneMusicUuid = s.musicUuid || null;
             this.createScene(s, false);
             if (s.sequence && game.user.isGM) this._sequence.restore(s.sequence);
+            else if (s.presetLink && game.user.isGM) this._presetLink.restore(s.presetLink);
         } catch { /* no saved state */ }
     }
 
@@ -562,9 +579,41 @@ class VisualNovelScene {
         if (emit && !game.user.isGM) return;
         if (!Number.isFinite(intensity)) return;
         this.state.particleIntensity = Math.min(Math.max(Math.round(intensity), 1), 20);
-        this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, this.state.particlesLayer);
+        this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, this.state.particlesLayer, this._particleLook());
         this._syncFxSettingsUI();
         if (emit) { this.emitSocketEvent('setParticleIntensity', { intensity: this.state.particleIntensity }); this._persistState(); }
+    }
+
+    _particleLook() {
+        return { depth: this.state.particleDepth, wind: this.state.particleWind, gusts: this.state.particleGusts };
+    }
+
+    setParticleDepth(depth, emit = true) {
+        if (emit && !game.user.isGM) return;
+        if (!PARTICLE_DEPTHS.includes(depth)) return;
+        this.state.particleDepth = depth;
+        // Глубина меняет размер, скорость и слой каждой частицы: перераскладываем их заново
+        this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, this.state.particlesLayer, this._particleLook());
+        this._syncFxSettingsUI();
+        if (emit) { this.emitSocketEvent('setParticleDepth', { depth }); this._persistState(); }
+    }
+
+    setParticleWind(wind, emit = true) {
+        if (emit && !game.user.isGM) return;
+        if (!Number.isFinite(wind)) return;
+        this.state.particleWind = resolveParticleWind(wind);
+        // Ветер меняется на лету, частицы не перезапускаются
+        this._atmosphere.setWind(this.state.particleWind, this.state.particleGusts);
+        this._syncFxSettingsUI();
+        if (emit) { this.emitSocketEvent('setParticleWind', { wind: this.state.particleWind }); this._persistState(); }
+    }
+
+    setParticleGusts(gusts, emit = true) {
+        if (emit && !game.user.isGM) return;
+        this.state.particleGusts = !!gusts;
+        this._atmosphere.setWind(this.state.particleWind, this.state.particleGusts);
+        this._syncFxSettingsUI();
+        if (emit) { this.emitSocketEvent('setParticleGusts', { gusts: this.state.particleGusts }); this._persistState(); }
     }
 
     setParticleEffect(particle, emit = true) {
@@ -573,7 +622,7 @@ class VisualNovelScene {
         if (!VNAtmosphere.PARTICLE_TYPES.includes(particleType)) return;
         this.state.particleEffect = particle;
         // Только частицы: параллакс, камера и визуальный эффект продолжают работать (полный _reinitAtmosphere сбрасывал зум фона и фокус камеры)
-        this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, this.state.particlesLayer);
+        this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, this.state.particlesLayer, this._particleLook());
         this._syncAtmosphereUI();
         if (emit) { this.emitSocketEvent('setParticleEffect', { particle }); this._persistState(); }
     }
@@ -595,7 +644,7 @@ class VisualNovelScene {
         this.state.particlesLayer = layer;
         // Вход/выход из 'mix' требует перераскладки частиц по контейнерам; back<->front — только CSS-класс
         if ((prev === 'mix') !== (layer === 'mix')) {
-            this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, layer);
+            this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, layer, this._particleLook());
             this._syncAtmosphereUI();
         } else this._applyParticlesLayerUI();
         if (emit) { this.emitSocketEvent('setParticlesLayer', { layer }); this._persistState(); }
@@ -621,6 +670,15 @@ class VisualNovelScene {
             slider.value = this.state.particleIntensity;
             panel.querySelector('.vn-fxset-intensity-val').textContent = slider.value;
         }
+        panel.querySelectorAll('.vn-fxset-depth').forEach(b =>
+            b.classList.toggle('active', b.dataset.depth === this.state.particleDepth));
+        const wind = panel.querySelector('.vn-fxset-wind');
+        if (wind && wind !== document.activeElement) {
+            wind.value = this.state.particleWind;
+            panel.querySelector('.vn-fxset-wind-val').textContent = windLabel(this.state.particleWind);
+        }
+        const gustsToggle = panel.querySelector('.vn-fxset-gusts');
+        if (gustsToggle) gustsToggle.checked = this.state.particleGusts !== false;
         const overlayToggle = panel.querySelector('.vn-fxset-dimming');
         if (overlayToggle) overlayToggle.checked = this.state.backgroundOverlay !== false;
         const vignetteToggle = panel.querySelector('.vn-fxset-vignette');
@@ -633,7 +691,7 @@ class VisualNovelScene {
         const overlayEl = this.$overlay?.[0];
         if (!overlayEl) return;
         this._atmosphere.destroy();
-        this._atmosphere.init(overlayEl, this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity, this.state.particlesLayer);
+        this._atmosphere.init(overlayEl, this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity, this.state.particlesLayer, this._particleLook());
         this._syncAtmosphereUI();
     }
 
@@ -916,7 +974,8 @@ class VisualNovelScene {
      */
     async launchPreset(preset, { gmOnly = false, stepIndex = null } = {}) {
         if (!VNPresets.isSequence(preset)) {
-            this.createScene(gmOnly ? { ...preset, gmOnly } : preset);
+            if (!this.createScene(gmOnly ? { ...preset, gmOnly } : preset)) return false;
+            this._presetLink.start(preset);
             return true;
         }
         const steps = preset.steps ?? [];
@@ -933,9 +992,16 @@ class VisualNovelScene {
         return true;
     }
 
+    /** A preset was just saved from the live scene: the scene now counts as opened from it (not while a composite preset runs). */
+    bindPreset(preset) {
+        if (!this.state.isActive || this._sequence.active) return;
+        this._presetLink.start(preset);
+    }
+
     _doCreateScene(payload, emit) {
         vnLog('createScene, emit:', emit);
         this._sequence.stop();
+        this._presetLink.stop();
         this._atmosphere.destroy();
         this.state.reset();
         this.state.fromPayload({
@@ -953,6 +1019,9 @@ class VisualNovelScene {
             atmosphereEffect: payload.atmosphereEffect ?? null,
             particlesLayer: resolveParticlesLayer(payload),
             particleIntensity: payload.particleIntensity ?? 1,
+            particleDepth: payload.particleDepth,
+            particleWind: payload.particleWind,
+            particleGusts: payload.particleGusts,
             speakers: payload.speakers || {},
             flipped: payload.flipped || {},
             visibility: payload.visibility || null,
@@ -1005,7 +1074,7 @@ class VisualNovelScene {
         setTimeout(() => {
             this.activateSceneListeners();
             this._applyAllPortraitTransforms();
-            this._atmosphere.init(this.$overlay[0], this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity, this.state.particlesLayer);
+            this._atmosphere.init(this.$overlay[0], this.state.particleEffect, this.state.visualEffect, this.state.particleIntensity, this.state.particlesLayer, this._particleLook());
             this._updateAtmosphereButtons();
             this._applyParticlesLayerUI();
             this._animateInitialCharacters();
@@ -1053,6 +1122,12 @@ class VisualNovelScene {
         if (intensityChanged) {
             this.state.particleIntensity = Math.min(Math.max(Math.round(payload.particleIntensity), 1), 20);
         }
+        const depthChanged = payload.particleDepth != null && this.state.particleDepth !== resolveParticleDepth(payload.particleDepth);
+        if (depthChanged) this.state.particleDepth = resolveParticleDepth(payload.particleDepth);
+        const windChanged = payload.particleWind != null && this.state.particleWind !== resolveParticleWind(payload.particleWind);
+        if (windChanged) this.state.particleWind = resolveParticleWind(payload.particleWind);
+        const gustsChanged = payload.particleGusts != null && this.state.particleGusts !== !!payload.particleGusts;
+        if (gustsChanged) this.state.particleGusts = !!payload.particleGusts;
         const particleChanged = payload.particleEffect != null && this.state.particleEffect !== payload.particleEffect;
         const visualChanged = payload.visualEffect != null && this.state.visualEffect !== payload.visualEffect;
         if (particleChanged) this.state.particleEffect = payload.particleEffect;
@@ -1069,14 +1144,15 @@ class VisualNovelScene {
         // Each axis is swapped on its own: changing only the visual effect must not restart the falling particles
         // (nor the parallax drift and camera), and the other way round.
         const applyAtmosphere = () => {
-            if (particleChanged || intensityChanged) {
+            if (particleChanged || intensityChanged || depthChanged) {
                 this.state.particlesLayer = newLayer;
-                this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, newLayer);
+                this._atmosphere.setParticles(this.state.particleEffect, this.state.particleIntensity, newLayer, this._particleLook());
             } else if (layerChanged) {
                 this.setParticlesLayer(newLayer, false);
             }
+            if ((windChanged || gustsChanged) && !(particleChanged || intensityChanged || depthChanged)) this._atmosphere.setWind(this.state.particleWind, this.state.particleGusts);
             if (visualChanged) this._atmosphere.setVisual(this.state.visualEffect);
-            if (particleChanged || visualChanged || intensityChanged) {
+            if (particleChanged || visualChanged || intensityChanged || depthChanged || windChanged || gustsChanged) {
                 this._updateAtmosphereButtons();
                 this._applyParticlesLayerUI();
             }
@@ -1266,6 +1342,7 @@ class VisualNovelScene {
 
         if (emit) this.stopSceneMusic(true);
         this._sequence.stop();
+        this._presetLink.stop();
         this._closeChatPanel();
 
         const $ov = this.$overlay;
@@ -1569,12 +1646,19 @@ class VisualNovelScene {
             e.currentTarget.closest('.vn-fxset-intensity-row').querySelector('.vn-fxset-intensity-val').textContent = e.currentTarget.value;
         });
         $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-intensity', (e) => this.setParticleIntensity(Number(e.currentTarget.value), true));
+        $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-gusts', (e) => this.setParticleGusts(e.currentTarget.checked, true));
+        $(document).on(`click${ns}`, '#vn-scene-overlay .vn-fxset-depth', (e) => this.setParticleDepth(e.currentTarget.dataset.depth, true));
+        $(document).on(`input${ns}`, '#vn-scene-overlay .vn-fxset-wind', (e) => {
+            e.currentTarget.closest('.vn-fxset-intensity-row').querySelector('.vn-fxset-wind-val').textContent = windLabel(Number(e.currentTarget.value));
+            this.setParticleWind(Number(e.currentTarget.value), true);
+        });
         $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-dimming', (e) => this.setBackgroundOverlay(e.currentTarget.checked, true));
         $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-vignette', (e) => this.setVignette(e.currentTarget.checked, true));
         $(document).on(`change${ns}`, '#vn-scene-overlay .vn-fxset-fog', (e) => this.setGroundFog(e.currentTarget.checked, true));
 
         $(document).on(`click${ns}`, '.vn-broadcast-button', () => this.broadcastToPlayers());
         this._sequence.attachListeners(ns);
+        this._presetLink.attachListeners(ns);
 
         $(document).on(`click${ns}`, '.vn-sounds-btn', (e) => {
             e.stopPropagation();

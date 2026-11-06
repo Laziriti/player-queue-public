@@ -24,6 +24,9 @@ export class VNSocketHandler {
         setVisualEffect:      { gmOnly: true,  required: ['visual'] },
         setParticlesLayer: { gmOnly: true, required: ['layer'] },
         setParticleIntensity: { gmOnly: true, required: ['intensity'] },
+        setParticleDepth:     { gmOnly: true,  required: ['depth'] },
+        setParticleWind:      { gmOnly: true,  required: ['wind'] },
+        setParticleGusts:     { gmOnly: true,  required: ['gusts'] },
         setVisibility:        { gmOnly: true,  required: ['tokenId', 'visibility'] },
         preload:              { gmOnly: true,  required: ['urls'] },
     };
@@ -128,6 +131,9 @@ export class VNSocketHandler {
                     visualEffect: p.visualEffect ?? null,
                     particleIntensity: p.particleIntensity ?? null,
                     particlesLayer: p.particlesLayer ?? null,
+                    particleDepth: p.particleDepth ?? null,
+                    particleWind: p.particleWind ?? null,
+                    particleGusts: p.particleGusts ?? null,
                     particlesForeground: p.particlesForeground ?? null,
                     flipped: p.flipped ?? null,
                     visibility: p.visibility ?? null,
@@ -155,6 +161,9 @@ export class VNSocketHandler {
             case 'setVisualEffect':      s.setVisualEffect(p.visual, false); break;
             case 'setParticlesLayer':    s.setParticlesLayer(p.layer, false); break;
             case 'setParticleIntensity': s.setParticleIntensity(Number(p.intensity), false); break;
+            case 'setParticleDepth':     s.setParticleDepth(p.depth, false); break;
+            case 'setParticleWind':      s.setParticleWind(Number(p.wind), false); break;
+            case 'setParticleGusts':     s.setParticleGusts(!!p.gusts, false); break;
             case 'setVisibility':        s.applyVisibility(p.tokenId, p.visibility, false); break;
             case 'preload':              s.preloadImages(p.urls); break;
             default: console.warn(`[VN] No handler for action: ${action}`);

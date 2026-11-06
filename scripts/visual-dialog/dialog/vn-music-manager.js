@@ -128,25 +128,33 @@ export class VNMusicManager {
 
     generateTab(musicUuid, soundCues = []) {
         const cuesHtml = soundCues.map(c => this._buildCueItemHtml(c)).join('');
-        return `<div class="vn-music-tab">
+        return `<div class="vn-music-tab"><div class="vn-music-grid">
             ${this._generateMusicSection(musicUuid)}
             <div class="vn-cues-section">
-                <div class="vn-music-label"><i class="fas fa-play-circle"></i> ${game.i18n.localize('vn.dialog.soundCuesLabel')}</div>
-                <p class="vn-cues-hint">${game.i18n.localize('vn.dialog.soundCuesHint')}</p>
+                <div class="vn-music-head">
+                    <div class="vn-music-label"><i class="fas fa-play-circle"></i> ${game.i18n.localize('vn.dialog.soundCuesLabel')}</div>
+                    <p class="vn-cues-hint">${game.i18n.localize('vn.dialog.soundCuesHint')}</p>
+                </div>
                 <div class="vn-cue-drop-zone" id="vn-cue-drop">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>${game.i18n.localize('vn.dialog.dragTracksFromPlaylist')}</span>
+                    <i class="fas fa-plus-circle vn-drop-icon"></i>
+                    <strong class="vn-drop-title">${game.i18n.localize('vn.dialog.cuesEmptyTitle')}</strong>
+                    <span class="vn-drop-text">${game.i18n.localize('vn.dialog.dragTracksFromPlaylist')}</span>
                     ${this._pickButton('cue')}
                 </div>
                 <div class="vn-cue-list" id="vn-cue-list">${cuesHtml}</div>
             </div>
-        </div>`;
+        </div></div>`;
     }
 
     _buildCueItemHtml(cue) {
+        const sound = this._resolveSoundFromUuid(cue.uuid);
+        const source = sound
+            ? `<span class="vn-cue-source" title="${escapeHtml(`${sound.parent?.name ?? ''} — ${sound.name}`)}"><i class="fas fa-music"></i>${escapeHtml(sound.name)}</span>`
+            : `<span class="vn-cue-source vn-cue-missing"><i class="fas fa-triangle-exclamation"></i>${game.i18n.localize('vn.dialog.cueMissing')}</span>`;
         return `<div class="vn-cue-item" data-cue-id="${cue.id}" data-cue-uuid="${escapeHtml(cue.uuid)}">
-            <i class="fas fa-music vn-cue-icon"></i>
+            <span class="vn-cue-index" aria-hidden="true"></span>
             <input type="text" class="vn-cue-label-input" value="${escapeHtml(cue.label || '')}" placeholder="${game.i18n.localize('vn.dialog.cueLabelPlaceholder')}">
+            ${source}
             <button type="button" class="vn-music-clear vn-cue-delete" title="${game.i18n.localize('vn.dialog.btnDelete')}"><i class="fas fa-times"></i></button>
         </div>`;
     }
@@ -159,14 +167,17 @@ export class VNMusicManager {
             if (sound) { nameText = `${sound.parent.name} — ${sound.name}`; hasMusic = true; }
         }
         return `<div class="vn-music-section">
-            <div class="vn-music-label"><i class="fas fa-music"></i> ${game.i18n.localize('vn.dialog.musicLabel')}</div>
+            <div class="vn-music-head">
+                <div class="vn-music-label"><i class="fas fa-music"></i> ${game.i18n.localize('vn.dialog.musicLabel')}</div>
+                <p class="vn-cues-hint">${game.i18n.localize('vn.dialog.musicHint')}</p>
+            </div>
             <div class="vn-music-drop-zone" id="vn-music-drop"${hasMusic ? ' hidden' : ''}>
-                <i class="fas fa-music"></i>
-                <span>${game.i18n.localize('vn.dialog.dragTrackFromPlaylist')}</span>
+                <i class="fas fa-music vn-drop-icon"></i>
+                <span class="vn-drop-text">${game.i18n.localize('vn.dialog.dragTrackFromPlaylist')}</span>
                 ${this._pickButton('music')}
             </div>
             <div class="vn-music-selected" id="vn-music-selected"${!hasMusic ? ' hidden' : ''}>
-                <i class="fas fa-music"></i>
+                <i class="fas fa-music vn-music-selected-icon"></i>
                 <span class="vn-music-name" id="vn-music-name">${escapeHtml(nameText)}</span>
                 <button type="button" class="vn-music-clear" id="vn-music-clear" title="${game.i18n.localize('vn.dialog.clearMusic')}"><i class="fas fa-times"></i></button>
             </div>

@@ -9,6 +9,8 @@
 .vn-presets-content { display: flex; flex-direction: column; gap: 8px; padding: 4px; flex: 1 1 auto; min-height: 0; }
 
 .vn-presets-split {
+    position: relative;
+    container: vn-split / inline-size;
     display: flex;
     align-items: stretch;
     gap: 8px;
@@ -17,7 +19,8 @@
 }
 
 .vn-presets-list-pane {
-    container-type: inline-size;
+    container: vn-list / inline-size;
+    --vn-ctl-h: 32px;   /* one height for every control of the two top rows */
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -28,9 +31,11 @@
 
 /* ── Detail panel ──────────────────────────────────── */
 
+/* The panel exists only while a preset is open (the list has the whole width otherwise).
+   Side by side when there is room; in a narrow window it covers the list and has a "back to the list" button. */
 .vn-preset-detail-panel {
     /* one width for every preset kind: a panel that resizes when you click between presets makes the list jump */
-    width: clamp(340px, 36%, 500px);
+    width: clamp(400px, 42%, 560px);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -41,28 +46,17 @@
     min-height: 260px;
     align-self: stretch;
     font-size: 0.95em;
+    container: vn-panel / inline-size;
 }
-
-
-.vn-panel-empty-hint {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 48px 24px;
-    color: var(--vn-text-dim);
-    font-size: 0.82em;
-    text-align: center;
-    opacity: 0.5;
-}
-.vn-panel-empty-hint i { font-size: 1.8em; }
+.vn-preset-detail-panel[hidden] { display: none; }
 
 .vn-panel-header--preset-detail {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 14px;
+    padding: 6px 12px;
+    min-height: 44px;
+    box-sizing: border-box;
     border-bottom: 1px solid var(--vn-border);
     background: rgba(0, 0, 0, 0.25);
     flex-shrink: 0;
@@ -77,7 +71,27 @@
     text-overflow: ellipsis;
 }
 .vn-panel-title i { margin-right: 4px; opacity: 0.8; }
-.vn-panel-close-btn { flex-shrink: 0; width: 22px; height: 22px; padding: 0; opacity: 0.6; }
+.vn-panel-close-btn { flex-shrink: 0; width: 32px; height: 32px; padding: 0; justify-content: center; opacity: 0.7; }
+.vn-panel-close-btn .vn-panel-back-icon,
+.vn-panel-close-btn .vn-panel-back-label { display: none; }
+.vn-panel-back-label { font-size: 0.9em; }
+.vn-panel-close-btn:hover { opacity: 1; }
+
+@container vn-split (max-width: 720px) {
+    .vn-preset-detail-panel {
+        position: absolute;
+        inset: 0;
+        z-index: 15;
+        width: auto;
+        min-height: 0;
+        background: var(--vn-bg-deep, #14141c);
+        box-shadow: 0 0 0 1px var(--vn-border-hover), 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .vn-panel-close-btn .vn-panel-close-icon { display: none; }
+    .vn-panel-close-btn .vn-panel-back-icon,
+    .vn-panel-close-btn .vn-panel-back-label { display: inline; }
+    .vn-panel-close-btn { order: -1; width: auto; padding: 0 12px; gap: 6px; opacity: 1; }
+}
 .vn-panel-close-btn:hover { opacity: 1; }
 
 .vn-panel-body {
@@ -138,6 +152,15 @@
     font-size: 0.78em;
 }
 .vn-panel-action i { width: 13px; flex-shrink: 0; text-align: center; }
+/* Launching is what the panel is mostly opened for: a full-width primary button above the editing actions */
+.vn-panel-actions .vn-panel-action--launch {
+    grid-column: 1 / -1; flex: 1 1 100%;
+    justify-content: center;
+    min-height: 36px; font-size: 0.85em; font-weight: 600;
+    background: var(--vn-accent-dim); border-color: rgba(136, 192, 208, 0.45); color: var(--vn-accent);
+}
+.vn-panel-actions .vn-panel-action--launch:hover { background: rgba(136, 192, 208, 0.35); border-color: var(--vn-accent); }
+.vn-panel-actions .vn-panel-action--delete { grid-column: 1 / -1; }
 
 /* Info row */
 .vn-panel-info {
@@ -171,6 +194,33 @@
     color: var(--vn-text-dim);
     opacity: 0.4;
 }
+
+/* Scenes section: linked scenes as chips + the button that opens the picker */
+.vn-panel-scenes {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    min-height: 4px;
+}
+.vn-panel-scenes:empty::before {
+    content: '—';
+    font-size: max(11px, 0.7em);
+    color: var(--vn-text-dim);
+    opacity: 0.4;
+}
+.vn-scene-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    max-width: 100%;
+    padding: 2px 7px;
+    line-height: 1;
+    font-size: 0.85em; font-weight: 600;
+    background: rgba(136,192,208,0.12);
+    border: 1px solid rgba(136,192,208,0.25);
+    border-radius: 20px;
+    color: var(--vn-accent);
+    white-space: nowrap;
+}
+.vn-scene-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.vn-scene-chip > i { flex: none; font-size: 0.85em; opacity: 0.7; }
+.vn-panel-scenes-btn { align-self: flex-start; }
 
 .vn-panel-tag-input-wrap {
     display: flex;
@@ -212,6 +262,10 @@
     gap: 4px;
     margin-top: 4px;
     min-height: 0;
+    max-height: 120px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--vn-accent-dim) transparent;
 }
 .vn-panel-tag-dropdown:empty { display: none; }
 
@@ -256,9 +310,41 @@
 .vn-preset-info { cursor: pointer; }
 .vn-preset-card-name { cursor: pointer; }
 
-.vn-preset-save-row { display: flex; gap: 6px; }
+/* Two tidy rows above the list: 1. saving (name, pin, save, composite); 2. browsing (group, search, view, sort, filters, ⋯).
+   Both wrap on a narrow window without changing the height of a control. */
+.vn-preset-save-row,
+.vn-preset-controls {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.vn-preset-controls { padding-bottom: 8px; border-bottom: 1px solid var(--vn-border); }
+
+.vn-preset-save-row > input[type="text"],
+.vn-preset-save-row > .vn-btn,
+.vn-preset-controls > input[type="text"],
+.vn-preset-controls > select,
+.vn-preset-controls > .vn-btn,
+.vn-preset-controls .vn-presets-mode-toggle .vn-btn,
+.vn-preset-controls .vn-preset-view-toggle .vn-btn,
+.vn-preset-controls .vn-preset-tag-bar > .vn-btn,
+.vn-preset-controls .vn-preset-menu > summary {
+    height: var(--vn-ctl-h);
+    min-height: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding-block: 0;
+    line-height: 1;
+}
+.vn-preset-save-row > .vn-btn,
+.vn-preset-controls > .vn-btn,
+.vn-preset-controls .vn-preset-tag-bar > .vn-btn { padding-inline: 11px; font-size: 0.82em; justify-content: center; }
+.vn-preset-save-row > .vn-preset-scene-pin { width: var(--vn-ctl-h); padding-inline: 0; }
+
 .vn-preset-save-row input[type="text"] {
-    flex: 1; padding: 8px 12px;
+    flex: 1 1 180px; min-width: 0; padding-inline: 12px;
     background: rgba(0,0,0,0.3);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
@@ -293,12 +379,8 @@
     box-shadow: none;
 }
 
-.vn-preset-controls {
-    display: flex; gap: 6px; align-items: center;
-}
-
 .vn-preset-search {
-    flex: 1; padding: 7px 12px;
+    flex: 1 1 150px; min-width: 120px; padding-inline: 12px;
     background: rgba(0,0,0,0.25);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
@@ -315,9 +397,9 @@
 }
 
 .vn-preset-sort {
-    flex: 0 0 80px;
-    width: 80px;
-    padding: 4px 6px;
+    flex: 0 0 auto;
+    width: 104px;
+    padding: 0 6px;
     background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
@@ -332,10 +414,14 @@
 
 .vn-preset-list { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-height: 220px; overflow-y: auto; }
 
+/* List row: small preview | name + one line of facts and tags | launch (big) + delete (quiet) */
 .vn-preset-item {
     position: relative;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
     background: rgba(0,0,0,0.15);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
@@ -343,26 +429,59 @@
 }
 .vn-preset-item:hover { background: rgba(0,0,0,0.25); border-color: var(--vn-border-hover); }
 
+.vn-preset-thumb {
+    width: 58px;
+    aspect-ratio: 8 / 5;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text-dim);
+    font-size: 0.9em;
+    cursor: pointer;
+}
+.vn-preset-thumb > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vn-preset-thumb > i { opacity: 0.3; }
+
 .vn-preset-info {
-    display: flex; flex-direction: column; gap: 2px;
-    overflow: hidden; flex: 1; margin-right: 8px;
+    display: flex; flex-direction: column; gap: 3px;
+    min-width: 0; overflow: hidden;
 }
 
 .vn-preset-name {
-    color: var(--vn-text); font-size: 0.9em; font-weight: 500;
+    color: var(--vn-text); font-size: 0.9em; font-weight: 600;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-.vn-preset-meta {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+/* Kind, effect / music hints, scene and date on one line; the tags take the rest of it (or wrap under it in a narrow list) */
+.vn-preset-sub {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 3px 10px;
+    min-width: 0;
 }
+.vn-preset-meta {
+    display: flex; align-items: center; flex-wrap: nowrap; gap: 8px;
+    min-width: 0; max-width: 100%;
+}
+.vn-preset-sub .vn-preset-tags { flex: 1 1 110px; margin-top: 0; }
+
+.vn-preset-hints { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: max(11px, 0.72em); }
+.vn-preset-hint { color: var(--vn-accent); opacity: 0.8; cursor: help; }
+.vn-preset-hint.--particle { color: var(--vn-text-dim); }
+.vn-preset-hint.--music { color: var(--vn-gold); }
+
+.vn-preset-dates > i { margin-right: 4px; font-size: 0.85em; opacity: 0.55; }
 
 .vn-preset-scene-tag {
     display: flex; align-items: center; gap: 3px;
+    max-width: 180px; min-width: 0;
     font-size: max(11px, 0.72em); color: var(--vn-text-dim);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .vn-preset-scene-tag i { font-size: 0.85em; flex-shrink: 0; color: var(--vn-accent-dim); }
+.vn-preset-scene-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.vn-preset-scene-more { flex: none; color: var(--vn-accent); font-weight: 600; }
 
 .vn-preset-dates {
     font-size: max(11px, 0.7em); color: var(--vn-text-dim);
@@ -385,14 +504,53 @@
     white-space: nowrap; cursor: help;
 }
 
-.vn-preset-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.vn-preset-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* The primary action of a row: obvious, touch-sized; the word appears when the list is wide enough */
+.vn-preset-item .vn-preset-launch {
+    height: 34px; min-width: 34px; min-height: 0;
+    justify-content: center;
+    padding: 0 11px;
+    gap: 7px;
+    font-size: 0.85em; font-weight: 600;
+    background: var(--vn-accent-dim);
+    border-color: rgba(136, 192, 208, 0.45);
+    color: var(--vn-accent);
+}
+.vn-preset-item .vn-preset-launch:hover { background: rgba(136, 192, 208, 0.35); border-color: var(--vn-accent); }
+.vn-preset-launch-label { display: none; }
+@container vn-list (min-width: 540px) {
+    .vn-preset-launch-label { display: inline; }
+}
+/* Deleting stays one confirmation away, but is not what the eye lands on */
+.vn-preset-item .vn-preset-delete {
+    width: 32px; height: 32px; min-width: 0; min-height: 0; padding: 0;
+    justify-content: center;
+    opacity: 0.4;
+    background: transparent; border-color: transparent;
+    color: var(--vn-danger);
+}
+.vn-preset-item:hover .vn-preset-delete,
+.vn-preset-item .vn-preset-delete:focus-visible { opacity: 1; }
+.vn-preset-item .vn-preset-delete:hover { opacity: 1; background: var(--vn-danger-dim); border-color: rgba(191, 97, 106, 0.4); }
+@media (hover: none) { .vn-preset-item .vn-preset-delete { opacity: 0.8; } }
 
 /* ── Tags ─────────────────────────────────────────── */
 
+/* One row under a list item / card. The tags that do not fit get .vn-tag-overflow and a "+N" badge (_fitPresetTags);
+   while measuring, the chips take their natural width. Only the first chip may shrink, with an ellipsis, when it is
+   wider than the row by itself. */
 .vn-preset-tags {
-    display: flex; flex-wrap: wrap; gap: 3px;
+    display: flex; flex-wrap: nowrap; gap: 3px;
     margin-top: 2px;
+    min-width: 0;
+    overflow: hidden;
 }
+.vn-preset-tags .vn-tag-chip { flex: none; max-width: 100%; }
+.vn-preset-tags .vn-tag-chip:first-child { flex: 0 1 auto; min-width: 0; }
+.vn-preset-tags.is-measuring .vn-tag-chip { flex: none; max-width: none; }
+.vn-tag-overflow { display: none !important; }
+.vn-tag-chip > span { overflow: hidden; text-overflow: ellipsis; }
 
 .vn-tag-chip {
     display: inline-flex; align-items: center; gap: 3px;
@@ -421,9 +579,11 @@
     border-radius: 10px;
     white-space: nowrap;
     user-select: none;
+    flex: none;
 }
 
-.vn-tag-rm-btn {
+.vn-tag-rm-btn,
+.vn-scene-rm-btn {
     appearance: none; -webkit-appearance: none;
     background: none; border: none; border-radius: 0;
     box-shadow: none; outline: none;
@@ -433,81 +593,126 @@
     color: inherit; opacity: 0.55; cursor: pointer;
     font-size: 0.9em; line-height: 1; font-family: inherit;
 }
-.vn-tag-rm-btn:hover { opacity: 1; color: #bf616a; background: none; border: none; box-shadow: none; }
+.vn-tag-rm-btn:hover,
+.vn-scene-rm-btn:hover { opacity: 1; color: #bf616a; background: none; border: none; box-shadow: none; }
 
-/* Tag filter bar above list header */
-.vn-preset-tag-bar {
-    display: flex; align-items: center; gap: 6px;
-    padding: 0 2px 4px;
-    min-height: 0;
-}
+/* Tag filter bar above the list: picker button, the picked tags as removable chips, reset */
+/* The bar is part of the browsing row (its button sits next to sort / "this scene"); the picked tags drop to a line of
+   their own under the row only while there are any */
+.vn-preset-tag-bar { display: contents; }
 .vn-preset-tag-bar[hidden] { display: none !important; }
 
-.vn-tag-bar-search {
-    flex-shrink: 0;
-    width: 88px;
-    padding: 3px 8px;
-    font-size: max(11px, 0.75em);
-    background: rgba(0,0,0,0.25);
-    border: 1px solid var(--vn-border);
-    border-radius: var(--vn-radius-sm);
-    color: var(--vn-text);
-    outline: none;
-}
-.vn-tag-bar-search:focus { border-color: var(--vn-accent-dim); }
-.vn-tag-bar-search::placeholder { color: var(--vn-text-dim); opacity: 0.5; }
+.vn-tag-picker-btn { flex-shrink: 0; gap: 5px; }
+.vn-tag-picker-count { margin-left: 1px; }
 
-.vn-tag-bar-chips {
-    flex: 1;
-    display: flex; flex-wrap: nowrap; gap: 4px;
-    overflow-x: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--vn-accent-dim) transparent;
-    min-height: 0;
+.vn-tag-bar-picked {
+    flex: 1 0 100%; order: 10;
+    display: flex; align-items: center; gap: 6px;
+    min-width: 0;
 }
-.vn-tag-bar-chips::-webkit-scrollbar { height: 3px; }
-.vn-tag-bar-chips::-webkit-scrollbar-thumb { background: var(--vn-accent-dim); border-radius: 3px; }
+.vn-tag-bar-picked[hidden] { display: none; }
 
-.vn-tag-filter-chip {
-    display: inline-flex; align-items: center;
-    padding: 2px 8px;
-    line-height: 1;
-    font-size: max(11px, 0.7em); font-weight: 600;
-    background: rgba(136,192,208,0.08);
-    border: 1px solid rgba(136,192,208,0.2);
-    border-radius: 20px;
-    color: var(--vn-text-dim);
-    cursor: pointer;
-    transition: all var(--vn-transition);
-    white-space: nowrap;
+.vn-tag-bar-active {
+    flex: 1; min-width: 0;
+    display: flex; flex-wrap: wrap; gap: 4px;
 }
-.vn-tag-filter-chip:hover { background: rgba(136,192,208,0.16); color: var(--vn-accent); border-color: var(--vn-accent-dim); }
-.vn-tag-filter-chip.active { background: rgba(136,192,208,0.2); border-color: var(--vn-accent); color: var(--vn-accent); }
+.vn-tag-bar-active .vn-tag-chip { max-width: 100%; }
+.vn-tag-bar-active .vn-tag-chip > span { overflow: hidden; text-overflow: ellipsis; }
+.vn-tag-bar-clear { flex-shrink: 0; }
 
-/* Tag edit popover */
-.vn-tag-popover {
+/* The picker window: opens under the bar, over the list */
+.vn-tag-picker {
     position: absolute;
-    left: 0; right: 0; bottom: calc(100% + 4px);
-    z-index: 100;
+    top: calc(100% + 2px); left: 0;
+    width: min(420px, 100%);
+    z-index: 60;
+    display: flex; flex-direction: column;
     background: var(--vn-bg-deep, #12121a);
     border: 1px solid var(--vn-accent-dim);
     border-radius: var(--vn-radius);
-    padding: 8px;
-    display: flex; flex-direction: column; gap: 6px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
 }
-.vn-tag-popover-chips { display: flex; flex-wrap: wrap; gap: 4px; min-height: 20px; }
-.vn-tag-popover-input { display: flex; gap: 4px; }
-.vn-tag-input {
-    flex: 1; font-size: 0.8em;
-    background: rgba(255,255,255,0.05);
+.vn-tag-picker[hidden] { display: none; }
+
+.vn-tag-picker-head {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px;
+    border-bottom: 1px solid var(--vn-border);
+}
+
+.vn-tag-picker-search {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(0, 0, 0, 0.28);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
-    padding: 3px 7px;
-    color: var(--vn-text);
-    outline: none;
+    padding: 0 9px;
+    transition: border-color 0.15s;
 }
-.vn-tag-input:focus { border-color: var(--vn-accent-dim); }
+.vn-tag-picker-search:focus-within { border-color: var(--vn-accent-dim); }
+.vn-tag-picker-search i { font-size: max(11px, 0.7em); color: var(--vn-text-dim); opacity: 0.55; flex-shrink: 0; }
+.vn-tag-picker-input {
+    flex: 1; min-width: 0; width: 100%;
+    background: none; border: none; outline: none; box-shadow: none;
+    color: var(--vn-text);
+    font-size: max(12px, 0.82em);
+    padding: 5px 0;
+}
+.vn-tag-picker-input::placeholder { color: var(--vn-text-dim); opacity: 0.5; }
+
+.vn-tag-match { display: flex; gap: 2px; flex-shrink: 0; }
+.vn-tag-match-btn.active {
+    background: var(--vn-accent-dim);
+    border-color: var(--vn-accent);
+    color: var(--vn-accent);
+}
+
+.vn-tag-picker-list {
+    overflow-y: auto;
+    max-height: min(280px, 45vh);
+    min-height: 56px;
+    padding: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--vn-accent-dim) transparent;
+}
+
+.vn-tag-picker-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto 18px;
+    align-items: center; gap: 8px;
+    padding: 4px 8px;
+    border-radius: var(--vn-radius-sm);
+    font-size: max(12px, 0.82em);
+    color: var(--vn-text);
+    cursor: pointer;
+    transition: background var(--vn-transition);
+}
+.vn-tag-picker-row:hover { background: rgba(136, 192, 208, 0.1); }
+.vn-tag-picker-row.is-on { color: var(--vn-accent); background: rgba(136, 192, 208, 0.14); }
+.vn-tag-picker-row input[type="checkbox"] { margin: 0; accent-color: var(--vn-accent); }
+.vn-tag-picker-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-tag-picker-n { font-size: 0.85em; color: var(--vn-text-dim); font-variant-numeric: tabular-nums; }
+
+.vn-tag-picker-del {
+    appearance: none; -webkit-appearance: none;
+    background: none; border: none; box-shadow: none; outline: none;
+    padding: 0; margin: 0; width: 18px; height: 18px; min-width: 0; min-height: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--vn-text-dim); font-size: 0.85em; line-height: 1;
+    opacity: 0; cursor: pointer;
+    transition: opacity var(--vn-transition), color var(--vn-transition);
+}
+.vn-tag-picker-row:hover .vn-tag-picker-del,
+.vn-tag-picker-del:focus-visible { opacity: 0.8; }
+.vn-tag-picker-del:hover { opacity: 1; color: #bf616a; background: none; border: none; box-shadow: none; }
+
+.vn-tag-picker-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--vn-border);
+    font-size: max(11px, 0.72em);
+    color: var(--vn-text-dim);
+}
 
 /* preset-card needs relative for popover */
 .vn-preset-card { position: relative; }
@@ -639,10 +844,10 @@
 }
 
 .vn-preset-cards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 240px));
+    gap: 12px 10px;
+    align-content: start;
 }
 
 /* ── Poster-style card tile ── */
@@ -651,10 +856,18 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    width: 220px;
+    min-width: 0;
     box-sizing: border-box;
     cursor: pointer;
 }
+
+/* Effect / music hints and (outside the scene grouping) the scene under the poster */
+.vn-preset-card-sub {
+    display: flex; align-items: center; gap: 4px 8px;
+    min-width: 0; padding: 0 2px;
+    font-size: max(11px, 0.72em); color: var(--vn-text-dim);
+}
+.vn-preset-card-sub .vn-preset-scene-tag { min-width: 0; flex: 0 1 auto; }
 
 .vn-preset-card-poster {
     position: relative;
@@ -672,6 +885,11 @@
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
 
+.vn-preset-card-img,
+.vn-preset-card-pip {
+    -webkit-user-drag: none;
+    user-select: none;
+}
 .vn-preset-card-img {
     position: absolute;
     inset: 0;
@@ -695,7 +913,7 @@
 .vn-preset-card-footer {
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    padding: 22px 7px 6px;
+    padding: 22px 56px 7px 8px;   /* room on the right for the launch button */
     background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%);
     pointer-events: none;
 }
@@ -757,41 +975,38 @@
     color: #d4a020;
 }
 
+/* The launch button is always on the poster (bottom right), not just on hover: the card's one obvious action */
 .vn-preset-card-overlay {
     position: absolute;
-    inset: 0;
+    right: 8px; bottom: 8px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.28);
-    opacity: 0;
-    transition: opacity 0.15s;
 }
-.vn-preset-card:hover .vn-preset-card-overlay { opacity: 1; }
 
-.vn-preset-card-launch {
+.vn-preset-card .vn-preset-card-launch {
     appearance: none; -webkit-appearance: none;
-    width: 36px; height: 36px;
+    width: 42px; height: 42px;
     aspect-ratio: 1 / 1;
     flex-shrink: 0;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.45);
-    border: 1.5px solid rgba(255,255,255,0.45);
-    color: #fff;
+    background: rgba(136, 192, 208, 0.92);
+    border: 2px solid rgba(255,255,255,0.55);
+    color: #0f1118;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.85em; padding: 0; line-height: 1;
+    font-size: 1em; padding: 0; line-height: 1;
     min-width: 0; min-height: 0;
     cursor: pointer;
-    box-shadow: none; outline: none;
-    transition: background 0.12s, transform 0.12s, border-color 0.12s;
-    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+    outline: none;
+    transition: background 0.12s, transform 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
-.vn-preset-card-launch:hover {
-    background: rgba(136,192,208,0.35);
-    border-color: var(--vn-accent-dim);
-    transform: scale(1.12);
+.vn-preset-card:hover .vn-preset-card-launch { box-shadow: 0 2px 14px rgba(136, 192, 208, 0.55); }
+.vn-preset-card .vn-preset-card-launch:hover,
+.vn-preset-card .vn-preset-card-launch:focus-visible {
+    background: #a5d4e2;
+    border-color: #fff;
+    transform: scale(1.1);
 }
-.vn-preset-card-launch i { margin-left: 2px; }
+.vn-preset-card-launch i { margin-left: 3px; }
 
 /* ═══════════════════════════════════════════════════════════
    Folder system
@@ -1098,7 +1313,100 @@
 
 /* Group / view toggles: icon only in a narrow list, icon + word when there is room */
 .vn-btn-label { display: none; }
-@container (min-width: 860px) {
+@container vn-list (min-width: 860px) {
     .vn-presets-mode-toggle .vn-btn-label,
     .vn-preset-view-toggle .vn-btn-label { display: inline; }
 }
+/* "This scene" and "Tags" lose their words in a narrow list so the browsing row keeps to one line (the tooltips stay) */
+@container vn-list (max-width: 780px) {
+    .vn-preset-scene-filter-label,
+    .vn-tag-picker-btn-label { display: none; }
+}
+
+/* Group / view switches are one segmented control each */
+.vn-presets-mode-toggle,
+.vn-preset-view-toggle { gap: 0; }
+.vn-presets-mode-toggle .vn-btn,
+.vn-preset-view-toggle .vn-btn { min-width: var(--vn-ctl-h); justify-content: center; padding-inline: 9px; }
+.vn-presets-mode-toggle .vn-btn:not(:first-child),
+.vn-preset-view-toggle .vn-btn:not(:first-child) { margin-left: -1px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.vn-presets-mode-toggle .vn-btn:not(:last-child),
+.vn-preset-view-toggle .vn-btn:not(:last-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.vn-presets-mode-toggle .vn-btn.active,
+.vn-preset-view-toggle .vn-btn.active { position: relative; z-index: 1; }
+
+/* ── Scene picker window (VNScenePicker) ─────────────── */
+
+/* The window has a fixed height: the content area gives the tree whatever is left above the footer, so the tree scrolls
+   and the footer buttons stay in view (a flex child with `height: 100%` of an auto-height parent just grew past the window). */
+.vn-scpick-dialog .window-content { min-height: 0; overflow: hidden; }
+.vn-scpick-dialog .window-content > form,
+.vn-scpick-dialog .dialog-content {
+    flex: 1 1 0; min-height: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+.vn-scpick-dialog .window-content > form > .dialog-content { flex: 1 1 0; }
+.vn-scpick-dialog .form-footer { flex: none; }
+
+.vn-scpick { display: flex; flex-direction: column; flex: 1 1 0; gap: 8px; min-height: 0; }
+
+.vn-scpick-search {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    padding: 0 9px;
+    color: var(--vn-text-dim);
+}
+.vn-scpick-search:focus-within { border-color: var(--vn-accent); box-shadow: 0 0 0 2px var(--vn-accent-dim); }
+.vn-scpick-search input {
+    flex: 1; min-width: 0; height: 30px;
+    padding: 0; background: transparent; border: none; box-shadow: none;
+    color: var(--vn-text); font-size: 0.85rem;
+}
+.vn-scpick-search input:focus { outline: none; box-shadow: none; }
+
+.vn-scpick-bar { display: flex; align-items: center; gap: 6px; }
+.vn-scpick-count { flex: 1; font-size: 0.75rem; color: var(--vn-text-dim); }
+
+.vn-scpick-tree {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    scrollbar-width: thin;
+}
+
+.vn-scpick-folder[hidden],
+.vn-scpick-scene[hidden],
+.vn-scpick-missing[hidden],
+.vn-scpick-nothing[hidden] { display: none; }
+
+.vn-scpick-folder > summary,
+.vn-scpick-scene {
+    display: flex; align-items: center; gap: 7px;
+    padding: 4px 6px;
+    border-radius: var(--vn-radius-sm);
+    font-size: 0.85rem;
+    color: var(--vn-text);
+    cursor: pointer;
+}
+.vn-scpick-folder > summary { list-style: none; font-weight: 600; }
+.vn-scpick-folder > summary::-webkit-details-marker { display: none; }
+.vn-scpick-folder > summary:hover,
+.vn-scpick-scene:hover { background: rgba(255, 255, 255, 0.06); }
+.vn-scpick-folder > summary > i { flex: none; color: var(--vn-folder-color, var(--vn-gold, #ebcb8b)); width: 16px; text-align: center; }
+.vn-scpick-folder:not([open]) > summary > i::before { content: "\f07b"; }
+.vn-scpick-scene > i { flex: none; color: var(--vn-text-dim); width: 16px; text-align: center; font-size: 0.85em; }
+.vn-scpick-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-scpick-here { flex: none; color: var(--vn-accent); font-size: 0.8em; }
+.vn-scpick-children { margin-left: 12px; padding-left: 6px; border-left: 1px solid var(--vn-border); display: flex; flex-direction: column; gap: 1px; }
+
+.vn-scpick input[type="checkbox"] { flex: none; margin: 0; cursor: pointer; }
+
+.vn-scpick-missing { margin-top: 6px; padding-top: 4px; border-top: 1px dashed var(--vn-border); }
+.vn-scpick-missing-hdr { padding: 2px 6px; font-size: 0.72rem; color: var(--vn-text-dim); }

@@ -2,7 +2,7 @@
 // vn-state.js — VNSceneState + VNPresets classes
 // ============================================================
 
-import { parseActorId } from './vn-id-utils.js';
+import { parseActorId, presetScenes, presetSceneNames } from './vn-id-utils.js';
 import { applyMigrations } from './vn-migrations.js';
 import { PRESETS } from './visual-effects/atmosphere/config/effects.js';
 import { VNTransitions } from './visual-effects/vn-transitions.js';
@@ -12,6 +12,15 @@ export const MODULE_ID = 'player-queue';
 
 export const PARTICLE_LAYERS = ['back', 'front', 'mix'];
 export const PARTICLE_LAYER_ICONS = { back: 'fa-arrow-down', mix: 'fa-shuffle', front: 'fa-arrow-up' };
+
+// Глубина частиц (мелкие дальние и крупные ближние) и ветер: -5 (сильный влево) … 0 … 5 (сильный вправо); порывы — по умолчанию включены
+export const PARTICLE_DEPTHS = ['flat', 'soft', 'deep'];
+export const PARTICLE_DEPTH_ICONS = { flat: 'fa-minus', soft: 'fa-layer-group', deep: 'fa-cubes-stacked' };
+export const WIND_MAX = 5;
+export const resolveParticleDepth = (v) => (PARTICLE_DEPTHS.includes(v) ? v : 'flat');
+export const resolveParticleWind = (v) => Math.min(Math.max(Math.round(Number(v) || 0), -WIND_MAX), WIND_MAX);
+
+export const windLabel = (w) => (w === 0 ? game.i18n.localize('vn.bg.windCalm') : `${w < 0 ? '← ' : ''}${Math.abs(w)}${w > 0 ? ' →' : ''}`);
 
 // Старые данные хранили булев particlesForeground вместо particlesLayer
 export function resolveParticlesLayer(p) {
@@ -42,6 +51,9 @@ class VNSceneState {
         this.visualEffect = 'none';
         this.particlesLayer = 'back';
         this.particleIntensity = 1;
+        this.particleDepth = 'flat';
+        this.particleWind = 0;
+        this.particleGusts = true;
         this.speakers = Object.fromEntries(VNSceneState.POSITIONS.map(p => [p, null]));
         this.flipped = {};
         this.visibility = {};
@@ -71,6 +83,9 @@ class VNSceneState {
             visualEffect: this.visualEffect,
             particlesLayer: this.particlesLayer,
             particleIntensity: this.particleIntensity,
+            particleDepth: this.particleDepth,
+            particleWind: this.particleWind,
+            particleGusts: this.particleGusts,
             speakers: { ...this.speakers },
             flipped: { ...this.flipped },
             visibility: { ...this.visibility },
@@ -106,6 +121,9 @@ class VNSceneState {
         }
         this.particlesLayer = resolveParticlesLayer(p);
         this.particleIntensity = Math.min(Math.max(Math.round(p.particleIntensity ?? 1), 1), 20);
+        this.particleDepth = resolveParticleDepth(p.particleDepth);
+        this.particleWind = resolveParticleWind(p.particleWind);
+        this.particleGusts = p.particleGusts !== false;
         this.flipped = { ...(p.flipped ?? {}) };
         if (p.visibility) {
             this.visibility = { ...p.visibility };
@@ -248,6 +266,12 @@ class VNPresets {
             (b.createdAt || b.savedAt || 0) - (a.createdAt || a.savedAt || 0));
     }
 
+    /** The scene the GM is on, as a link list for a new preset (empty when not pinning or no scene is open) */
+    static _currentSceneList(attach = true) {
+        const scene = canvas?.scene;
+        return attach && scene ? [{ id: scene.id, name: scene.name }] : [];
+    }
+
     static _modVersion() { return game.modules.get(MODULE_ID)?.version ?? '0.0.0'; }
 
     static async save(name, sceneState, attachScene = true, opts = {}) {
@@ -264,12 +288,12 @@ class VNPresets {
             version: this._modVersion(),
             createdAt: now,
             updatedAt: now,
-            sceneId: attachScene ? (canvas?.scene?.id ?? null) : null,
-            sceneName: attachScene ? (canvas?.scene?.name ?? null) : null,
+            scenes: this._currentSceneList(attachScene),
             folderId: opts.folderId ?? null,
             ...(thumbnailData ? { thumbnailData } : {}),
         };
         await VNStore.mutate(this.SETTING_KEY, draft => { draft[id] = entry; });
+        return entry;
     }
 
     // ── Sequences (composite presets) ──────────────────────────
@@ -335,8 +359,7 @@ class VNPresets {
             id, name, type: 'sequence', steps: [],
             version: this._modVersion(),
             createdAt: now, updatedAt: now,
-            sceneId: attachScene ? (canvas?.scene?.id ?? null) : null,
-            sceneName: attachScene ? (canvas?.scene?.name ?? null) : null,
+            scenes: this._currentSceneList(attachScene),
             folderId: opts.folderId ?? null,
         };
         this._applyCover(p);
@@ -365,16 +388,41 @@ class VNPresets {
         return result;
     }
 
-    static setScene(id, sceneId, sceneName) {
-        return this._patch(id, p => Object.assign(p, { sceneId: sceneId ?? null, sceneName: sceneName ?? null, updatedAt: Date.now() }));
+    /** Replaces the scenes a preset is linked to ([{ id, name }]); the pre-14.15.0 single pair is dropped. */
+    static setScenes(id, scenes) {
+        const clean = scenes.filter(s => s && (s.id || s.name)).map(s => ({ id: s.id ?? null, name: String(s.name ?? '') }));
+        return this._patch(id, p => {
+            delete p.sceneId;
+            delete p.sceneName;
+            Object.assign(p, { scenes: clean, updatedAt: Date.now() });
+        });
     }
 
+    /**
+     * Deletes a scene group of the list. A preset linked to other scenes as well is not deleted: it only loses this scene.
+     * Returns { deleted, unlinked }.
+     */
     static async deleteGroup(groupKey) {
-        await VNStore.mutate(this.SETTING_KEY, draft => {
+        const key = groupKey || '';
+        const { result } = await VNStore.mutate(this.SETTING_KEY, draft => {
+            const out = { deleted: 0, unlinked: 0 };
             for (const id of Object.keys(draft)) {
-                if ((draft[id].sceneName || '') === (groupKey || '')) delete draft[id];
+                const names = presetSceneNames(draft[id]);
+                if (key ? !names.includes(key) : names.length) continue;
+                if (names.length > 1) {
+                    const rest = presetScenes(draft[id]).filter(s => String(s.name ?? '').trim() !== key);
+                    delete draft[id].sceneId;
+                    delete draft[id].sceneName;
+                    Object.assign(draft[id], { scenes: rest, updatedAt: Date.now() });
+                    out.unlinked++;
+                } else {
+                    delete draft[id];
+                    out.deleted++;
+                }
             }
+            return out;
         });
+        return result ?? { deleted: 0, unlinked: 0 };
     }
 
     /** Wipes every preset in one write. */
@@ -556,6 +604,21 @@ class VNPresets {
         return this._patch(id, p => Object.assign(p, { tags: clean, updatedAt: Date.now() }));
     }
 
+    /** A full copy of a preset (composite ones too) under `name`; it gets a new id, new step ids and fresh timestamps, and stays in the same folder. */
+    static async duplicate(id, name) {
+        const { result } = await VNStore.mutate(this.SETTING_KEY, draft => {
+            const src = draft[id];
+            if (!src) return VNStore.SKIP;
+            const now = Date.now();
+            const copy = { ...structuredClone(src), id: foundry.utils.randomID(), name, createdAt: now, updatedAt: now };
+            delete copy.savedAt;
+            if (Array.isArray(copy.steps)) for (const step of copy.steps) step.id = foundry.utils.randomID();
+            draft[copy.id] = copy;
+            return copy;
+        });
+        return result;
+    }
+
     static setFolder(id, folderId) {
         return this._patch(id, p => Object.assign(p, { folderId: folderId || null, updatedAt: Date.now() }));
     }
@@ -570,11 +633,12 @@ class VNPresets {
         const payload = sceneState.toPayload();
         return this._patch(id, (_, draft) => {
             if (this.isSequence(draft[id])) return VNStore.SKIP;
-            const { id: pid, name, createdAt, sceneId, sceneName, thumbnailData: oldThumb, folderId, tags } = draft[id];
+            const { id: pid, name, createdAt, thumbnailData: oldThumb, folderId, tags } = draft[id];
+            const scenes = presetScenes(draft[id]);
             const thumbnailData = newThumb ?? oldThumb ?? null;
             draft[id] = {
                 ...payload, id: pid, name, version: this._modVersion(), createdAt, updatedAt: Date.now(),
-                sceneId, sceneName, folderId: folderId ?? null,
+                scenes, folderId: folderId ?? null,
                 ...(tags ? { tags } : {}),
                 ...(thumbnailData ? { thumbnailData } : {}),
             };

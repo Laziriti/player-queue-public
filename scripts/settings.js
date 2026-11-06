@@ -311,6 +311,20 @@ function registerSettings() {
         onChange: v => window.visualNovelScene?.setCameraEnabled(v)
     });
 
+    S('dimInactive', {
+        name: 'settings.dimInactive.name',
+        hint: 'settings.dimInactive.hint',
+        scope: 'world', config: true, type: Boolean, default: true,
+        onChange: () => window.visualNovelScene?.applyInactiveLook()
+    });
+
+    S('blurInactive', {
+        name: 'settings.blurInactive.name',
+        hint: 'settings.blurInactive.hint',
+        scope: 'world', config: true, type: Boolean, default: true,
+        onChange: () => window.visualNovelScene?.applyInactiveLook()
+    });
+
     S('cameraDoF', {
         name: 'settings.cameraDoF.name',
         hint: 'settings.cameraDoF.hint',

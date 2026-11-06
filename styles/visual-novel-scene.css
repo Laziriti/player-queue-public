@@ -815,7 +815,8 @@
     gap: 4px;
 }
 
-.vn-fxset-layer {
+.vn-fxset-layer,
+.vn-fxset-depth {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -830,8 +831,10 @@
     white-space: nowrap;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
-.vn-fxset-layer:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-.vn-fxset-layer.active { color: var(--vn-accent); border-color: var(--vn-accent-dim); background: rgba(136, 192, 208, 0.12); }
+.vn-fxset-layer:hover,
+.vn-fxset-depth:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.vn-fxset-layer.active,
+.vn-fxset-depth.active { color: var(--vn-accent); border-color: var(--vn-accent-dim); background: rgba(136, 192, 208, 0.12); }
 
 .vn-fxset-intensity-row {
     display: flex;
@@ -841,8 +844,10 @@
     color: rgba(255, 255, 255, 0.6);
 }
 .vn-fxset-intensity-row > span:first-of-type { white-space: nowrap; }
-.vn-fxset-intensity { flex: 1 1 auto; min-width: 40px; accent-color: var(--vn-accent); cursor: pointer; }
+.vn-fxset-intensity,
+.vn-fxset-wind { flex: 1 1 auto; min-width: 40px; accent-color: var(--vn-accent); cursor: pointer; }
 .vn-fxset-intensity-val { min-width: 1.6em; text-align: right; }
+.vn-fxset-wind-val { min-width: 3.2em; text-align: right; white-space: nowrap; }
 
 /* Same switch as in the scene dialog (.vn-overlay-toggle), but the label takes the free width and the switch sits at the end */
 .vn-fxset-body .vn-fxset-toggle { display: flex; padding: 5px 6px; color: rgba(255, 255, 255, 0.75); }
@@ -1878,25 +1883,28 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 /* Tabs: the selected one is marked by the accent underline only (a stray full border was drawn on focus) */
-.application:has(.vn-scene-dialog) .vn-tab-btn,
-.application:has(.vn-scene-dialog) .vn-tab-btn:is(:hover, :focus, :active) {
+.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-pool-tab),
+.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-pool-tab):is(:hover, :focus, :active) {
     border: none;
     border-bottom: 2px solid transparent;
     border-radius: 0;
+    box-shadow: none;
 }
-.application:has(.vn-scene-dialog) .vn-tab-btn.active { border-bottom-color: var(--vn-accent); }
+.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-pool-tab).active { border-bottom-color: var(--vn-accent); }
+.application:has(.vn-scene-dialog) .vn-pool-tab { background: transparent; height: auto; line-height: normal; }
+.application:has(.vn-scene-dialog) .vn-pool-tab:hover { background: rgba(255, 255, 255, 0.04); }
+.application:has(.vn-scene-dialog) .vn-pool-tab.drag-hover { background: var(--vn-accent-dim); }
 
 /* Toggled buttons keep their own faint accent halo */
 .application:has(.vn-scene-dialog) .vn-btn.active:not(:focus-visible) {
     box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.25) !important;
 }
 
-/* The Characters tab has no list to stretch, so the three position slots take the free height:
-   big drop targets instead of a quarter of the window left empty. */
-.vn-tab-panel[data-tab="characters"].active { display: flex; flex-direction: column; }
-.vn-tab-panel[data-tab="characters"] > .vn-dialog-layout { flex: 1 1 auto; min-height: 0; }
-.vn-dialog-main > .vn-positions-grid { flex: 1 1 auto; min-height: 150px; }
-.vn-positions-grid > .vn-position-slot { display: flex; flex-direction: column; }
+/* Characters tab: the stage (three position slots) comes first and is as tall as its content needs;
+   the pool of actors below takes the rest of the window and scrolls inside itself, so the stage never leaves the view. */
+.vn-tab-panel[data-tab="characters"].active { display: flex; flex-direction: column; gap: 10px; }
+.vn-positions-grid { flex: 0 0 auto; }
+.vn-positions-grid > .vn-position-slot { display: flex; flex-direction: column; min-width: 0; }
 .vn-positions-grid .vn-token-selector { flex: 1 1 auto; align-content: flex-start; }
 
 /* ── Main dialog shell: the tab fills the window, the footer stays at the bottom ──
@@ -1931,10 +1939,13 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     overflow-y: auto;
 }
 
-/* ── Footer hierarchy: Create is the primary action, background-only is secondary, Cancel is quiet ── */
+/* ── Footer hierarchy: Create is the primary action (right), Cancel is quiet, "background only / remove characters"
+   is a ghost button parked on the far left so it cannot be mistaken for the primary one ──
+   Buttons that make no sense on the active tab are hidden by the builder (hidden + disabled, see _syncFooter). */
 .application:has(.vn-scene-dialog--tabs) .form-footer {
     flex: 0 0 auto;
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
     margin-top: 8px;
@@ -1944,7 +1955,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 
 .application:has(.vn-scene-dialog--tabs) .form-footer button {
     flex: 0 0 auto;
-    min-width: 150px;
+    min-width: 110px;
     height: 36px;
     padding: 0 18px;
     border-radius: var(--vn-radius-sm);
@@ -1971,7 +1982,26 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     color: var(--vn-text);
 }
 
-.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="background-only"] { order: 2; }
+.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="background-only"] {
+    order: 0;
+    margin-right: auto;
+    background: transparent;
+    border-color: var(--vn-border);
+    color: var(--vn-text-dim);
+    font-weight: 500;
+}
+.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="background-only"]:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--vn-border-hover);
+    color: var(--vn-text);
+}
+/* In edit mode the button takes characters off the running scene: it warns on hover */
+.application:has(.vn-scene-dialog--tabs[data-mode="edit"]) .form-footer button[data-action="background-only"]:hover {
+    background: rgba(191, 97, 106, 0.1);
+    border-color: var(--vn-danger);
+    color: var(--vn-danger);
+}
+.application:has(.vn-scene-dialog--tabs) .form-footer button[hidden] { display: none !important; }
 
 .application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="create"] {
     order: 3;
@@ -1982,12 +2012,6 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 .application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="create"]:hover {
     background: #a5d3df;
     border-color: #a5d3df;
-}
-
-/* The import/export tab has no use for "create a scene" */
-.application:has(.vn-scene-dialog--tabs[data-tab="adventure-io"]) .form-footer
-    :is(button[data-action="create"], button[data-action="background-only"]) {
-    display: none;
 }
 
 /* One height and weight for text inputs and selects (Foundry's own are 40px and bold, next to 24px buttons) */
@@ -2087,9 +2111,15 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     border-bottom: 2px solid var(--vn-border);
     margin-bottom: 10px;
     padding: 0 4px;
+    /* The tab labels adapt to the width of this row (container queries below), not to the viewport:
+       the window can be resized down to 600px */
+    container-type: inline-size;
+    container-name: vn-tabs;
 }
 
 .vn-tab-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
     padding: 7px 16px;
     background: transparent;
     border: none;
@@ -2111,9 +2141,24 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 .vn-tab-panel { display: none; padding: 4px; }
 .vn-tab-panel.active { display: block; }
 
+/* Narrow window: tighter tabs, then only the active tab keeps its label (the others stay icon-only with a title tooltip),
+   and in the narrowest the GM-only switch drops its text too (its tooltip and the gold "on" state remain) */
+@container vn-tabs (max-width: 820px) {
+    .vn-tab-btn { padding: 7px 11px; }
+}
+@container vn-tabs (max-width: 760px) {
+    .vn-tab-btn:not(.active) { padding: 7px 12px; }
+    .vn-tab-btn:not(.active) .vn-tab-label { display: none; }
+}
+@container vn-tabs (max-width: 500px) {
+    .vn-gm-only-toggle .vn-gm-label { display: none; }
+}
+
 /* GM-only toggle in dialog tabs row */
 .vn-gm-only-toggle {
     margin-left: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -2179,13 +2224,11 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 
 /* ── Dialog Layout ── */
 
-.vn-dialog-layout { display: flex; gap: 12px; }
-.vn-dialog-main { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.vn-dialog-sidebar { width: 170px; flex-shrink: 0; }
+.vn-scene-dialog { --vn-tok-size: 64px; }
 
 .vn-positions-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
 }
 
@@ -2221,14 +2264,17 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 .vn-token-selector {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    min-height: 60px;
-    padding: 8px;
+    gap: 8px;
+    /* one card tall: the slot is sized by its content, not stretched to the window */
+    min-height: calc(var(--vn-tok-size, 64px) + 52px);
+    padding: 10px 8px 8px;
     position: relative;
     transition: all var(--vn-transition);
 }
 
 .vn-token-selector.drag-over,
+.vn-available-tokens.drag-over,
+.vn-scene-participants.drag-over,
 .vn-favorites-section.drag-over { background: rgba(136,192,208,0.06); }
 .vn-token-selector:has(.vn-token-option) .vn-drop-hint { display: none; }
 
@@ -2244,6 +2290,8 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 
 .vn-token-option {
     position: relative;
+    box-sizing: border-box;
+    width: calc(var(--vn-tok-size, 64px) + 12px);
     cursor: move;
     border: 1.5px solid transparent;
     border-radius: var(--vn-radius-sm);
@@ -2275,60 +2323,84 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 
 .vn-token-preview img {
-    width: var(--vn-tok-size, 48px); height: var(--vn-tok-size, 48px);
+    width: var(--vn-tok-size, 64px); height: var(--vn-tok-size, 64px);
     object-fit: cover;
     border-radius: var(--vn-radius-sm);
     border: 1px solid rgba(255,255,255,0.08);
 }
 
+/* Up to two lines (the full name is in the card's tooltip) */
 .vn-token-name {
-    font-size: max(11px, 0.7em);
+    font-size: max(11px, 0.72em);
+    line-height: 1.2;
     text-align: center;
-    max-width: calc(var(--vn-tok-size, 48px) + 12px);
+    max-width: 100%;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     color: var(--vn-text-dim);
     font-weight: 500;
 }
 
 .vn-token-option.selected .vn-token-name { color: var(--vn-accent); }
 
-/* ── Hide toggle button ── */
+/* ── Corner badges on a card in a position slot: visibility (top-right) and portrait effect (top-left) ──
+   They hang over the corners so the face stays clear. At rest a badge is invisible; it shows on hover / keyboard focus
+   of the card, and stays as a small indicator while its setting is not the default (hidden / has an effect). */
 
-.vn-token-hide-btn {
+.vn-scene-dialog .vn-token-option > :is(.vn-token-hide-btn, .vn-token-fx-btn) {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 18px;
-    height: 18px;
+    top: -6px;
+    width: 20px;
+    height: 20px;
+    min-height: 0;
     padding: 0;
-    border: none;
-    border-radius: 3px;
-    background: rgba(0, 0, 0, 0.5);
-    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 50%;
+    background: rgba(13, 17, 23, 0.92);
+    color: rgba(255, 255, 255, 0.8);
     font-size: max(11px, 0.65em);
     cursor: pointer;
     display: none;
     align-items: center;
     justify-content: center;
     z-index: 2;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
     line-height: 1;
 }
+.vn-scene-dialog .vn-token-option > .vn-token-hide-btn { right: -6px; left: auto; }
+.vn-scene-dialog .vn-token-option > .vn-token-fx-btn { left: -6px; right: auto; }
 
-.vn-token-hide-btn:hover {
-    background: rgba(0, 0, 0, 0.85);
+.vn-scene-dialog .vn-token-option > :is(.vn-token-hide-btn, .vn-token-fx-btn):hover {
+    background: #000;
     color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
 }
 
-.vn-token-selector .vn-token-option .vn-token-hide-btn {
+.vn-scene-dialog .vn-token-selector .vn-token-option > :is(.vn-token-hide-btn, .vn-token-fx-btn) {
     display: flex;
+    opacity: 0;
+    pointer-events: none;
+}
+.vn-scene-dialog .vn-token-selector .vn-token-option:is(:hover, :focus-within) > :is(.vn-token-hide-btn, .vn-token-fx-btn),
+.vn-scene-dialog .vn-token-selector .vn-token-option:is([data-visibility="hidden"], [data-visibility="name-hidden"]) > .vn-token-hide-btn,
+.vn-scene-dialog .vn-token-selector .vn-token-option[data-char-fx] > .vn-token-fx-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+/* A set (non-default) badge is smaller until the card is hovered: just an indicator */
+.vn-scene-dialog .vn-token-selector .vn-token-option:not(:hover, :focus-within):is([data-visibility="hidden"], [data-visibility="name-hidden"]) > .vn-token-hide-btn,
+.vn-scene-dialog .vn-token-selector .vn-token-option[data-char-fx]:not(:hover, :focus-within) > .vn-token-fx-btn {
+    transform: scale(0.8);
 }
 
-.vn-token-option[data-visibility="hidden"] .vn-token-hide-btn,
-.vn-token-option[data-visibility="name-hidden"] .vn-token-hide-btn {
-    background: rgba(191, 97, 106, 0.7);
+.vn-scene-dialog .vn-token-option[data-visibility="hidden"] > .vn-token-hide-btn,
+.vn-scene-dialog .vn-token-option[data-visibility="name-hidden"] > .vn-token-hide-btn {
+    background: rgba(191, 97, 106, 0.95);
+    border-color: transparent;
     color: #fff;
 }
 
@@ -2341,40 +2413,10 @@ body.vn-dragging .vn-token-option { transition: none; }
     color: var(--vn-danger);
 }
 
-/* ── Portrait effect button (top-left, mirrors the hide button) ── */
-
-.vn-token-fx-btn {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    border: none;
-    border-radius: 3px;
-    background: rgba(0, 0, 0, 0.5);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: max(11px, 0.65em);
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    transition: background 0.15s ease, color 0.15s ease;
-    line-height: 1;
-}
-
-.vn-token-fx-btn:hover {
-    background: rgba(0, 0, 0, 0.85);
-    color: #fff;
-}
-
-.vn-token-selector .vn-token-option .vn-token-fx-btn {
-    display: flex;
-}
-
-.vn-token-option[data-char-fx] .vn-token-fx-btn {
-    background: rgba(136, 192, 208, 0.75);
+/* Portrait effect badge (top-left, see the corner badges above) in its "effect set" colour */
+.vn-scene-dialog .vn-token-option[data-char-fx] > .vn-token-fx-btn {
+    background: rgba(136, 192, 208, 0.95);
+    border-color: transparent;
     color: #0b1620;
 }
 
@@ -2538,13 +2580,64 @@ body.vn-dragging .vn-token-option { transition: none; }
     filter: brightness(0.2);
 }
 
-/* ── Character controls (search + card size) ── */
+/* ── Actor pool: tokens on the canvas / scene participants / favorites in one panel under the stage ── */
 
+.vn-pool {
+    flex: 1 1 auto;
+    min-height: 170px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius);
+    background: rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.vn-pool-bar {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    padding-right: 8px;
+    background: rgba(0, 0, 0, 0.15);
+    border-bottom: 1px solid var(--vn-border);
+}
+
+.vn-pool-tabs { display: flex; flex-wrap: wrap; }
+
+.vn-pool-tab {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 11px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    color: var(--vn-text-dim);
+    font-size: 0.82em;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--vn-transition), background var(--vn-transition);
+}
+.vn-pool-tab:hover { color: var(--vn-text); background: rgba(255, 255, 255, 0.04); }
+.vn-pool-tab.active { color: var(--vn-accent); border-bottom-color: var(--vn-accent); }
+.vn-pool-tab[data-pool="favorites"] i { color: var(--vn-gold); }
+/* A card is dragged over an inactive tab: it is about to open */
+.vn-pool-tab.drag-hover { background: var(--vn-accent-dim); color: var(--vn-accent); }
+
+/* Search + card size live in the pool's bar, to the right of the tabs; they wrap below the tabs in a narrow window */
 .vn-characters-controls {
+    flex: 1 1 200px;
+    min-width: 0;
+    max-width: 360px;
+    margin-left: auto;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 0 0 8px;
+    padding: 0;
 }
 
 .vn-characters-controls .vn-token-search {
@@ -2579,14 +2672,27 @@ body.vn-dragging .vn-token-option { transition: none; }
     cursor: pointer;
 }
 
-.vn-available-tokens {
+.vn-pool-panel {
+    display: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 8px 8px;
+    overflow-y: auto;
+}
+.vn-pool-panel.active { display: flex; }
+
+.vn-available-tokens,
+.vn-favorites-section {
+    flex: 1 1 auto;
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px;
-    background: rgba(0,0,0,0.08);
+    align-content: flex-start;
+    gap: 8px;
+    min-height: calc(var(--vn-tok-size, 64px) + 40px);
     border-radius: var(--vn-radius-sm);
-    min-height: 50px;
+    transition: background var(--vn-transition);
 }
 
 .vn-empty-hint {
@@ -2599,88 +2705,106 @@ body.vn-dragging .vn-token-option { transition: none; }
     opacity: 0.6;
 }
 
-.vn-scene-participants {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 4px 2px;
-    min-height: 48px;
-}
-
-.vn-participants-hint {
-    margin: 0 0 6px;
+.vn-favorites-hint {
+    flex: 0 0 auto;
+    margin: 0;
     font-size: max(11px, 0.75em);
     color: var(--vn-text-dim);
     font-style: italic;
     line-height: 1.4;
-}
-
-
-/* ── Favorites ── */
-
-.vn-favorites-panel {
-    border: 1px solid rgba(235,203,139,0.2);
-    border-radius: var(--vn-radius);
-    background: rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
-.vn-panel-header {
-    padding: 6px 10px;
-    background: rgba(0,0,0,0.15);
-    border-bottom: 1px solid rgba(235,203,139,0.15);
-    color: var(--vn-gold);
-    font-weight: 600;
-    font-size: 0.8em;
     display: flex;
     align-items: center;
     gap: 5px;
 }
 
-.vn-favorites-section {
+/* ── Scene participants: a permanent collapsible strip between the stage and the pool.
+   Saved with the preset (not tied to the canvas scene), so it must stay a visible drop target while the pool switches tabs. ── */
+.vn-participants-strip {
+    flex: 0 0 auto;
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius);
+    background: rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+.vn-participants-strip:has(.vn-scene-participants.drag-over) { border-color: var(--vn-accent); }
+
+.vn-participants-header {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-height: 60px;
-    max-height: clamp(150px, 45vh, 500px);
-    flex: 1;
-    overflow-y: auto;
-    padding: 6px;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    background: rgba(0, 0, 0, 0.15);
+    color: var(--vn-accent);
+    font-weight: 600;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+.vn-participants-header::-webkit-details-marker { display: none; }
+.vn-participants-header:hover { background: rgba(255, 255, 255, 0.04); }
+.vn-participants-strip[open] .vn-chevron { transform: rotate(180deg); }
+.vn-participants-header .vn-participants-hint {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--vn-text-dim);
+    font-size: max(11px, 0.95em);
+    font-style: italic;
+    font-weight: 400;
 }
 
-.vn-favorites-section .vn-token-option { width: 100%; }
-.vn-favorites-section .vn-token-preview { flex-direction: row; gap: 6px; }
-.vn-favorites-section .vn-token-preview img { width: var(--vn-tok-size, 48px); height: var(--vn-tok-size, 48px); }
-.vn-favorites-section .vn-token-name { max-width: 90px; }
+/* One row of cards, scrolling sideways when there are many; an empty strip is still a drop target with a hint */
+.vn-scene-participants {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: calc(var(--vn-tok-size, 64px) * 0.8 + 40px);
+    padding: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: relative;
+    transition: background var(--vn-transition);
+}
+.vn-scene-participants > .vn-token-option { flex: 0 0 auto; width: calc(var(--vn-tok-size, 64px) * 0.8 + 12px); }
+/* Compact cards: this is a reference list, the stage above is where cards are arranged */
+.vn-scene-participants .vn-token-preview img { width: calc(var(--vn-tok-size, 64px) * 0.8); height: calc(var(--vn-tok-size, 64px) * 0.8); }
+.vn-scene-participants .vn-token-name { -webkit-line-clamp: 1; line-clamp: 1; }
+.vn-scene-participants:empty::before {
+    content: attr(data-empty);
+    position: absolute;
+    inset: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+    color: var(--vn-text-dim);
+    font-size: max(11px, 0.78em);
+    font-style: italic;
+    text-align: center;
+    opacity: 0.7;
+    pointer-events: none;
+}
 
 .vn-favorites-empty {
+    width: 100%;
     color: var(--vn-text-dim);
     font-size: max(11px, 0.75em);
     text-align: center;
     padding: 16px 6px;
     font-style: italic;
-    opacity: 0.5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-
-.vn-favorites-hint {
-    font-size: max(11px, 0.65em);
-    color: var(--vn-text-dim);
-    text-align: center;
-    padding: 4px;
-    border-top: 1px solid var(--vn-border);
+    opacity: 0.6;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    opacity: 0.9;
+    gap: 6px;
 }
+/* The hint line is dropped as soon as there are cards: the empty placeholder disappears with them */
+.vn-favorites-section:has(.vn-token-option) .vn-favorites-empty { display: none; }
 
 
 
@@ -2809,18 +2933,6 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-preset-list::-webkit-scrollbar-thumb,
 .vn-io-preset-list::-webkit-scrollbar-thumb { background: var(--vn-accent-dim); border-radius: 2px; }
 
-
-/* ══════════════════════════════════════════════════════════
-   Responsive
-   ══════════════════════════════════════════════════════════ */
-
-@media (max-width: 900px) {
-    .vn-dialog-layout { flex-direction: column; }
-    .vn-dialog-sidebar { width: 100%; }
-    .vn-positions-grid { grid-template-columns: 1fr; }
-    .vn-favorites-section { flex-direction: row; flex-wrap: wrap; }
-    .vn-favorites-section .vn-token-option { width: auto; }
-}
 
 /* ── Instructions dialog z-index (bug 1: must be above main dialog) ── */
 

@@ -7,7 +7,7 @@
  */
 export const PARTICLE_GROUPS = [
     { id: 'basic',   label: 'vn.atmosphere.groups.basic',   types: ['none', 'particles', 'snow', 'rain', 'embers', 'fireflies', 'sparks'] },
-    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['bubbles', 'ash', 'sakura', 'dream_orbs', 'sand_grains', 'bokeh'] },
+    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['bubbles', 'ash', 'sakura', 'dream_orbs', 'sand_grains', 'bokeh', 'hail', 'leaves', 'fluff', 'smoke'] },
     { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine_motes', 'ether_wisps'] },
     { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['eldritch_spores', 'blood_motes', 'shadow_wisps', 'glass_dust'] },
     { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['apocalypse_debris', 'void_shards', 'cosmic_dust', 'abyss_bubbles'] },
@@ -36,6 +36,10 @@ export const PARTICLE_LABELS = {
     dream_orbs:         'vn.atmosphere.particles.dream_orbs',
     sand_grains:        'vn.atmosphere.particles.sand_grains',
     bokeh:              'vn.atmosphere.particles.bokeh',
+    hail:               'vn.atmosphere.particles.hail',
+    leaves:             'vn.atmosphere.particles.leaves',
+    fluff:              'vn.atmosphere.particles.fluff',
+    smoke:              'vn.atmosphere.particles.smoke',
     divine_motes:       'vn.atmosphere.particles.divine_motes',
     ether_wisps:        'vn.atmosphere.particles.ether_wisps',
     eldritch_spores:    'vn.atmosphere.particles.eldritch_spores',
@@ -90,11 +94,14 @@ export const PARTICLE_VARIANTS = {
         { id: 'flurry', label: 'vn.atmosphere.particleVariants.flurry' },
         { id: 'dust',   label: 'vn.atmosphere.particleVariants.iceDust' },
         { id: 'flakes', label: 'vn.atmosphere.particleVariants.bigFlakes' },
+        { id: 'blizzard', label: 'vn.atmosphere.particleVariants.blizzard' },
+        { id: 'crystals', label: 'vn.atmosphere.particleVariants.crystals' },
     ],
     particles: [
         { id: 'all',    label: 'vn.atmosphere.particleVariants.risingMotes' },
         { id: 'settle', label: 'vn.atmosphere.particleVariants.settlingDust' },
         { id: 'stars',  label: 'vn.atmosphere.particleVariants.starDust' },
+        { id: 'motes',  label: 'vn.atmosphere.particleVariants.warmMotes' },
     ],
     sparks: [
         { id: 'all',      label: 'vn.atmosphere.particleVariants.sparks' },
@@ -136,6 +143,14 @@ export const PARTICLE_VARIANTS = {
         { id: 'rise',    label: 'vn.atmosphere.particleVariants.ascendingMotes' },
         { id: 'twinkle', label: 'vn.atmosphere.particleVariants.twinklingMotes' },
     ],
+    smoke: [
+        { id: 'all',   label: 'vn.atmosphere.particleVariants.smoke' },
+        { id: 'steam', label: 'vn.atmosphere.particleVariants.steam' },
+    ],
+    leaves: [
+        { id: 'all',  label: 'vn.atmosphere.particleVariants.fallingLeaves' },
+        { id: 'gale', label: 'vn.atmosphere.particleVariants.windblownLeaves' },
+    ],
     fireflies: [
         { id: 'all',   label: 'vn.atmosphere.particleVariants.greenFireflies' },
         { id: 'blue',  label: 'vn.atmosphere.particleVariants.blueFireflies' },
@@ -157,6 +172,10 @@ export const PARTICLE_ICONS = {
     dream_orbs: 'fa-cloud-moon',
     sand_grains: 'fa-wind',
     bokeh: 'fa-circle-dot',
+    hail: 'fa-cloud-meatball',
+    leaves: 'fa-leaf',
+    fluff: 'fa-seedling',
+    smoke: 'fa-cloud',
     divine_motes: 'fa-sun',
     ether_wisps: 'fa-hat-wizard',
     eldritch_spores: 'fa-eye',

@@ -156,7 +156,8 @@ export class ParallaxSystem {
 
         // Под калейдоскопом слой фона не двигаем: его потомки (клинья с clip-path и анимацией) при покадровом
         // transform родителя мерцают тёмными многоугольниками, а сам эффект и так в постоянном движении
-        const kaleido = this._overlayEl?.classList.contains('vn-vfx-kaleidoscope');
+        // То же под «Кубами»: на слое лежит трёхмерная стена с перспективой, покадровый transform родителя заставил бы её перерисовываться
+        const kaleido = this._overlayEl?.classList.contains('vn-vfx-kaleidoscope') || this._overlayEl?.classList.contains('vn-vfx-cubes');
 
         if (this._isAnimated || !this._enabled || kaleido) {
             this._currentX = 0.5;
