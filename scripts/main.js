@@ -3,8 +3,9 @@
 // ============================================================
 
 import { PlayerQueue } from './queue/player-queue.js';
-import { SoundTestApp } from './sound-test.js';
-import { registerSettings, applyNameplateImage } from './settings.js';
+import { registerSettings } from './settings.js';
+import { ModuleSettingsApp } from './module-settings.js';
+import { applyNameplateImage, applyNameplateFont } from './visual-dialog/vn-nameplate.js';
 import { VisualNovelScene } from './visual-dialog/visual-novel-scene.js';
 import { VNPresets } from './visual-dialog/vn-state.js';
 import { escapeHtml, presetScenes } from './visual-dialog/vn-id-utils.js';
@@ -114,6 +115,7 @@ Hooks.once('ready', async () => {
         game.settings.set(PlayerQueue.ID, 'nameplateImage', nameplateValue).catch(() => {});
     }
     applyNameplateImage(nameplateValue);
+    applyNameplateFont(PlayerQueue.setting('nameplateFont'));
 
     // Visual Novel Scene
     const vns = new VisualNovelScene();
@@ -153,6 +155,7 @@ Hooks.on('playerQueueAnnounced', ({ entry, by }) => {
 // ============================================================
 
 window.openQueue = () => PlayerQueue.instance?.toggleQueue();
+window.openPlayerQueueSettings = () => ModuleSettingsApp.open();
 window.joinQueueLow = () => PlayerQueue.instance?.joinQueueWithPriority(0);
 window.joinQueueMedium = () => PlayerQueue.instance?.joinQueueWithPriority(1);
 window.joinQueueHigh = () => PlayerQueue.instance?.joinQueueWithPriority(2);
@@ -244,6 +247,7 @@ window.openScenePresets = async () => {
         </div>`;
 
     const dialog = new foundry.applications.api.DialogV2({
+        classes: ['vn-scene-window'],
         window: {
             title: game.i18n.format('vn.scenePresets.title', { scene: currentScene.name }),
             icon: 'fas fa-theater-masks',

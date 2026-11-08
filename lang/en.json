@@ -114,20 +114,13 @@
       "name": "🔴 High priority sound (!!!)",
       "hint": "Play a sound for high priority"
     },
-    "testSounds": {
-      "name": "🎮 Test sounds",
-      "label": "Open sound test",
-      "hint": "Check how each priority sounds with your current settings"
-    },
     "darkTheme": {
       "name": "🌙 Dark theme",
       "hint": "Force a dark look for the queue window. By default the window follows the Foundry color scheme (light or dark)"
     },
     "nameplateImage": {
       "name": "🎭 Character nameplate",
-      "hint": "Pick an image from the assets/dialog name lables/ folder, or leave empty for the default look.",
-      "defaultView": "— Default look —",
-      "noPlate": "— No nameplate —"
+      "hint": "The frame under a character's name on the scene. The images live in assets/dialog name labels/"
     },
     "liteMode": {
       "name": "🪶 Lite mode for dialog scenes",
@@ -173,6 +166,16 @@
     "blurInactive": {
       "name": "💧 Blur inactive characters",
       "hint": "Applies to every client. When off, characters who are not speaking are not blurred, even if a player has Depth of Field enabled. Dimming is a separate setting"
+    },
+    "nameplateFont": {
+      "name": "🔤 Nameplate name font",
+      "hint": "The font used for the character name on the nameplate. All fonts are free (SIL OFL licence) and cover Cyrillic and Latin. They live in assets/fonts/.",
+      "defaultFont": "— Default (Foundry font) —"
+    },
+    "moduleSettings": {
+      "name": "Module settings",
+      "label": "Open settings",
+      "hint": "Queue, sounds, camera, scene look and performance in one window. Changes are saved immediately"
     }
   },
   "fxFilters": {
@@ -202,15 +205,6 @@
     "cancel": "Cancel",
     "variantsLabel": "Variants:",
     "variantsTitle": "Variants are disabled together with the effect: {list}"
-  },
-  "soundTest": {
-    "title": "Priority Sound Test",
-    "currentSettings": "Current settings:",
-    "labelSounds": "Sounds",
-    "labelVolume": "Volume",
-    "hint": "Click a priority to hear its sound with your current settings",
-    "on": "On",
-    "off": "Off"
   },
   "vn": {
     "actor": {
@@ -1014,5 +1008,54 @@
       "count": "Selected: {count}",
       "missing": "Not in this world (the link is kept)"
     }
+  },
+  "settingsApp": {
+    "title": "Player Queue: settings",
+    "sections": {
+      "queue": {
+        "title": "Queue",
+        "desc": "The floating queue window on your screen"
+      },
+      "sounds": {
+        "title": "Sounds",
+        "desc": "Alerts when someone raises a hand. This computer only"
+      },
+      "camera": {
+        "title": "Camera & parallax",
+        "desc": "How the background and the camera move in a dialog scene. This computer only"
+      },
+      "look": {
+        "title": "Scene look",
+        "desc": "Name plates, dimmed characters and files. Shared by all players, changed by the GM"
+      },
+      "perf": {
+        "title": "Performance",
+        "desc": "Lighten dialog scenes on a weak computer. This computer only"
+      }
+    },
+    "groups": {
+      "window": "Queue window",
+      "behavior": "Behavior",
+      "general": "General",
+      "priorities": "Sound per priority",
+      "plate": "Names on the scene",
+      "characters": "Characters",
+      "files": "Files"
+    },
+    "autosave": "Changes are saved immediately",
+    "saved": "Saved",
+    "saveFailed": "Could not save the setting. See the browser console",
+    "reset": "Reset",
+    "resetTitle": "Restore the defaults in this section",
+    "resetConfirmTitle": "Reset settings",
+    "resetConfirm": "Restore every setting in “{section}” to its default?",
+    "resetDone": "Section reset",
+    "world": "Everyone",
+    "worldTitle": "World setting: applies to every player, changed by the GM",
+    "playSound": "Play the sound",
+    "plateDefault": "Default",
+    "plateNone": "No plate",
+    "fontDefault": "Foundry's own",
+    "nameSample": "Аэлвин Aa"
   }
 }

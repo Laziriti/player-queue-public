@@ -81,9 +81,11 @@ class VNSceneHTML {
         const charStyle = (pd ? `--queue-color: ${pd.color};` : '')
             + (charScale !== undefined ? `--char-scale: ${charScale};` : '')
             + `--flip-x: ${flipX};`;
-        const imgHTML = `<img class="vn-character-img" src="${esc(imgSrc)}" alt="${esc(token.name)}" loading="lazy" style="--flip-x: ${flipX}">`;
+        // alt/title read the real name aloud / on hover, so they follow the visibility state (see VisualNovelScene._applyVisibilityToElement)
+        const known = visibility === 'visible';
+        const imgHTML = `<img class="vn-character-img" src="${esc(imgSrc)}" alt="${known ? esc(token.name) : ''}" loading="lazy" style="--flip-x: ${flipX}">`;
 
-        return `<div class="vn-character ${priorityClass} ${rowClass} ${hiddenClass}" data-token-id="${esc(tokenId)}" data-name="${esc(token.name)}" style="${charStyle}">
+        return `<div class="vn-character ${priorityClass} ${rowClass} ${hiddenClass}" data-token-id="${esc(tokenId)}" data-name="${esc(token.name)}"${known ? ` title="${esc(token.name)}"` : ''} style="${charStyle}">
             <div class="vn-speaking-indicator"><span></span><span></span><span></span></div>
             ${VNCharFx.wrapHTML(imgHTML, state.charFx?.[tokenId], imgSrc)}
             <div class="vn-character-nameplate"><span class="vn-nameplate-text">${esc(displayName)}</span></div>

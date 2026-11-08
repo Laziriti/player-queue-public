@@ -1509,8 +1509,11 @@
     border-radius: 16px;
     color: rgba(255, 255, 255, 0.85);
     font-weight: 600;
-    font-size: 0.9em;
+    font-size: calc(0.9em * var(--np-fit, 1) * var(--np-font-scale, 1)); /* --np-fit < 1 — длинное имя ужато скриптом (vn-nameplate.js) */
     white-space: nowrap;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1518,31 +1521,41 @@
     transition: all 0.4s ease;
 }
 
-/* Имя: скрыто → полупрозрачно при наведении → полностью видно у активного */
-.vn-character:hover .vn-character-nameplate { opacity: 0.7; }
-.vn-character.active .vn-character-nameplate { opacity: 1; }
-
+/* Прозрачность плашки задают vn-characters.css (активный 1, неактивный --vn-name-op) */
+/* box-shadow активной плашки — только в анимации vnNameplateGlow (vn-fx-theming.css) */
 .vn-character.active .vn-nameplate-text {
     background: linear-gradient(135deg, rgba(136, 192, 208, 0.9), rgba(100, 160, 180, 0.9));
     color: #fff;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    box-shadow: 0 4px 16px rgba(136, 192, 208, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.2);
     font-weight: 700;
 }
 
 .vn-character.queue-priority-1.active .vn-nameplate-text {
     background: linear-gradient(135deg, rgba(235, 203, 139, 0.9), rgba(200, 170, 100, 0.9));
-    box-shadow: 0 4px 16px rgba(235, 203, 139, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .vn-character.queue-priority-2.active .vn-nameplate-text {
     background: linear-gradient(135deg, rgba(191, 97, 106, 0.9), rgba(160, 70, 80, 0.9));
-    box-shadow: 0 4px 16px rgba(191, 97, 106, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* ══════════════════════════════════════════════════════════
    Nameplate — image label (настройка nameplateImage)
    ══════════════════════════════════════════════════════════ */
+
+/* Рамка выше текста (высота = ширина рамки / ratio картинки) и выступает под ним; поднимаем плашку ровно настолько,
+   чтобы нижний край рамки оставался на экране (текст ~20px высотой, запас 4px) */
+.vn-nameplate-has-image .vn-character-nameplate {
+    bottom: max(20px, calc(var(--np-offset-y, 0px) + (var(--np-text-width, 200px) + var(--np-padding-x, 0px) * 2) / var(--vn-nameplate-ratio, 3) / 2 - 6px));
+}
+
+/* Крайний персонаж стороны стоит у края экрана, а рамка шире портрета: сдвигаем плашку внутрь на выступающую часть
+   (14px = отступ сцены 20px минус 6px воздуха у края) */
+.vn-nameplate-has-image .vn-left-side .vn-character:first-child .vn-character-nameplate {
+    left: calc(50% + max(0px, (var(--np-text-width, 200px) + var(--np-padding-x, 0px) * 2 - 100%) / 2 - 14px));
+}
+.vn-nameplate-has-image .vn-right-side .vn-character:last-child .vn-character-nameplate {
+    left: calc(50% - max(0px, (var(--np-text-width, 200px) + var(--np-padding-x, 0px) * 2 - 100%) / 2 - 14px));
+}
 
 /* Frame image: absolutely centered on the text element, extends paddingX beyond text on each side */
 .vn-nameplate-has-image .vn-character-nameplate::before {
@@ -1574,8 +1587,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     width: var(--np-text-width, 200px);
+    max-width: none;
     text-align: center;
-    font-size: var(--np-font-size, 0.9em);
+    font-size: calc(var(--np-font-size, 0.9em) * var(--np-fit, 1) * var(--np-font-scale, 1));
     color: rgba(240, 220, 175, 0.9);
     font-weight: 700;
     letter-spacing: 0.8px;
@@ -1599,6 +1613,15 @@
 
 body.vn-nameplate-hidden .vn-character-nameplate {
     display: none;
+}
+
+/* Шрифт имени (настройка nameplateFont; переменные ставит applyNameplateFont). Специфичность выше, чем у
+   .vn-character.active .vn-nameplate-text, поэтому вес «активного» (700) не перебивает вес выбранного шрифта —
+   иначе браузер дорисует жирность поверх файла, в котором её нет */
+body.vn-nameplate-font .vn-character .vn-nameplate-text {
+    font-family: var(--np-font-family);
+    font-weight: var(--np-font-weight);
+    letter-spacing: var(--np-letter-spacing);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1787,8 +1810,8 @@ body.vn-nameplate-hidden .vn-character-nameplate {
    Dialog Styles (DialogV2)
    ══════════════════════════════════════════════════════════ */
 
-.application:has(.vn-scene-dialog),
-.application:has(.vn-scale-dialog) {
+.application.vn-scene-window,
+.application.vn-scale-window {
     z-index: 10100 !important;
 }
 
@@ -1801,8 +1824,8 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 /* Force dark chrome on all VN dialog windows — overrides Foundry light theme */
-.application:has(.vn-scene-dialog),
-.application:has(.vn-scale-dialog),
+.application.vn-scene-window,
+.application.vn-scale-window,
 .application.vn-confirm-dialog,
 .application.vn-instructions-dialog {
     background: rgba(20, 20, 30, 0.98) !important;
@@ -1810,8 +1833,8 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     color: var(--vn-text) !important;
 }
 
-.application:has(.vn-scene-dialog) .window-header,
-.application:has(.vn-scale-dialog) .window-header,
+.application.vn-scene-window .window-header,
+.application.vn-scale-window .window-header,
 .application.vn-confirm-dialog .window-header,
 .application.vn-instructions-dialog .window-header {
     background: rgba(15, 15, 25, 0.98) !important;
@@ -1819,26 +1842,26 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     border-bottom-color: var(--vn-border) !important;
 }
 
-.application:has(.vn-scene-dialog) .window-header h1,
-.application:has(.vn-scale-dialog) .window-header h1,
+.application.vn-scene-window .window-header h1,
+.application.vn-scale-window .window-header h1,
 .application.vn-confirm-dialog .window-header h1,
 .application.vn-instructions-dialog .window-header h1,
-.application:has(.vn-scene-dialog) .window-header .window-title,
-.application:has(.vn-scale-dialog) .window-header .window-title,
+.application.vn-scene-window .window-header .window-title,
+.application.vn-scale-window .window-header .window-title,
 .application.vn-confirm-dialog .window-header .window-title,
 .application.vn-instructions-dialog .window-header .window-title {
     color: var(--vn-text) !important;
 }
 
-.application:has(.vn-scene-dialog) .window-content,
-.application:has(.vn-scale-dialog) .window-content,
+.application.vn-scene-window .window-content,
+.application.vn-scale-window .window-content,
 .application.vn-confirm-dialog .window-content,
 .application.vn-instructions-dialog .window-content {
     background: var(--vn-bg-panel) !important;
     color: var(--vn-text) !important;
 }
 
-.application:has(.vn-scene-dialog) .window-content {
+.application.vn-scene-window .window-content {
     overflow-y: auto;
     max-height: calc(100vh - 100px);
 }
@@ -1847,8 +1870,8 @@ body.vn-nameplate-hidden .vn-character-nameplate {
    Foundry paints focus / hover / scrollbars / checkboxes in its signature orange through these variables
    (that is where the orange outlines on clicked tabs and tiles and the maroon scrollbars came from).
    Re-point them to the module accent inside our windows, so there is one accent colour instead of two. */
-.application:has(.vn-scene-dialog),
-.application:has(.vn-scale-dialog),
+.application.vn-scene-window,
+.application.vn-scale-window,
 .application.vn-confirm-dialog,
 .application.vn-instructions-dialog {
     --color-shadow-primary: var(--vn-accent);
@@ -1863,7 +1886,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 }
 
 /* No orange ring that sticks to a button after a mouse click; keyboard focus keeps the accent outline */
-.application:has(.vn-scene-dialog) :is(button, select, input, textarea, [role="button"]):focus:not(:focus-visible) {
+.application.vn-scene-window :is(button, select, input, textarea, [role="button"]):focus:not(:focus-visible) {
     outline: none;
     box-shadow: none;
 }
@@ -1871,32 +1894,32 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 /* The variables above did not catch everything: Foundry also sets accent-color on checkboxes and draws the
    focus / toggled ring with its own rules, so the orange survived on clicked tabs, toggles and tiles.
    Pin the look explicitly instead of guessing variable names. */
-.application:has(.vn-scene-dialog) :is(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+.application.vn-scene-window :is(input[type="checkbox"], input[type="radio"], input[type="range"]) {
     accent-color: var(--vn-accent);
 }
 
-.application:has(.vn-scene-dialog) :is(button, select, input, textarea, summary, [role="button"]):focus:not(:focus-visible),
-.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-btn, .vn-atmo-item, .vn-effects-preset-item,
+.application.vn-scene-window :is(button, select, input, textarea, summary, [role="button"]):focus:not(:focus-visible),
+.application.vn-scene-window :is(.vn-tab-btn, .vn-btn, .vn-atmo-item, .vn-effects-preset-item,
     .vn-particles-layer-opt, .vn-bg-option, .vn-token-option, .vn-preset-item, .vn-preset-card).active:not(:focus-visible) {
     outline: none !important;
     box-shadow: none !important;
 }
 
 /* Tabs: the selected one is marked by the accent underline only (a stray full border was drawn on focus) */
-.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-pool-tab),
-.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-pool-tab):is(:hover, :focus, :active) {
+.application.vn-scene-window :is(.vn-tab-btn, .vn-pool-tab),
+.application.vn-scene-window :is(.vn-tab-btn, .vn-pool-tab):is(:hover, :focus, :active) {
     border: none;
     border-bottom: 2px solid transparent;
     border-radius: 0;
     box-shadow: none;
 }
-.application:has(.vn-scene-dialog) :is(.vn-tab-btn, .vn-pool-tab).active { border-bottom-color: var(--vn-accent); }
-.application:has(.vn-scene-dialog) .vn-pool-tab { background: transparent; height: auto; line-height: normal; }
-.application:has(.vn-scene-dialog) .vn-pool-tab:hover { background: rgba(255, 255, 255, 0.04); }
-.application:has(.vn-scene-dialog) .vn-pool-tab.drag-hover { background: var(--vn-accent-dim); }
+.application.vn-scene-window :is(.vn-tab-btn, .vn-pool-tab).active { border-bottom-color: var(--vn-accent); }
+.application.vn-scene-window .vn-pool-tab { background: transparent; height: auto; line-height: normal; }
+.application.vn-scene-window .vn-pool-tab:hover { background: rgba(255, 255, 255, 0.04); }
+.application.vn-scene-window .vn-pool-tab.drag-hover { background: var(--vn-accent-dim); }
 
 /* Toggled buttons keep their own faint accent halo */
-.application:has(.vn-scene-dialog) .vn-btn.active:not(:focus-visible) {
+.application.vn-scene-window .vn-btn.active:not(:focus-visible) {
     box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.25) !important;
 }
 
@@ -1911,19 +1934,19 @@ body.vn-nameplate-hidden .vn-character-nameplate {
    window-content > form.dialog-form > (div.dialog-content, footer.form-footer). Every level is a flex column
    with min-height: 0 so only the active tab panel scrolls. The levels above keep overflow: auto, so if
    Foundry's markup ever differs the window falls back to scrolling as a whole instead of clipping. */
-.application:has(.vn-scene-dialog--tabs) .window-content {
+.application.vn-scene-window--tabs .window-content {
     display: flex;
     flex-direction: column;
 }
 
-.application:has(.vn-scene-dialog--tabs) .dialog-form {
+.application.vn-scene-window--tabs .dialog-form {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
-.application:has(.vn-scene-dialog--tabs) .dialog-content {
+.application.vn-scene-window--tabs .dialog-content {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
@@ -1942,7 +1965,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
 /* ── Footer hierarchy: Create is the primary action (right), Cancel is quiet, "background only / remove characters"
    is a ghost button parked on the far left so it cannot be mistaken for the primary one ──
    Buttons that make no sense on the active tab are hidden by the builder (hidden + disabled, see _syncFooter). */
-.application:has(.vn-scene-dialog--tabs) .form-footer {
+.application.vn-scene-window--tabs .form-footer {
     flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
@@ -1953,7 +1976,7 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     border-top: 1px solid var(--vn-border);
 }
 
-.application:has(.vn-scene-dialog--tabs) .form-footer button {
+.application.vn-scene-window--tabs .form-footer button {
     flex: 0 0 auto;
     min-width: 110px;
     height: 36px;
@@ -1966,23 +1989,23 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     color: var(--vn-text);
     transition: all var(--vn-transition);
 }
-.application:has(.vn-scene-dialog--tabs) .form-footer button:hover {
+.application.vn-scene-window--tabs .form-footer button:hover {
     background: rgba(255, 255, 255, 0.12);
     border-color: var(--vn-border-hover);
 }
 
-.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="cancel"] {
+.application.vn-scene-window--tabs .form-footer button[data-action="cancel"] {
     order: 1;
     background: transparent;
     border-color: transparent;
     color: var(--vn-text-dim);
 }
-.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="cancel"]:hover {
+.application.vn-scene-window--tabs .form-footer button[data-action="cancel"]:hover {
     background: rgba(255, 255, 255, 0.06);
     color: var(--vn-text);
 }
 
-.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="background-only"] {
+.application.vn-scene-window--tabs .form-footer button[data-action="background-only"] {
     order: 0;
     margin-right: auto;
     background: transparent;
@@ -1990,26 +2013,26 @@ body.vn-nameplate-hidden .vn-character-nameplate {
     color: var(--vn-text-dim);
     font-weight: 500;
 }
-.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="background-only"]:hover {
+.application.vn-scene-window--tabs .form-footer button[data-action="background-only"]:hover {
     background: rgba(255, 255, 255, 0.05);
     border-color: var(--vn-border-hover);
     color: var(--vn-text);
 }
 /* In edit mode the button takes characters off the running scene: it warns on hover */
-.application:has(.vn-scene-dialog--tabs[data-mode="edit"]) .form-footer button[data-action="background-only"]:hover {
+.application.vn-scene-window--edit .form-footer button[data-action="background-only"]:hover {
     background: rgba(191, 97, 106, 0.1);
     border-color: var(--vn-danger);
     color: var(--vn-danger);
 }
-.application:has(.vn-scene-dialog--tabs) .form-footer button[hidden] { display: none !important; }
+.application.vn-scene-window--tabs .form-footer button[hidden] { display: none !important; }
 
-.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="create"] {
+.application.vn-scene-window--tabs .form-footer button[data-action="create"] {
     order: 3;
     background: var(--vn-accent);
     border-color: var(--vn-accent);
     color: #0d1117;
 }
-.application:has(.vn-scene-dialog--tabs) .form-footer button[data-action="create"]:hover {
+.application.vn-scene-window--tabs .form-footer button[data-action="create"]:hover {
     background: #a5d3df;
     border-color: #a5d3df;
 }
@@ -2942,8 +2965,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 
 /* FilePicker and any sub-dialogs must appear above all VN dialog tiers */
-#file-picker,
-.application:has(.filepicker-body) {
+#file-picker {
     z-index: 10400 !important;
 }
 

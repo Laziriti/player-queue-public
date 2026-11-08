@@ -20,6 +20,7 @@ import { VNSceneHTML } from './vn-scene-html.js';
 import { VNSequence } from './vn-sequence.js';
 import { VNPresetLink } from './vn-preset-link.js';
 import { VNPreloader } from './vn-preload.js';
+import { fitNameplate, fitNameplates } from './vn-nameplate.js';
 
 const VN_DEBUG = false;
 const vnLog = VN_DEBUG ? (...args) => console.log('[VN]', ...args) : () => {};
@@ -464,8 +465,13 @@ class VisualNovelScene {
         const v = visibility ?? 'visible';
         charEl.classList.toggle('vn-character-hidden',      v === 'hidden');
         charEl.classList.toggle('vn-character-name-hidden', v === 'name-hidden');
+        const known = v === 'visible';
+        const name = charEl.dataset.name || '';
         const nm = charEl.querySelector('.vn-nameplate-text');
-        if (nm) nm.textContent = (v !== 'visible') ? '???' : (charEl.dataset.name || '');
+        if (nm) { nm.textContent = known ? name : '???'; fitNameplate(nm); }
+        if (known) charEl.title = name; else charEl.removeAttribute('title');
+        const img = charEl.querySelector('.vn-character-img');
+        if (img) img.alt = known ? name : '';
     }
 
     applyVisibility(tokenId, visibility, emit = true) {
@@ -1064,6 +1070,7 @@ class VisualNovelScene {
 
         $('body').append(this._html.scene(tokens));
         this._invalidateOverlayCache();
+        fitNameplates(this.$overlay[0]);
         this._applyAllPortraitTransforms();
         QueueBridge.refreshFloating();
 
@@ -1274,6 +1281,7 @@ class VisualNovelScene {
             }
             container.replaceChildren(...fresh.childNodes);
             container.classList.remove('empty');
+            fitNameplates(container);
 
             const activeSpeaker = this.state.speakers[position];
             container.querySelectorAll('.vn-character').forEach(charEl => {

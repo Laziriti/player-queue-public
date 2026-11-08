@@ -135,7 +135,7 @@
    Входные анимации заканчиваются ровно в нём (см. ВХОДЫ), иначе после снятия .vn-entering
    персонаж на секунду выглядел бы активным и «откатывался» в приглушённое состояние. */
 .vn-character { --vn-rest-y: 0px; --vn-name-op: 1; }
-.vn-character:not(.active) { --vn-rest-y: 4px; --vn-name-op: 0.4; }
+.vn-character:not(.active) { --vn-rest-y: 4px; --vn-name-op: 0.55; }
 
 /* Вид неактивного действует и во время входа/выхода: раньше эти состояния были исключены,
    поэтому персонаж появлялся ярким, затем затухал, а уходя — наоборот вспыхивал.
@@ -447,9 +447,8 @@
     animation: none !important;
 }
 
-/* Name obscured: portrait visible, identity unknown */
+/* Name obscured: portrait visible, identity unknown. Opacity follows active / inactive like any other plate */
 #vn-scene-overlay .vn-character.vn-character-name-hidden .vn-character-nameplate {
-    opacity: 0.7;
     font-style: italic;
 }
 

@@ -76,6 +76,7 @@ export class VNDialogBuilder {
 
         this._baseTitle = isEdit ? game.i18n.localize('vn.dialog.editTitle') : game.i18n.localize('vn.dialog.createTitle');
         const dialog = new foundry.applications.api.DialogV2({
+            classes: ['vn-scene-window', 'vn-scene-window--tabs', ...(isEdit ? ['vn-scene-window--edit'] : [])],
             window: { title: this._baseTitle, icon: isEdit ? 'fas fa-edit' : 'fas fa-theater-masks', resizable: true },
             position: dialogPosition,
             content: dialogContent,
@@ -1071,6 +1072,7 @@ export class VNDialogBuilder {
         const debouncedScale = debounce(val => scene.setPortraitScale(val / 100, false), 30);
 
         const dialog = new foundry.applications.api.DialogV2({
+            classes: ['vn-scale-window'],
             window: { title: game.i18n.localize('vn.dialog.portraitSizeTitle'), icon: 'fas fa-expand-arrows-alt' },
             position: { width: 380, height: 'auto' },
             content: `<div class="vn-scale-dialog">

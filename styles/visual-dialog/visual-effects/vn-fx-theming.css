@@ -46,7 +46,8 @@
    ни цвета, ни мерцание/глитч/пульсация.
    ══════════════════════════════════════════════════════════ */
 
-.vn-character.active .vn-nameplate-text {
+/* С плашкой-картинкой box-shadow отключён (!important), анимировать нечего */
+body:not(.vn-nameplate-has-image) .vn-character.active .vn-nameplate-text {
     animation: vnNameplateGlow 3s ease-in-out infinite alternate;
 }
 

@@ -1,0 +1,759 @@
+/* ══════════════════════════════════════════════════════════
+   Настройки модуля (ModuleSettingsApp, scripts/module-settings.js)
+   Слева разделы, справа карточки. Только переменные Foundry, поэтому окно следует светлой/тёмной схеме само.
+   ══════════════════════════════════════════════════════════ */
+.pq-settings .window-content {
+    padding: 0;
+    overflow: hidden;
+    container: pqs / inline-size;
+}
+
+.pqs {
+    --pqs-fg: var(--color-text-primary);
+    --pqs-dim: var(--color-text-secondary);
+    --pqs-line: color-mix(in srgb, var(--pqs-fg) 14%, transparent);
+    --pqs-surface: color-mix(in srgb, var(--pqs-fg) 5%, transparent);
+    --pqs-surface-2: color-mix(in srgb, var(--pqs-fg) 9%, transparent);
+    --pqs-accent: #3a86d1;
+    --pqs-ok: #3fa56b;
+}
+
+.pqs {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    height: 100%;
+    color: var(--pqs-fg);
+}
+
+.pqs h2,
+.pqs h3,
+.pqs p {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.pqs button {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    box-shadow: none;
+    font-family: inherit;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+.pqs button:focus-visible,
+.pqs select:focus-visible {
+    outline: 2px solid var(--pqs-accent);
+    outline-offset: 2px;
+}
+
+/* ── разделы ── */
+.pqs-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 10px;
+    border-right: 1px solid var(--pqs-line);
+    background: var(--pqs-surface);
+    overflow-y: auto;
+}
+
+.pqs .pqs-tab {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 11px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--pqs-dim);
+    text-align: left;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pqs .pqs-tab i {
+    flex: 0 0 1.4em;
+    text-align: center;
+    font-size: 1.05em;
+}
+
+.pqs .pqs-tab span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pqs .pqs-tab:hover {
+    background: var(--pqs-surface-2);
+    color: var(--pqs-fg);
+}
+
+.pqs .pqs-tab[aria-selected="true"] {
+    background: color-mix(in srgb, var(--pqs-accent) 20%, transparent);
+    box-shadow: inset 3px 0 0 var(--pqs-accent);
+    color: var(--pqs-fg);
+    font-weight: 600;
+}
+
+/* ── содержимое ── */
+.pqs-main {
+    min-height: 0;
+    padding: 0 24px 22px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+.pqs-panel[hidden] {
+    display: none;
+}
+
+.pqs-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 0 14px;
+}
+
+.pqs-head h2 {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1.4em;
+    line-height: 1.2;
+}
+
+.pqs-head p {
+    margin-top: 3px;
+    font-size: 0.9em;
+    color: var(--pqs-dim);
+}
+
+.pqs .pqs-reset {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 11px;
+    border: 1px solid var(--pqs-line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--pqs-dim);
+    font-size: 0.85em;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pqs .pqs-reset:hover {
+    background: var(--pqs-surface-2);
+    color: var(--pqs-fg);
+}
+
+.pqs-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.pqs-group-title {
+    margin: 0 0 7px 3px;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--pqs-dim);
+}
+
+.pqs-card {
+    border: 1px solid var(--pqs-line);
+    border-radius: 12px;
+    background: var(--pqs-surface);
+    overflow: hidden;
+}
+
+/* ── строка настройки ── */
+.pqs-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 28px;
+    padding: 13px 18px;
+    transition: opacity 0.12s ease, background 0.12s ease;
+}
+
+.pqs-row + .pqs-row {
+    border-top: 1px solid var(--pqs-line);
+}
+
+label.pqs-row {
+    cursor: pointer;
+}
+
+label.pqs-row:hover {
+    background: var(--pqs-surface);
+}
+
+.pqs-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.pqs-name {
+    font-weight: 600;
+}
+
+.pqs-hint {
+    max-width: 64ch;
+    font-size: 0.84em;
+    line-height: 1.4;
+    color: var(--pqs-dim);
+}
+
+.pqs-badge {
+    display: inline-block;
+    margin-left: 9px;
+    padding: 1px 8px;
+    border: 1px solid color-mix(in srgb, var(--pqs-accent) 50%, transparent);
+    border-radius: 99px;
+    color: var(--pqs-accent);
+    font-size: 0.66em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.pqs-ctl {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.pqs-row.is-wide {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.pqs-row.is-wide .pqs-ctl {
+    justify-content: flex-start;
+}
+
+.pqs-row.is-disabled,
+.pqs-prio.is-disabled {
+    opacity: 0.45;
+}
+
+.pqs-row.is-disabled,
+label.pqs-row.is-disabled {
+    cursor: default;
+}
+
+/* ── переключатель ── */
+.pqs-switch {
+    position: relative;
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 24px;
+}
+
+.pqs-switch input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.pqs-switch input:disabled {
+    cursor: default;
+}
+
+.pqs-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--pqs-fg) 24%, transparent);
+    transition: background 0.15s ease;
+}
+
+.pqs-track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease;
+}
+
+.pqs-switch input:checked + .pqs-track {
+    background: var(--pqs-accent);
+}
+
+.pqs-switch input:checked + .pqs-track::after {
+    transform: translateX(18px);
+}
+
+.pqs-switch input:focus-visible + .pqs-track {
+    outline: 2px solid var(--pqs-accent);
+    outline-offset: 2px;
+}
+
+/* ── ползунок ── */
+.pqs-range {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.pqs-range input[type="range"] {
+    --pct: 50%;
+    width: 190px;
+    height: 20px;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.pqs-range input[type="range"]::-webkit-slider-runnable-track {
+    height: 5px;
+    border-radius: 99px;
+    background: linear-gradient(to right, var(--pqs-accent) var(--pct), color-mix(in srgb, var(--pqs-fg) 24%, transparent) var(--pct));
+}
+
+.pqs-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -5.5px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--pqs-accent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.pqs-range input[type="range"]:disabled {
+    cursor: default;
+}
+
+.pqs-range input[type="range"]:focus-visible {
+    outline: 2px solid var(--pqs-accent);
+    outline-offset: 3px;
+    border-radius: 99px;
+}
+
+.pqs-range output {
+    min-width: 3.6em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+/* ── сегменты ── */
+.pqs-seg {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--pqs-line);
+    border-radius: 10px;
+    background: var(--pqs-surface-2);
+}
+
+.pqs-seg label {
+    position: relative;
+    display: block;
+    cursor: pointer;
+}
+
+.pqs-seg input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.pqs-seg span {
+    display: block;
+    padding: 5px 13px;
+    border-radius: 7px;
+    color: var(--pqs-dim);
+    font-size: 0.9em;
+    white-space: nowrap;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pqs-seg label:hover span {
+    color: var(--pqs-fg);
+}
+
+.pqs-seg input:checked + span {
+    background: var(--pqs-accent);
+    color: #fff;
+}
+
+.pqs-seg label:has(input:focus-visible) {
+    outline: 2px solid var(--pqs-accent);
+    outline-offset: 1px;
+    border-radius: 7px;
+}
+
+/* ── угол экрана ── */
+.pqs-corner {
+    display: grid;
+    grid-template: 1fr 1fr / 1fr 1fr;
+    width: 116px;
+    height: 72px;
+    border: 1px solid var(--pqs-line);
+    border-radius: 8px;
+    background: var(--pqs-surface-2);
+}
+
+.pqs-corner label {
+    position: relative;
+    display: flex;
+    padding: 5px;
+    cursor: pointer;
+}
+
+.pqs-corner label[data-pos^="top"] { align-items: flex-start; }
+.pqs-corner label[data-pos^="bottom"] { align-items: flex-end; }
+.pqs-corner label[data-pos$="left"] { justify-content: flex-start; }
+.pqs-corner label[data-pos$="right"] { justify-content: flex-end; }
+
+.pqs-corner input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.pqs-corner i {
+    display: block;
+    width: 24px;
+    height: 15px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--pqs-fg) 20%, transparent);
+    transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.pqs-corner label:hover i {
+    background: color-mix(in srgb, var(--pqs-fg) 38%, transparent);
+}
+
+.pqs-corner input:checked + i {
+    background: var(--pqs-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--pqs-accent) 35%, transparent);
+}
+
+.pqs-corner label:has(input:focus-visible) {
+    outline: 2px solid var(--pqs-accent);
+    outline-offset: -2px;
+    border-radius: 6px;
+}
+
+.pqs-corner-name {
+    order: -1;
+    min-width: 7em;
+    color: var(--pqs-dim);
+    font-size: 0.88em;
+    text-align: right;
+}
+
+/* ── список, выбор папки, кнопка ── */
+.pqs-select {
+    min-width: 250px;
+    max-width: 100%;
+}
+
+.pqs-ctl file-picker {
+    display: flex;
+    min-width: 300px;
+}
+
+.pqs .pqs-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 15px;
+    border: 1px solid color-mix(in srgb, var(--pqs-accent) 55%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--pqs-accent) 14%, transparent);
+    color: var(--pqs-fg);
+    white-space: nowrap;
+    transition: background 0.12s ease;
+}
+
+.pqs .pqs-btn:hover {
+    background: color-mix(in srgb, var(--pqs-accent) 28%, transparent);
+}
+
+/* ── плашки имён и шрифты ── */
+.pqs-plates,
+.pqs-fonts {
+    display: grid;
+    gap: 9px;
+    width: 100%;
+}
+
+.pqs-plates {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.pqs-fonts {
+    grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+}
+
+.pqs-plate,
+.pqs-font {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--pqs-line);
+    border-radius: 10px;
+    background: var(--pqs-surface-2);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.pqs-plate:hover,
+.pqs-font:hover {
+    border-color: color-mix(in srgb, var(--pqs-fg) 40%, transparent);
+}
+
+.pqs-plate input,
+.pqs-font input {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.pqs-plate:has(input:checked),
+.pqs-font:has(input:checked) {
+    border-color: var(--pqs-accent);
+    box-shadow: 0 0 0 1px var(--pqs-accent);
+    background: color-mix(in srgb, var(--pqs-accent) 14%, transparent);
+}
+
+.pqs-plate:has(input:focus-visible),
+.pqs-font:has(input:focus-visible) {
+    outline: 2px solid var(--pqs-accent);
+    outline-offset: 2px;
+}
+
+.pqs-plate-img {
+    display: grid;
+    place-items: center;
+    height: 56px;
+    padding: 6px 10px;
+    background: linear-gradient(180deg, #2a2d36, #181a20);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 1.3em;
+}
+
+.pqs-plate-img img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.pqs-plate-name {
+    padding: 5px 8px;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.pqs-font-sample {
+    padding: 8px 10px 0;
+    overflow: hidden;
+    font-size: 1.2em;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pqs-font small {
+    padding: 0 10px 6px;
+    overflow: hidden;
+    color: var(--pqs-dim);
+    font-size: 0.7em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── звуки приоритетов ── */
+.pqs-prios {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.pqs-prio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 14px 8px 12px;
+    border: 1.5px solid color-mix(in srgb, var(--c) 60%, var(--pqs-line));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--c) 9%, transparent);
+    transition: opacity 0.12s ease;
+}
+
+.pqs-prio img {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 2px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+    pointer-events: none;
+}
+
+.pqs-prio small {
+    color: var(--pqs-dim);
+    font-size: 0.72em;
+}
+
+.pqs-prio-ctl {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 9px;
+}
+
+.pqs .pqs-play {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid var(--c);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--c) 24%, transparent);
+    color: var(--pqs-fg);
+    transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.pqs .pqs-play:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--c) 48%, transparent);
+    transform: scale(1.06);
+}
+
+.pqs .pqs-play:disabled {
+    cursor: default;
+}
+
+.pqs .pqs-play i {
+    margin-left: 2px;
+    font-size: 0.85em;
+}
+
+/* ── подвал ── */
+.pqs-foot {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    padding: 9px 20px;
+    border-top: 1px solid var(--pqs-line);
+    background: var(--pqs-surface);
+    font-size: 0.85em;
+}
+
+.pqs-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--pqs-dim);
+    transition: color 0.2s ease;
+}
+
+.pqs-status.is-saved {
+    color: var(--pqs-ok);
+    font-weight: 600;
+}
+
+/* ── узкое окно: разделы сворачиваются в значки, строки становятся в столбец ── */
+@container pqs (max-width: 700px) {
+    .pqs {
+        grid-template-columns: 54px minmax(0, 1fr);
+    }
+
+    .pqs-nav {
+        padding: 12px 6px;
+    }
+
+    .pqs .pqs-tab {
+        justify-content: center;
+        padding: 11px 0;
+    }
+
+    .pqs .pqs-tab span {
+        display: none;
+    }
+
+    .pqs-main {
+        padding: 0 14px 18px;
+    }
+
+    .pqs-row {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 12px 14px;
+    }
+
+    .pqs-ctl {
+        justify-content: flex-start;
+    }
+
+    label.pqs-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .pqs-range input[type="range"] {
+        width: min(190px, 46cqw);
+    }
+
+    .pqs-ctl file-picker,
+    .pqs-select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .pqs-corner-name {
+        text-align: left;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pqs *,
+    .pqs *::after {
+        transition: none !important;
+    }
+}

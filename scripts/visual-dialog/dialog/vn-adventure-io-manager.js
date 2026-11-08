@@ -4,7 +4,7 @@
 
 import { VNPresets, VNFolders, MODULE_ID } from '../vn-state.js';
 import { VNAdventureIO } from '../vn-adventure-io.js';
-import { NAMEPLATE_CONFIGS, applyNameplateImage } from '../../settings.js';
+import { NAMEPLATE_CONFIGS, applyNameplateImage } from '../vn-nameplate.js';
 import { buildActorPipsHtml, groupPresetsByScene, escapeHtml, presetSceneNames } from '../vn-id-utils.js';
 import { VNBackgroundManager } from './vn-background-manager.js';
 
