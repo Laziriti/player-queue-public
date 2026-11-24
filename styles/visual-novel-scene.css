@@ -13,28 +13,47 @@
        Ползунок --portrait-scale умножает это значение */
     --vn-portrait-base: max(140px, 14.5vw);
 
-    --vn-accent: #88c0d0;
-    --vn-accent-dim: rgba(136, 192, 208, 0.3);
+    /* Foundry's warm accent, with a deeper ink colour on parchment. */
+    --vn-accent: light-dark(var(--color-warm-3, #5d142b), var(--color-warm-1, #ee9b3a));
+    --vn-accent-fill: var(--color-warm-1, #ee9b3a);
+    --vn-accent-fill-hover: color-mix(in srgb, var(--vn-accent-fill) 80%, white);
+    --vn-on-accent: #241509;
+    --vn-accent-soft: color-mix(in srgb, var(--vn-accent) 12%, transparent);
+    --vn-accent-dim: color-mix(in srgb, var(--vn-accent) 22%, transparent);
+    --vn-accent-edge: color-mix(in srgb, var(--vn-accent) 55%, transparent);
     --vn-accent-glow: rgba(136, 192, 208, 0.6);
-    --vn-gold: #ebcb8b;
-    --vn-gold-dim: rgba(235, 203, 139, 0.15);
-    --vn-danger: #bf616a;
-    --vn-danger-dim: rgba(191, 97, 106, 0.15);
-    --vn-success: #a3be8c;
+    --vn-gold: light-dark(#75501e, #e4c28a);
+    --vn-gold-dim: color-mix(in srgb, var(--vn-gold) 15%, transparent);
+    --vn-danger: light-dark(#902b3a, #e08b8d);
+    --vn-danger-dim: color-mix(in srgb, var(--vn-danger) 15%, transparent);
+    --vn-success: light-dark(#376236, #a3be8c);
     --vn-bg-dark: rgba(0, 0, 0, 0.85);
     --vn-bg-darker: rgba(0, 0, 0, 0.95);
-    --vn-bg-panel: rgba(30, 30, 40, 0.95);
-    --vn-border: rgba(255, 255, 255, 0.12);
-    --vn-border-hover: rgba(255, 255, 255, 0.3);
-    --vn-text: #eceff4;
-    --vn-text-dim: #8892a0;
+    --vn-bg-panel: light-dark(#e6dfcf, #221c22);
+    --vn-bg-option: light-dark(#efe8da, var(--color-cool-4, #302831));
+    --vn-bg-deep: light-dark(#ece5d6, #1c171d);
+    --vn-ink: light-dark(#352822, #fff5e4);
+    --vn-surface: color-mix(in srgb, var(--vn-ink) 5%, transparent);
+    --vn-surface-hover: color-mix(in srgb, var(--vn-ink) 10%, transparent);
+    --vn-inset: light-dark(rgba(68, 43, 27, 0.06), rgba(0, 0, 0, 0.22));
+    --vn-border: color-mix(in srgb, var(--vn-ink) 17%, transparent);
+    --vn-border-hover: color-mix(in srgb, var(--vn-ink) 36%, transparent);
+    --vn-text: light-dark(var(--color-dark-2, #2b2523), var(--color-light-2, #eee6d9));
+    --vn-text-dim: light-dark(#594d45, #b9ada7);
+    --vn-text-muted: var(--vn-text-dim);
     --vn-radius: 8px;
     --vn-radius-sm: 4px;
     --vn-radius-lg: 12px;
     --vn-transition: 0.2s ease;
     --vn-transition-slow: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    --vn-bg-option: #1e1e28;
 }
+
+.vn-visual-angle-control { display: flex; align-items: center; gap: 8px; padding: 8px 0; flex: 0 0 auto; }
+.vn-visual-angle-control[hidden] { display: none !important; }
+.vn-visual-angle-control > label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; font-size: 12px; }
+.vn-visual-angle-control input[type="range"] { flex: 1; min-width: 55px; width: 0; accent-color: var(--vn-accent); }
+.vn-visual-angle-value { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
+.vn-visual-angle-control .vn-visual-angle-reset { flex: 0 0 26px; width: 26px; height: 26px; min-height: 0; padding: 0; line-height: 1; }
 
 
 /* ══════════════════════════════════════════════════════════
@@ -42,6 +61,7 @@
    ══════════════════════════════════════════════════════════ */
 
 #vn-scene-overlay {
+    color-scheme: dark;
     position: fixed;
     top: 0;
     left: 0;
@@ -80,7 +100,8 @@
     background-position: center;
     background-repeat: no-repeat;
     z-index: 0;
-    transition: background-image 0.8s ease;
+    filter: var(--vn-monochrome-filter, none);
+    transition: background-image 0.8s ease, filter 0.8s ease;
     will-change: transform;
 }
 
@@ -166,7 +187,9 @@
 
 #vn-scene-overlay.vn-particles-fg .vn-particles,
 #vn-scene-overlay .vn-particles.vn-particles-upper {
-    z-index: 101;
+    z-index: 19;
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
 }
 
 /* Частицы рисует один канвас на слой (scripts/.../atmosphere/systems/canvas/): воркер, OffscreenCanvas */
@@ -231,8 +254,7 @@
 #vn-scene-overlay.minimized .vn-fx-scan,
 #vn-scene-overlay.minimized .vn-fx-flash,
 #vn-scene-overlay.minimized .vn-fx-bloom,
-#vn-scene-overlay.minimized .vn-fx-ray,
-#vn-scene-overlay.minimized .vn-kd-wheel,
+#vn-scene-overlay.minimized .vn-pixi-background,
 #vn-scene-overlay.minimized .vn-fx-grain,
 #vn-scene-overlay.minimized .vn-chat-panel,
 #vn-scene-overlay.minimized .vn-size-controls {
@@ -315,15 +337,15 @@
 }
 
 .vn-settings-button:hover {
-    background: rgba(136, 192, 208, 0.2);
+    background: var(--vn-accent-dim);
     border-color: var(--vn-accent);
     color: var(--vn-accent);
 }
 
 .vn-minimize-self-button:hover,
 .vn-maximize-self-button:hover {
-    background: rgba(136, 176, 255, 0.2);
-    border-color: rgba(136, 176, 255, 0.5);
+    background: var(--vn-surface-hover);
+    border-color: var(--vn-border-hover);
 }
 
 .vn-broadcast-button {
@@ -344,21 +366,21 @@
 }
 
 .vn-chat-button:hover {
-    background: rgba(136, 192, 208, 0.2);
+    background: var(--vn-accent-dim);
     border-color: var(--vn-accent);
     color: var(--vn-accent);
 }
 
 .vn-chat-button.active {
-    background: rgba(136, 192, 208, 0.15);
+    background: var(--vn-accent-soft);
     border-color: var(--vn-accent);
     color: var(--vn-accent);
-    box-shadow: 0 0 12px rgba(136, 192, 208, 0.3);
+    box-shadow: 0 0 12px var(--vn-accent-dim);
 }
 
 .vn-chat-button.active:hover {
-    background: rgba(136, 192, 208, 0.25);
-    box-shadow: 0 0 18px rgba(136, 192, 208, 0.4);
+    background: var(--vn-accent-dim);
+    box-shadow: 0 0 18px var(--vn-accent-edge);
 }
 
 /* ── VN Chat Panel ── */
@@ -373,7 +395,7 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
-    background: rgba(8, 12, 20, 0.82);
+    background: color-mix(in srgb, var(--vn-bg-deep) 88%, transparent);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -448,16 +470,16 @@
     border-radius: 8px;
     margin: 2px 0 !important;
     /* Flip Foundry's CSS variables for dark-on-light text */
-    --color-text-dark-primary: rgba(215, 215, 225, 0.92);
-    --color-text-dark-secondary: rgba(180, 180, 195, 0.8);
-    --color-text-dark-heading: rgba(225, 225, 235, 1);
-    --color-text-dark-inactive: rgba(150, 150, 170, 0.7);
-    --color-dark-text: rgba(215, 215, 225, 0.92);
-    color: rgba(215, 215, 225, 0.92);
+    --color-text-dark-primary: var(--vn-text);
+    --color-text-dark-secondary: var(--vn-text-dim);
+    --color-text-dark-heading: var(--vn-text);
+    --color-text-dark-inactive: var(--vn-text-dim);
+    --color-dark-text: var(--vn-text);
+    color: var(--vn-text);
 }
 
 /* Force light text on everything — catches hardcoded color: #000 / color: #191813 */
-.vn-chat-panel .chat-message * { color: rgba(215, 215, 225, 0.92) !important; }
+.vn-chat-panel .chat-message * { color: var(--vn-text) !important; }
 
 /* Clear backgrounds — but skip elements with inline background (token portraits, etc.) */
 .vn-chat-panel .chat-message div:not([style*="background"]),
@@ -501,7 +523,7 @@
 }
 
 .vn-chat-panel #chat-controls button {
-    color: rgba(215, 215, 225, 0.7) !important;
+    color: var(--vn-text-dim) !important;
     background: rgba(255, 255, 255, 0.06) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 4px !important;
@@ -522,13 +544,13 @@
 
 .vn-chat-panel #chat-message {
     background: rgba(255, 255, 255, 0.06) !important;
-    color: rgba(215, 215, 225, 0.92) !important;
+    color: var(--vn-text) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 6px !important;
 }
 
 .vn-chat-panel #chat-message .editor-content {
-    color: rgba(215, 215, 225, 0.92) !important;
+    color: var(--vn-text) !important;
     min-height: 32px;
     max-height: 120px;
     overflow-y: auto;
@@ -536,12 +558,12 @@
 }
 
 .vn-chat-panel #chat-message .editor-menu {
-    background: rgba(20, 24, 35, 0.95) !important;
+    background: var(--vn-bg-deep) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .vn-chat-panel #chat-message .editor-menu button {
-    color: rgba(215, 215, 225, 0.7) !important;
+    color: var(--vn-text-dim) !important;
 }
 
 .vn-chat-panel .jump-to-bottom {
@@ -583,7 +605,7 @@
     top: calc(100% + 8px);
     right: 0;
     width: 320px;
-    background: rgba(8, 8, 16, 0.96);
+    background: var(--vn-bg-deep);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.04);
@@ -617,10 +639,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 2px;
     padding: 4px;
-    max-height: 370px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.12) transparent;
+    align-content: start;
 }
 
 .vn-atmosphere-picker-grid::-webkit-scrollbar { width: 4px; }
@@ -635,7 +654,7 @@
     border: 1px solid transparent;
     border-radius: 6px;
     background: none;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--vn-text-dim);
     font-size: 0.78em;
     cursor: pointer;
     text-align: left;
@@ -645,13 +664,13 @@
 }
 
 .vn-atmo-item:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: #fff;
+    background: var(--vn-surface-hover);
+    color: var(--vn-text);
 }
 
 .vn-atmo-item.active {
-    background: rgba(136, 192, 208, 0.12);
-    border-color: rgba(136, 192, 208, 0.25);
+    background: var(--vn-accent-soft);
+    border-color: var(--vn-accent-dim);
     color: var(--vn-accent);
 }
 
@@ -746,7 +765,7 @@
     border: 1px solid transparent;
     border-radius: 6px;
     background: none;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--vn-text-dim);
     font-size: 0.76em;
     cursor: pointer;
     text-align: left;
@@ -763,13 +782,13 @@
 }
 
 .vn-variant-option:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: #fff;
+    background: var(--vn-surface-hover);
+    color: var(--vn-text);
 }
 
 .vn-variant-option.active {
-    background: rgba(136, 192, 208, 0.12);
-    border-color: rgba(136, 192, 208, 0.25);
+    background: var(--vn-accent-soft);
+    border-color: var(--vn-accent-dim);
     color: var(--vn-accent);
 }
 
@@ -787,6 +806,163 @@
 
 .vn-fxset-picker { width: 280px; }
 
+.vn-atmo-settings-wrap { position: static; }
+.vn-atmo-settings-picker {
+    box-sizing: border-box;
+    width: min(660px, calc(100vw - 28px));
+    height: 560px;
+    max-height: calc(100dvh - 74px);
+}
+.vn-atmo-settings-columns {
+    display: grid;
+    height: 100%;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+}
+.vn-atmo-settings-list,
+.vn-atmo-settings-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+.vn-atmo-settings-panel { border-inline-start: 1px solid rgba(255, 255, 255, 0.1); }
+.vn-atmo-settings-columns .vn-atmosphere-picker-header { flex: none; }
+.vn-atmo-settings-list .vn-atmosphere-picker-grid,
+.vn-atmo-settings-panel > :is(.vn-fxset-body, .vn-particle-settings-page) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.vn-atmo-settings-panel > .vn-fxset-body > * { flex-shrink: 0; }
+
+.vn-particle-settings-switch {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: none;
+    margin: 8px 10px 2px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 7px;
+    background: rgba(0, 0, 0, 0.22);
+    isolation: isolate;
+}
+.vn-particle-settings-switch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+.vn-particle-settings-switch label {
+    z-index: 1;
+    padding: 5px 4px;
+    border-radius: 4px;
+    color: var(--vn-text-dim);
+    font-size: 0.78em;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+}
+.vn-particle-settings-switch input:checked + label { color: var(--vn-accent); }
+.vn-particle-settings-switch input:disabled + label { cursor: default; opacity: 0.42; }
+.vn-particle-settings-switch input:focus-visible + label { outline: 2px solid var(--vn-accent); outline-offset: -2px; }
+.vn-particle-settings-thumb {
+    position: absolute;
+    inset-block: 3px;
+    inset-inline-start: 3px;
+    inline-size: calc(50% - 3px);
+    border: 1px solid var(--vn-accent-dim);
+    border-radius: 4px;
+    background: var(--vn-accent-soft);
+    pointer-events: none;
+    transition: inset-inline-start 150ms ease-out;
+}
+#vn-particle-settings-effect:checked ~ .vn-particle-settings-thumb { inset-inline-start: 50%; }
+.vn-particle-settings-page[hidden] { display: none; }
+.vn-visual-settings-switch {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: none;
+    margin: 8px 10px 2px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 7px;
+    background: rgba(0, 0, 0, 0.22);
+    isolation: isolate;
+}
+.vn-visual-settings-switch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+.vn-visual-settings-switch label {
+    z-index: 1;
+    padding: 5px 4px;
+    border-radius: 4px;
+    color: var(--vn-text-dim);
+    font-size: 0.78em;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+}
+.vn-visual-settings-switch input:checked + label { color: var(--vn-accent); }
+.vn-visual-settings-switch input:disabled + label { cursor: default; opacity: 0.42; }
+.vn-visual-settings-switch input:focus-visible + label { outline: 2px solid var(--vn-accent); outline-offset: -2px; }
+.vn-visual-settings-thumb {
+    position: absolute;
+    inset-block: 3px;
+    inset-inline-start: 3px;
+    inline-size: calc(50% - 3px);
+    border: 1px solid var(--vn-accent-dim);
+    border-radius: 4px;
+    background: var(--vn-accent-soft);
+    pointer-events: none;
+    transition: inset-inline-start 150ms ease-out;
+}
+.vn-visual-settings-switch input[value="effect"]:checked ~ .vn-visual-settings-thumb { inset-inline-start: 50%; }
+.vn-visual-settings-page { display: flex; flex-direction: column; gap: 6px; }
+.vn-visual-settings-page[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+    :is(.vn-particle-settings-thumb, .vn-visual-settings-thumb) { transition: none; }
+}
+
+.vn-effect-option[hidden] { display: none; }
+.vn-effect-option {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--vn-border, rgba(255, 255, 255, 0.12));
+    font-size: 0.82em;
+}
+.vn-effect-option i { margin-inline-end: 4px; }
+.vn-effect-option small { display: block; margin-inline-start: 1.45em; opacity: 0.7; }
+.vn-effect-option select { width: auto; max-width: 100%; font-size: inherit; color-scheme: inherit; }
+.vn-effect-option select option {
+    background-color: var(--vn-bg-option);
+    color: var(--vn-text);
+}
+
+@media (max-width: 600px) {
+    .vn-atmo-settings-columns {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+    }
+    .vn-atmo-settings-panel {
+        border-inline-start: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+}
+
 .vn-fxset-body {
     display: flex;
     flex-direction: column;
@@ -800,10 +976,17 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--vn-text-dim);
 }
 
-.vn-fxset-body > .vn-fxset-section:not(:first-child) {
+.vn-particle-settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.vn-particle-settings-group > .vn-fxset-section:not(:first-child) {
     margin-top: 6px;
     padding-top: 8px;
     border-top: 1px solid rgba(255, 255, 255, 0.07);
@@ -824,36 +1007,70 @@
     padding: 6px 4px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.6);
+    background: var(--vn-surface);
+    color: var(--vn-text-dim);
     font-size: 0.76em;
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 .vn-fxset-layer:hover,
-.vn-fxset-depth:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.vn-fxset-depth:hover { background: var(--vn-surface-hover); color: var(--vn-text); }
 .vn-fxset-layer.active,
-.vn-fxset-depth.active { color: var(--vn-accent); border-color: var(--vn-accent-dim); background: rgba(136, 192, 208, 0.12); }
+.vn-fxset-depth.active { color: var(--vn-accent); border-color: var(--vn-accent-dim); background: var(--vn-accent-soft); }
 
-.vn-fxset-intensity-row {
-    display: flex;
+:is(.vn-particle-range, .vn-visual-strength) {
+    display: grid;
+    grid-template-columns: 1em minmax(7.5em, 40%) minmax(2rem, 1fr) 4em;
     align-items: center;
     gap: 6px;
     font-size: 0.76em;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--vn-text-dim);
 }
-.vn-fxset-intensity-row > span:first-of-type { white-space: nowrap; }
-.vn-fxset-intensity,
-.vn-fxset-wind { flex: 1 1 auto; min-width: 40px; accent-color: var(--vn-accent); cursor: pointer; }
-.vn-fxset-intensity-val { min-width: 1.6em; text-align: right; }
-.vn-fxset-wind-val { min-width: 3.2em; text-align: right; white-space: nowrap; }
+:is(.vn-particle-range, .vn-visual-strength) input[type="range"] { min-width: 0; width: 100%; accent-color: var(--vn-accent); cursor: pointer; }
+.vn-particle-range-value, .vn-visual-strength output { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vn-visual-effect-control[hidden] { display: none !important; }
+.vn-effect-tint { display: flex; align-items: center; gap: 6px; }
+.vn-effect-tint :is(.vn-particle-range, .vn-visual-strength) { flex: 1; min-width: 0; }
+:is(.vn-effect-tint, .vn-visual-effect-control) input[type="color"] {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 22px;
+    padding: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 5px;
+    cursor: pointer;
+}
+:is(.vn-particle-settings-reset, .vn-visual-settings-reset) {
+    align-self: flex-end;
+    width: auto;
+    margin-top: 4px;
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    background: var(--vn-surface);
+    color: var(--vn-text-dim, rgba(255, 255, 255, 0.65));
+    font-size: 0.76em;
+    cursor: pointer;
+}
+:is(.vn-particle-settings-reset, .vn-visual-settings-reset):hover { background: var(--vn-surface-hover); color: var(--vn-text, #fff); }
 
 /* Same switch as in the scene dialog (.vn-overlay-toggle), but the label takes the free width and the switch sits at the end */
-.vn-fxset-body .vn-fxset-toggle { display: flex; padding: 5px 6px; color: rgba(255, 255, 255, 0.75); }
-.vn-fxset-body .vn-fxset-toggle > i { width: 14px; text-align: center; color: rgba(255, 255, 255, 0.45); }
+.vn-fxset-body .vn-fxset-toggle { display: flex; padding: 5px 6px; color: var(--vn-text-dim); }
+.vn-fxset-body .vn-fxset-toggle > i { width: 14px; text-align: center; color: var(--vn-text-dim); }
 .vn-fxset-body .vn-fxset-toggle > span:not(.vn-toggle-track) { flex: 1 1 auto; }
 
+.vn-visual-settings :is(.vn-visual-background, .vn-visual-foreground)[type="checkbox"] {
+    display: block !important;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+.vn-visual-settings :is(.vn-visual-background, .vn-visual-foreground):focus-visible + .vn-toggle-track {
+    outline: 2px solid var(--vn-accent);
+    outline-offset: 2px;
+}
 
 
 /* ── Sounds Panel ── */
@@ -867,7 +1084,7 @@
     top: calc(100% + 8px);
     right: 0;
     width: 260px;
-    background: rgba(8, 8, 16, 0.96);
+    background: var(--vn-bg-deep);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255,255,255,0.04);
@@ -924,8 +1141,8 @@
     border-color: rgba(255, 255, 255, 0.08);
 }
 .vn-sound-item.playing {
-    background: rgba(136, 192, 208, 0.1);
-    border-color: rgba(136, 192, 208, 0.35);
+    background: var(--vn-accent-soft);
+    border-color: var(--vn-accent-dim);
     color: var(--vn-accent);
 }
 .vn-sound-item.playing i {
@@ -1003,7 +1220,7 @@
     top: calc(100% + 6px);
     left: 0;
     min-width: 260px;
-    background: rgba(8, 8, 16, 0.94);
+    background: var(--vn-bg-deep);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--vn-radius);
     padding: 8px 10px;
@@ -1507,7 +1724,7 @@
     background: rgba(0, 0, 0, 0.65);
     padding: 5px 16px;
     border-radius: 16px;
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--np-text-color, rgba(255, 255, 255, 0.85));
     font-weight: 600;
     font-size: calc(0.9em * var(--np-fit, 1) * var(--np-font-scale, 1)); /* --np-fit < 1 — длинное имя ужато скриптом (vn-nameplate.js) */
     white-space: nowrap;
@@ -1525,7 +1742,7 @@
 /* box-shadow активной плашки — только в анимации vnNameplateGlow (vn-fx-theming.css) */
 .vn-character.active .vn-nameplate-text {
     background: linear-gradient(135deg, rgba(136, 192, 208, 0.9), rgba(100, 160, 180, 0.9));
-    color: #fff;
+    color: var(--np-text-color, #fff);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     border-color: rgba(255, 255, 255, 0.2);
     font-weight: 700;
@@ -1590,24 +1807,24 @@
     max-width: none;
     text-align: center;
     font-size: calc(var(--np-font-size, 0.9em) * var(--np-fit, 1) * var(--np-font-scale, 1));
-    color: rgba(240, 220, 175, 0.9);
+    color: var(--np-text-color, rgba(240, 220, 175, 0.9));
     font-weight: 700;
     letter-spacing: 0.8px;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 1), 0 0 10px rgba(0, 0, 0, 0.7);
 }
 
 .vn-nameplate-has-image .vn-character.active .vn-nameplate-text {
-    color: #fff8e0;
+    color: var(--np-text-color, #fff8e0);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 1), 0 0 14px rgba(210, 175, 80, 0.45);
 }
 
 .vn-nameplate-has-image .vn-character.queue-priority-1.active .vn-nameplate-text {
-    color: #ffd060;
+    color: var(--np-text-color, #ffd060);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 1), 0 0 14px rgba(235, 180, 50, 0.55);
 }
 
 .vn-nameplate-has-image .vn-character.queue-priority-2.active .vn-nameplate-text {
-    color: #ff8898;
+    color: var(--np-text-color, #ff8898);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 1), 0 0 14px rgba(200, 60, 80, 0.55);
 }
 
@@ -1823,42 +2040,9 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     z-index: 10300 !important;
 }
 
-/* Force dark chrome on all VN dialog windows — overrides Foundry light theme */
-.application.vn-scene-window,
-.application.vn-scale-window,
-.application.vn-confirm-dialog,
-.application.vn-instructions-dialog {
-    background: rgba(20, 20, 30, 0.98) !important;
-    border-color: var(--vn-border) !important;
-    color: var(--vn-text) !important;
-}
-
-.application.vn-scene-window .window-header,
-.application.vn-scale-window .window-header,
-.application.vn-confirm-dialog .window-header,
-.application.vn-instructions-dialog .window-header {
-    background: rgba(15, 15, 25, 0.98) !important;
-    color: var(--vn-text) !important;
-    border-bottom-color: var(--vn-border) !important;
-}
-
-.application.vn-scene-window .window-header h1,
-.application.vn-scale-window .window-header h1,
-.application.vn-confirm-dialog .window-header h1,
-.application.vn-instructions-dialog .window-header h1,
-.application.vn-scene-window .window-header .window-title,
-.application.vn-scale-window .window-header .window-title,
-.application.vn-confirm-dialog .window-header .window-title,
-.application.vn-instructions-dialog .window-header .window-title {
-    color: var(--vn-text) !important;
-}
-
-.application.vn-scene-window .window-content,
-.application.vn-scale-window .window-content,
-.application.vn-confirm-dialog .window-content,
-.application.vn-instructions-dialog .window-content {
-    background: var(--vn-bg-panel) !important;
-    color: var(--vn-text) !important;
+.application:is(.vn-scene-window, .vn-scale-window, .vn-confirm-dialog, .vn-instructions-dialog) {
+    color-scheme: var(--color-scheme, dark);
+    color: var(--vn-text);
 }
 
 .application.vn-scene-window .window-content {
@@ -1866,40 +2050,12 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     max-height: calc(100vh - 100px);
 }
 
-/* ── Foundry theme bridge ──
-   Foundry paints focus / hover / scrollbars / checkboxes in its signature orange through these variables
-   (that is where the orange outlines on clicked tabs and tiles and the maroon scrollbars came from).
-   Re-point them to the module accent inside our windows, so there is one accent colour instead of two. */
-.application.vn-scene-window,
-.application.vn-scale-window,
-.application.vn-confirm-dialog,
-.application.vn-instructions-dialog {
-    --color-shadow-primary: var(--vn-accent);
-    --color-shadow-highlight: var(--vn-accent);
-    --color-border-highlight: var(--vn-accent);
-    --color-border-highlight-alt: var(--vn-accent);
-    --color-scrollbar: var(--vn-accent-dim);
-    --color-scrollbar-track: transparent;
-    --button-focus-outline-color: var(--vn-accent);
-    --button-hover-border-color: var(--vn-border-hover);
-    accent-color: var(--vn-accent);
-}
-
-/* No orange ring that sticks to a button after a mouse click; keyboard focus keeps the accent outline */
-.application.vn-scene-window :is(button, select, input, textarea, [role="button"]):focus:not(:focus-visible) {
-    outline: none;
-    box-shadow: none;
-}
-
-/* The variables above did not catch everything: Foundry also sets accent-color on checkboxes and draws the
-   focus / toggled ring with its own rules, so the orange survived on clicked tabs, toggles and tiles.
-   Pin the look explicitly instead of guessing variable names. */
 .application.vn-scene-window :is(input[type="checkbox"], input[type="radio"], input[type="range"]) {
     accent-color: var(--vn-accent);
 }
 
 .application.vn-scene-window :is(button, select, input, textarea, summary, [role="button"]):focus:not(:focus-visible),
-.application.vn-scene-window :is(.vn-tab-btn, .vn-btn, .vn-atmo-item, .vn-effects-preset-item,
+.application.vn-scene-window :is(.vn-tab-btn, .vn-btn, .vn-atmo-item,
     .vn-particles-layer-opt, .vn-bg-option, .vn-token-option, .vn-preset-item, .vn-preset-card).active:not(:focus-visible) {
     outline: none !important;
     box-shadow: none !important;
@@ -1915,18 +2071,34 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 }
 .application.vn-scene-window :is(.vn-tab-btn, .vn-pool-tab).active { border-bottom-color: var(--vn-accent); }
 .application.vn-scene-window .vn-pool-tab { background: transparent; height: auto; line-height: normal; }
-.application.vn-scene-window .vn-pool-tab:hover { background: rgba(255, 255, 255, 0.04); }
+.application.vn-scene-window .vn-pool-tab:hover { background: var(--vn-surface); }
 .application.vn-scene-window .vn-pool-tab.drag-hover { background: var(--vn-accent-dim); }
 
 /* Toggled buttons keep their own faint accent halo */
 .application.vn-scene-window .vn-btn.active:not(:focus-visible) {
-    box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.25) !important;
+    box-shadow: 0 0 0 1px var(--vn-accent-dim) !important;
 }
 
 /* Characters tab: the stage (three position slots) comes first and is as tall as its content needs;
    the pool of actors below takes the rest of the window and scrolls inside itself, so the stage never leaves the view. */
 .vn-tab-panel[data-tab="characters"].active { display: flex; flex-direction: column; gap: 10px; }
 .vn-positions-grid { flex: 0 0 auto; }
+.vn-entrances {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 6px 12px 10px;
+    border: 1px solid var(--vn-border);
+    border-radius: 8px;
+}
+.vn-entrances legend { padding: 0 6px; font-size: 12px; }
+.vn-entrance-field { display: flex; flex: 1 1 300px; align-items: center; gap: 10px; min-width: 0; }
+.vn-entrance-field > span { flex: 1; font-size: 12px; }
+.vn-entrance-field select { flex: 0 1 190px; min-width: 0; }
 .vn-positions-grid > .vn-position-slot { display: flex; flex-direction: column; min-width: 0; }
 .vn-positions-grid .vn-token-selector { flex: 1 1 auto; align-content: flex-start; }
 
@@ -1984,13 +2156,13 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     border-radius: var(--vn-radius-sm);
     font-size: 13px;
     font-weight: 600;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--vn-surface);
     border: 1px solid var(--vn-border);
     color: var(--vn-text);
     transition: all var(--vn-transition);
 }
 .application.vn-scene-window--tabs .form-footer button:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--vn-surface-hover);
     border-color: var(--vn-border-hover);
 }
 
@@ -2001,7 +2173,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     color: var(--vn-text-dim);
 }
 .application.vn-scene-window--tabs .form-footer button[data-action="cancel"]:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--vn-surface);
     color: var(--vn-text);
 }
 
@@ -2014,7 +2186,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     font-weight: 500;
 }
 .application.vn-scene-window--tabs .form-footer button[data-action="background-only"]:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--vn-surface);
     border-color: var(--vn-border-hover);
     color: var(--vn-text);
 }
@@ -2028,13 +2200,13 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 
 .application.vn-scene-window--tabs .form-footer button[data-action="create"] {
     order: 3;
-    background: var(--vn-accent);
-    border-color: var(--vn-accent);
-    color: #0d1117;
+    background: var(--vn-accent-fill);
+    border-color: var(--vn-accent-fill);
+    color: var(--vn-on-accent);
 }
 .application.vn-scene-window--tabs .form-footer button[data-action="create"]:hover {
-    background: #a5d3df;
-    border-color: #a5d3df;
+    background: var(--vn-accent-fill-hover);
+    border-color: var(--vn-accent-fill-hover);
 }
 
 /* One height and weight for text inputs and selects (Foundry's own are 40px and bold, next to 24px buttons) */
@@ -2053,7 +2225,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     align-items: center;
     gap: 5px;
     padding: 5px 10px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--vn-surface);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
@@ -2064,7 +2236,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 }
 
 .vn-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--vn-surface-hover);
     border-color: var(--vn-border-hover);
 }
 
@@ -2073,11 +2245,11 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 
 .vn-btn-accent {
     background: var(--vn-accent-dim);
-    border-color: rgba(136, 192, 208, 0.4);
+    border-color: var(--vn-accent-edge);
     color: var(--vn-accent);
 }
 .vn-btn-accent:hover {
-    background: rgba(136, 192, 208, 0.35);
+    background: var(--vn-accent-dim);
     border-color: var(--vn-accent);
 }
 
@@ -2093,12 +2265,12 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 
 .vn-btn.active {
     background: var(--vn-accent-dim);
-    border-color: rgba(136, 192, 208, 0.6);
+    border-color: var(--vn-accent-edge);
     color: var(--vn-accent);
-    box-shadow: 0 0 0 1px rgba(136, 192, 208, 0.25);
+    box-shadow: 0 0 0 1px var(--vn-accent-dim);
 }
 .vn-btn.active:hover {
-    background: rgba(136, 192, 208, 0.28);
+    background: var(--vn-accent-dim);
     border-color: var(--vn-accent);
 }
 
@@ -2158,7 +2330,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     gap: 5px;
 }
 
-.vn-tab-btn:hover { color: var(--vn-text); background: rgba(255,255,255,0.04); }
+.vn-tab-btn:hover { color: var(--vn-text); background: var(--vn-surface); }
 .vn-tab-btn.active { color: var(--vn-accent); border-bottom-color: var(--vn-accent); }
 
 .vn-tab-panel { display: none; padding: 4px; }
@@ -2195,9 +2367,9 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     transition: all var(--vn-transition);
     user-select: none;
 }
-.vn-gm-only-toggle:hover { color: var(--vn-gold); border-color: rgba(235,203,139,0.3); background: rgba(235,203,139,0.05); }
+.vn-gm-only-toggle:hover { color: var(--vn-gold); border-color: var(--vn-border-hover); background: var(--vn-surface); }
 .vn-gm-only-toggle input[type="checkbox"] { display: none !important; }
-.vn-gm-only-toggle:has(input:checked) { color: var(--vn-gold); border-color: rgba(235,203,139,0.5); background: rgba(235,203,139,0.1); }
+.vn-gm-only-toggle:has(input:checked) { color: var(--vn-accent); border-color: var(--vn-accent-edge); background: var(--vn-accent-soft); }
 
 
 /* ── Collapsible ── */
@@ -2206,7 +2378,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
     margin-bottom: 8px;
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--vn-inset);
     overflow: hidden;
 }
 
@@ -2224,7 +2396,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     list-style: none;
 }
 .vn-collapsible-header::-webkit-details-marker { display: none; }
-.vn-collapsible-header:hover { background: rgba(255,255,255,0.04); }
+.vn-collapsible-header:hover { background: var(--vn-surface); }
 
 .vn-chevron {
     margin-left: auto;
@@ -2258,7 +2430,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 .vn-position-slot {
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--vn-inset);
     overflow: hidden;
     transition: border-color var(--vn-transition);
 }
@@ -2269,7 +2441,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     align-items: center;
     gap: 5px;
     padding: 6px 10px;
-    background: rgba(0, 0, 0, 0.15);
+    background: var(--vn-inset);
     border-bottom: 1px solid var(--vn-border);
     color: var(--vn-accent);
     font-weight: 600;
@@ -2298,7 +2470,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 .vn-token-selector.drag-over,
 .vn-available-tokens.drag-over,
 .vn-scene-participants.drag-over,
-.vn-favorites-section.drag-over { background: rgba(136,192,208,0.06); }
+.vn-favorites-section.drag-over { background: var(--vn-accent-soft); }
 .vn-token-selector:has(.vn-token-option) .vn-drop-hint { display: none; }
 
 .vn-drop-hint {
@@ -2320,12 +2492,12 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
     border-radius: var(--vn-radius-sm);
     padding: 3px;
     transition: all var(--vn-transition);
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--vn-surface);
     user-select: none;
 }
 
 .vn-token-option:hover {
-    background: rgba(255,255,255,0.08);
+    background: var(--vn-surface-hover);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
@@ -2334,7 +2506,7 @@ body.vn-nameplate-font .vn-character .vn-nameplate-text {
 body.vn-dragging .vn-token-option { transition: none; }
 .vn-token-option.selected {
     border-color: var(--vn-accent);
-    background: rgba(136,192,208,0.08);
+    background: var(--vn-accent-soft);
 }
 
 .vn-token-preview {
@@ -2383,8 +2555,8 @@ body.vn-dragging .vn-token-option { transition: none; }
     padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 50%;
-    background: rgba(13, 17, 23, 0.92);
-    color: rgba(255, 255, 255, 0.8);
+    background: #211916;
+    color: #f9eee3;
     font-size: max(11px, 0.65em);
     cursor: pointer;
     display: none;
@@ -2400,7 +2572,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-scene-dialog .vn-token-option > :is(.vn-token-hide-btn, .vn-token-fx-btn):hover {
     background: #000;
     color: #fff;
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: var(--vn-border-hover);
 }
 
 .vn-scene-dialog .vn-token-selector .vn-token-option > :is(.vn-token-hide-btn, .vn-token-fx-btn) {
@@ -2438,9 +2610,9 @@ body.vn-dragging .vn-token-option { transition: none; }
 
 /* Portrait effect badge (top-left, see the corner badges above) in its "effect set" colour */
 .vn-scene-dialog .vn-token-option[data-char-fx] > .vn-token-fx-btn {
-    background: rgba(136, 192, 208, 0.95);
+    background: var(--vn-accent-fill);
     border-color: transparent;
-    color: #0b1620;
+    color: var(--vn-on-accent);
 }
 
 /* Effect picker (native popover, shared by all cards). Not setting `display` on the closed state keeps [popover] hidden. */
@@ -2483,7 +2655,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     text-transform: uppercase;
 }
 
-.vn-fx-menu-group[data-group="svg"] {
+.vn-fx-menu-group[data-group="signal"] {
     margin-top: 4px;
     color: var(--vn-accent);
 }
@@ -2512,7 +2684,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 }
 
 .vn-fx-menu-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--vn-surface-hover);
 }
 
 .vn-fx-menu-item.current {
@@ -2612,7 +2784,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     flex-direction: column;
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--vn-inset);
     overflow: hidden;
 }
 
@@ -2623,7 +2795,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     align-items: center;
     gap: 4px 12px;
     padding-right: 8px;
-    background: rgba(0, 0, 0, 0.15);
+    background: var(--vn-inset);
     border-bottom: 1px solid var(--vn-border);
 }
 
@@ -2645,7 +2817,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     cursor: pointer;
     transition: color var(--vn-transition), background var(--vn-transition);
 }
-.vn-pool-tab:hover { color: var(--vn-text); background: rgba(255, 255, 255, 0.04); }
+.vn-pool-tab:hover { color: var(--vn-text); background: var(--vn-surface); }
 .vn-pool-tab.active { color: var(--vn-accent); border-bottom-color: var(--vn-accent); }
 .vn-pool-tab[data-pool="favorites"] i { color: var(--vn-gold); }
 /* A card is dragged over an inactive tab: it is about to open */
@@ -2668,8 +2840,8 @@ body.vn-dragging .vn-token-option { transition: none; }
     min-width: 0;
     height: 26px;
     padding: 0 8px;
-    background: rgba(0 0 0 / 0.3);
-    border: 1px solid rgba(255 255 255 / 0.12);
+    background: var(--vn-inset);
+    border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm, 4px);
     color: var(--vn-text, #ddd);
     font-size: 0.82em;
@@ -2746,7 +2918,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     flex: 0 0 auto;
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
-    background: rgba(0, 0, 0, 0.1);
+    background: var(--vn-inset);
     overflow: hidden;
 }
 .vn-participants-strip:has(.vn-scene-participants.drag-over) { border-color: var(--vn-accent); }
@@ -2759,14 +2931,14 @@ body.vn-dragging .vn-token-option { transition: none; }
     cursor: pointer;
     user-select: none;
     list-style: none;
-    background: rgba(0, 0, 0, 0.15);
+    background: var(--vn-inset);
     color: var(--vn-accent);
     font-weight: 600;
     font-size: 0.8em;
     white-space: nowrap;
 }
 .vn-participants-header::-webkit-details-marker { display: none; }
-.vn-participants-header:hover { background: rgba(255, 255, 255, 0.04); }
+.vn-participants-header:hover { background: var(--vn-surface); }
 .vn-participants-strip[open] .vn-chevron { transform: rotate(180deg); }
 .vn-participants-header .vn-participants-hint {
     flex: 1 1 0;
@@ -2846,7 +3018,7 @@ body.vn-dragging .vn-token-option { transition: none; }
     font-size: 0.8em;
     color: var(--vn-text);
 }
-.vn-overlay-toggle:hover { background: rgba(255,255,255,0.06); }
+.vn-overlay-toggle:hover { background: var(--vn-surface); }
 .vn-overlay-toggle input[type="checkbox"] { display: none !important; }
 
 /* ── Toggle track (shared: overlay checkboxes + gm-only) ── */
@@ -2857,8 +3029,8 @@ body.vn-dragging .vn-token-option { transition: none; }
     width: 32px;
     height: 18px;
     border-radius: 9px;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: var(--vn-surface-hover);
+    border: 1px solid var(--vn-border-hover);
     transition: background 0.2s, border-color 0.2s;
 }
 .vn-toggle-track::after {
@@ -2869,24 +3041,16 @@ body.vn-dragging .vn-token-option { transition: none; }
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.38);
+    background: var(--vn-text-dim);
     transition: transform 0.2s ease, background 0.2s;
 }
-.vn-overlay-toggle input:checked + .vn-toggle-track {
-    background: var(--vn-accent);
-    border-color: var(--vn-accent);
+:is(.vn-overlay-toggle, .vn-gm-only-toggle) input:checked + .vn-toggle-track {
+    background: var(--vn-accent-fill);
+    border-color: var(--vn-accent-edge);
 }
-.vn-overlay-toggle input:checked + .vn-toggle-track::after {
+:is(.vn-overlay-toggle, .vn-gm-only-toggle) input:checked + .vn-toggle-track::after {
     transform: translateX(14px);
-    background: #fff;
-}
-.vn-gm-only-toggle input:checked + .vn-toggle-track {
-    background: var(--vn-gold);
-    border-color: var(--vn-gold);
-}
-.vn-gm-only-toggle input:checked + .vn-toggle-track::after {
-    transform: translateX(14px);
-    background: #fff;
+    background: var(--vn-on-accent);
 }
 
 /* Shared focus ring (Background custom-path input + Presets search/save inputs) */
@@ -2911,7 +3075,7 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-scale-dialog input[type="range"] {
     width: 100%; height: 5px;
     -webkit-appearance: none; appearance: none;
-    background: rgba(255,255,255,0.1); border-radius: 3px; cursor: pointer;
+    background: var(--vn-surface-hover); border-radius: 3px; cursor: pointer;
 }
 .vn-scale-dialog input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -2927,13 +3091,13 @@ body.vn-dragging .vn-token-option { transition: none; }
 .vn-scale-presets { display: flex; gap: 4px; flex-wrap: wrap; }
 .vn-scale-preset {
     flex: 1; min-width: 45px; padding: 6px 3px;
-    background: rgba(255,255,255,0.05);
+    background: var(--vn-surface);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text-dim); font-size: 0.8em; font-weight: 600;
     cursor: pointer; transition: all var(--vn-transition); text-align: center;
 }
-.vn-scale-preset:hover { background: rgba(255,255,255,0.1); color: var(--vn-text); }
+.vn-scale-preset:hover { background: var(--vn-surface-hover); color: var(--vn-text); }
 .vn-scale-preset.active { background: var(--vn-accent-dim); border-color: var(--vn-accent); color: var(--vn-accent); }
 
 

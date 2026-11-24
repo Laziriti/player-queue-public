@@ -7,8 +7,10 @@
 
 import { PlayerQueue } from './queue/player-queue.js';
 import { MODULE_ID, PRIORITIES, PRIORITY_SOUND_SETTINGS, applyForcedTheme, priorityIconUrl } from './queue/queue-constants.js';
-import { NAMEPLATE_CONFIGS, NAMEPLATE_FONTS, nameplateFontFamily } from './visual-dialog/vn-nameplate.js';
-import { escapeHtml, stripEmoji } from './visual-dialog/vn-id-utils.js';
+import { NAMEPLATE_CONFIGS, NAMEPLATE_FONTS, nameplateFontFamily } from './visual-dialog/overlay/vn-nameplate.js';
+import { escapeHtml, stripEmoji } from './utils/text.js';
+import { normalizeAssetPath as normPath } from './utils/paths.js';
+import { filePickerImplementation } from './utils/file-picker.js';
 import { EffectFiltersApp } from './effect-filters.js';
 
 const { ApplicationV2 } = foundry.applications.api;
@@ -19,11 +21,11 @@ const esc = escapeHtml;
 const PLATE_FOLDER = 'modules/player-queue/assets/dialog name labels';
 const PLATE_EXTS = ['webp', 'png', 'jpg', 'jpeg', 'gif'];
 const NO_PLATE = '__hidden__';
-const normPath = p => decodeURIComponent(String(p ?? '')).replace(/^\//, '');
 
 /**
- * control: toggle | range | segmented | corner | select | plates | fonts | folder | button
- * choices: { значение: ключ подписи в settings.<key>.<ключ> }
+ * control: toggle | range | segmented | corner | select | plates | fonts | color | folder | button
+ * choice labels and ranges come from the registered setting; layout keeps control/unit/needs.
+ * choices (in settings.js): { значение: ключ подписи в settings.<key>.<ключ> }
  * needs:   ключ настройки-переключателя; пока он выключен, элемент недоступен
  * world:   настройка мира — видна и меняется только тем, кому разрешено менять настройки (ведущему)
  */
@@ -32,16 +34,16 @@ const SECTIONS = [
         id: 'queue', icon: 'fa-hand', groups: [
             {
                 id: 'window', items: [
-                    { key: 'queuePosition', control: 'corner', choices: { 'top-left': 'topLeft', 'top-right': 'topRight', 'bottom-left': 'bottomLeft', 'bottom-right': 'bottomRight' } },
-                    { key: 'queueOrientation', control: 'segmented', choices: { vertical: 'vertical', horizontal: 'horizontal' } },
-                    { key: 'queueSize', control: 'range', min: 30, max: 100, step: 5, unit: 'px' },
-                    { key: 'queueMaxItems', control: 'range', min: 3, max: 15, step: 1 },
+                    { key: 'queuePosition', control: 'corner' },
+                    { key: 'queueOrientation', control: 'segmented' },
+                    { key: 'queueSize', control: 'range', unit: 'px' },
+                    { key: 'queueMaxItems', control: 'range' },
                     { key: 'queueCompact', control: 'toggle' },
                 ]
             },
             {
                 id: 'behavior', items: [
-                    { key: 'queueDuringScene', control: 'select', choices: { top: 'top', keep: 'keep' } },
+                    { key: 'queueDuringScene', control: 'select' },
                     { key: 'darkTheme', control: 'toggle' },
                     { key: 'announceInChat', control: 'toggle', world: true },
                 ]
@@ -53,7 +55,7 @@ const SECTIONS = [
             {
                 id: 'general', items: [
                     { key: 'enableSounds', control: 'toggle' },
-                    { key: 'soundVolume', control: 'range', min: 0, max: 100, step: 5, unit: '%', needs: 'enableSounds' },
+                    { key: 'soundVolume', control: 'range', unit: '%', needs: 'enableSounds' },
                     { key: 'soundOnlyForSelf', control: 'toggle', needs: 'enableSounds' },
                 ]
             },
@@ -65,12 +67,13 @@ const SECTIONS = [
             {
                 id: 'main', items: [
                     { key: 'parallaxEnabled', control: 'toggle' },
-                    { key: 'parallaxDepth', control: 'range', min: 0, max: 100, step: 10, unit: '%', needs: 'parallaxEnabled' },
+                    { key: 'parallaxDepth', control: 'range', unit: '%', needs: 'parallaxEnabled' },
                     { key: 'cameraEnabled', control: 'toggle' },
                     { key: 'cameraDoF', control: 'toggle', needs: 'cameraEnabled' },
-                    { key: 'kenBurnsDirection', control: 'segmented', choices: { none: 'none', random: 'random', left: 'left', right: 'right' } },
+                    { key: 'kenBurnsDirection', control: 'segmented' },
                 ]
             },
+            { id: 'sceneEditor', items: [{ key: 'keepSceneEditorOpen', control: 'toggle' }] },
         ]
     },
     {
@@ -79,12 +82,14 @@ const SECTIONS = [
                 id: 'plate', items: [
                     { key: 'nameplateImage', control: 'plates', world: true },
                     { key: 'nameplateFont', control: 'fonts', world: true },
+                    { key: 'nameplateColor', control: 'color', world: true },
                 ]
             },
             {
                 id: 'characters', items: [
                     { key: 'dimInactive', control: 'toggle', world: true },
                     { key: 'blurInactive', control: 'toggle', world: true },
+                    { key: 'randomizePortraitFxPhase', control: 'toggle', world: true },
                 ]
             },
             { id: 'files', items: [{ key: 'thumbnailFolder', control: 'folder', world: true }] },
@@ -109,7 +114,7 @@ let plateFilesCache = null;
 async function loadPlateFiles() {
     if (plateFilesCache) return plateFilesCache;
     try {
-        const result = await foundry.applications.apps.FilePicker.implementation.browse('data', PLATE_FOLDER);
+        const result = await filePickerImplementation().browse('data', PLATE_FOLDER);
         plateFilesCache = result.files.filter(f => PLATE_EXTS.some(ext => f.toLowerCase().endsWith(`.${ext}`)));
     } catch {
         plateFilesCache = [];
@@ -131,6 +136,7 @@ class ModuleSettingsApp extends ApplicationV2 {
         actions: {
             showSection: ModuleSettingsApp.#onShowSection,
             resetSection: ModuleSettingsApp.#onResetSection,
+            resetNameplateColor: ModuleSettingsApp.#onResetNameplateColor,
             playSound: ModuleSettingsApp.#onPlaySound,
             openEffectFilters: ModuleSettingsApp.#onOpenEffectFilters
         }
@@ -254,8 +260,9 @@ class ModuleSettingsApp extends ApplicationV2 {
     #control(item, name, context) {
         const { key } = item;
         const value = this.#values[key];
-        const choiceLabel = id => esc(loc(`settings.${key}.${item.choices[id]}`));
-        const radios = (cls, inner) => `<span class="${cls}" role="radiogroup" aria-label="${name}">${Object.keys(item.choices).map(id => `
+        const { range = {}, choices = {} } = game.settings.settings.get(`${MODULE_ID}.${key}`) ?? {};
+        const choiceLabel = id => esc(loc(choices[id]));
+        const radios = (cls, inner) => `<span class="${cls}" role="radiogroup" aria-label="${name}">${Object.keys(choices).map(id => `
             <label${cls === 'pqs-corner' ? ` data-pos="${id}" title="${choiceLabel(id)}"` : ''}>
                 <input type="radio" name="pqs-${key}" data-setting="${key}" value="${id}"${value === id ? ' checked' : ''}${cls === 'pqs-corner' ? ` aria-label="${choiceLabel(id)}"` : ''}>
                 ${inner(id)}
@@ -265,13 +272,13 @@ class ModuleSettingsApp extends ApplicationV2 {
             case 'toggle':
                 return `<span class="pqs-switch"><input type="checkbox" role="switch" data-setting="${key}"${value ? ' checked' : ''}><span class="pqs-track" aria-hidden="true"></span></span>`;
             case 'range':
-                return `<span class="pqs-range"><input type="range" data-setting="${key}" min="${item.min}" max="${item.max}" step="${item.step}" value="${value}" aria-label="${name}"><output data-unit="${item.unit ?? ''}">${value}${item.unit ?? ''}</output></span>`;
+                return `<span class="pqs-range"><input type="range" data-setting="${key}" min="${range.min}" max="${range.max}" step="${range.step}" value="${value}" aria-label="${name}"><output data-unit="${item.unit ?? ''}">${value}${item.unit ?? ''}</output></span>`;
             case 'segmented':
                 return radios('pqs-seg', id => `<span>${choiceLabel(id)}</span>`);
             case 'corner':
                 return `${radios('pqs-corner', () => '<i aria-hidden="true"></i>')}<span class="pqs-corner-name" data-corner-name></span>`;
             case 'select':
-                return `<select class="pqs-select" data-setting="${key}" aria-label="${name}">${Object.keys(item.choices).map(id => `<option value="${id}"${value === id ? ' selected' : ''}>${choiceLabel(id)}</option>`).join('')}</select>`;
+                return `<select class="pqs-select" data-setting="${key}" aria-label="${name}">${Object.keys(choices).map(id => `<option value="${id}"${value === id ? ' selected' : ''}>${choiceLabel(id)}</option>`).join('')}</select>`;
             case 'folder':
                 return `<file-picker type="folder" noupload data-setting="${key}" value="${esc(value)}"></file-picker>`;
             case 'button':
@@ -280,6 +287,8 @@ class ModuleSettingsApp extends ApplicationV2 {
                 return this.#plates(item, context.plates, value);
             case 'fonts':
                 return this.#fonts(item, value);
+            case 'color':
+                return `<span class="pqs-color"><input type="color" data-setting="${key}" value="${esc(value || '#fff8e0')}" aria-label="${name}"><button type="button" class="pqs-btn" data-action="resetNameplateColor"${value ? '' : ' disabled'}>${esc(loc('settings.nameplateColor.defaultColor'))}</button></span>`;
             default:
                 return '';
         }
@@ -358,6 +367,9 @@ class ModuleSettingsApp extends ApplicationV2 {
         if (el.type === 'range') this.#showRange(el);
         if (el.type === 'radio' && el.closest('.pqs-corner')) this.#showCornerNames();
         await this.#commit(key, value);
+        if (key === 'nameplateColor') {
+            this.element.querySelector('[data-action="resetNameplateColor"]').disabled = !this.#values[key];
+        }
     }
 
     async #commit(key, value) {
@@ -436,6 +448,11 @@ class ModuleSettingsApp extends ApplicationV2 {
 
     static #onShowSection(event, target) {
         this.#show(target.dataset.section);
+    }
+
+    static async #onResetNameplateColor() {
+        await this.#commit('nameplateColor', '');
+        await this.render();
     }
 
     static async #onResetSection(event, target) {

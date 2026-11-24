@@ -176,6 +176,19 @@
       "name": "Module settings",
       "label": "Open settings",
       "hint": "Queue, sounds, camera, scene look and performance in one window. Changes are saved immediately"
+    },
+    "nameplateColor": {
+      "name": "Name text color",
+      "hint": "Text color for all character names on the scene. Default preserves the standard colors, including active character and queue priority highlights.",
+      "defaultColor": "Default"
+    },
+    "keepSceneEditorOpen": {
+      "name": "Keep scene editor open",
+      "hint": "Keep the editor open after creating or updating a scene. Double-click its title bar to minimize it."
+    },
+    "randomizePortraitFxPhase": {
+      "name": "Vary portrait effect phases",
+      "hint": "Each character starts at a different point in the effect loop. Turn this off to start matching effects at the same phase."
     }
   },
   "fxFilters": {
@@ -228,9 +241,8 @@
       "sizeReset": "Reset",
       "sizeIncrease": "Larger",
       "sizeSettings": "Settings",
-      "fxSettings": "Particles, dimming and vignette",
-      "fxSettingsHeader": "Frame & particles",
-      "fxSettingsFrame": "Frame"
+      "fxSettings": "Frame settings",
+      "fxSettingsHeader": "Frame"
     },
     "help": {
       "btnTitle": "Scene controls help",
@@ -281,7 +293,6 @@
         "downpour": "Downpour",
         "drizzle": "Drizzle",
         "slanted": "Wind-driven rain",
-        "bloodRain": "Blood rain",
         "snow": "Snow",
         "snowfall": "Heavy snowfall",
         "flurry": "Flurry",
@@ -294,9 +305,6 @@
         "sparkFountain": "Spark fountain",
         "fallingSparks": "Falling sparks",
         "electric": "Electric",
-        "greenFireflies": "Green",
-        "blueFireflies": "Blue",
-        "amberFireflies": "Amber",
         "embers": "Embers",
         "bonfire": "Bonfire",
         "smolder": "Smouldering",
@@ -323,7 +331,15 @@
         "windblownLeaves": "Windblown leaves",
         "smoke": "Smoke",
         "steam": "Steam",
-        "warmMotes": "Warm motes"
+        "warmMotes": "Warm motes",
+        "shootingStars": "Stars",
+        "comets": "Comets",
+        "cosmic": "Cosmic dust",
+        "abyss": "Abyss bubbles",
+        "dream": "Dream orbs",
+        "ether": "Ethereal orbs",
+        "ghostVortex": "Distant vortex",
+        "ghostVortexCenter": "Inside the vortex"
       },
       "visualVariants": {
         "classic": "Classic",
@@ -364,10 +380,7 @@
         "fadingLights": "Fading lights",
         "shadowWhispers": "Whispering shadows",
         "eyeSpiral": "Eye and spiral",
-        "eye": "The eye",
         "spiral": "Spiral",
-        "shardsFrame": "Shards across the frame",
-        "crackCenter": "Cracks at the centre",
         "drunk": "Drunk",
         "tipsy": "Tipsy",
         "wasted": "Wasted",
@@ -376,7 +389,14 @@
         "fogMedium": "Fog",
         "fogLight": "Light haze",
         "fogDense": "Dense shroud",
-        "fogGround": "Ground mist"
+        "fogGround": "Ground mist",
+        "eclipseShadow": "Without Sun",
+        "eclipseSun": "With Sun",
+        "eclipsePhase": "Adjustable phase",
+        "entity": "Entity",
+        "glassCrack": "Crack",
+        "glassShards": "Shattered glass",
+        "glassBackground": "Shattered background"
       },
       "groups": {
         "basic": "Basic",
@@ -391,7 +411,7 @@
       },
       "particles": {
         "none": "Off",
-        "particles": "Particles",
+        "particles": "Dust",
         "snow": "Snow",
         "rain": "Rain",
         "embers": "Embers",
@@ -400,30 +420,23 @@
         "bubbles": "Bubbles",
         "ash": "Ash",
         "sakura": "Sakura",
-        "dream_orbs": "Dream orbs",
         "sand_grains": "Sand grains",
-        "bokeh": "Bokeh",
+        "bokeh": "Glowing orbs",
         "divine_motes": "Divine motes",
-        "ether_wisps": "Ether wisps",
         "eldritch_spores": "Eldritch spores",
-        "blood_motes": "Blood motes",
-        "shadow_wisps": "Shadow wisps",
         "glass_dust": "Glass dust",
         "apocalypse_debris": "Apocalypse debris",
         "void_shards": "Void shards",
-        "cosmic_dust": "Cosmic dust",
-        "abyss_bubbles": "Abyss bubbles",
         "confetti": "Confetti",
         "ghosts": "Ghosts",
         "feathers": "Feathers",
         "page_scraps": "Page scraps",
         "balloons": "Balloons",
-        "comets": "Comets",
-        "shooting_stars": "Shooting stars",
         "hail": "Hail",
         "leaves": "Falling leaves",
         "fluff": "Fluff and pollen",
-        "smoke": "Smoke and steam"
+        "smoke": "Smoke and steam",
+        "meteors": "Shooting stars"
       },
       "visual": {
         "none": "Off",
@@ -447,7 +460,7 @@
         "blood_moon": "🩸 Blood moon",
         "cosmic_horror": "🌌 Cosmic horror",
         "void_breach": "🕳️ Void breach",
-        "glass_shatter": "🪟 Shattered glass",
+        "glass_shatter": "🪟 Glass",
         "carnival": "🎉 Carnival",
         "ghosts": "👻 Ghosts",
         "hologram": "💠 Hologram",
@@ -471,43 +484,60 @@
         "windowlight": "🪟 Window light",
         "forest": "🌲 Forest",
         "cave": "🦇 Cave",
-        "heat": "🌡️ Heat"
+        "heat": "🌡️ Heat",
+        "rainGlass": "Rain on Glass",
+        "mirrorWorld": "Beyond the Mirror",
+        "eclipse": "Eclipse",
+        "paperMap": "The World Becomes a Map",
+        "stainedGlass": "Stained Glass",
+        "flood": "Flood",
+        "firelightFamily": "🔥 Firelight",
+        "windowFamily": "🪟 Window and stained glass",
+        "iceFamily": "❄️ Frost and rime",
+        "skyFamily": "🌅 Sky and time of day",
+        "darknessFamily": "🌑 Dark moods",
+        "eldritchFamily": "🐙 Eldritch depths",
+        "catastropheFamily": "🌋 Catastrophes",
+        "warmthFamily": "🎉 Warmth and celebration",
+        "monochrome": "◐ Monochrome"
       },
-      "effects": {
-        "none": "Off",
-        "particles": "Particles",
-        "snow": "Snow",
-        "rain": "Rain",
-        "embers": "Embers",
-        "fireflies": "Fireflies",
-        "divine": "✨ Divine",
-        "eldritch": "🐙 Eldritch",
-        "dark_ritual": "🌑 Dark ritual",
-        "warm": "🔥 Warm glow",
-        "frozen": "❄️ Frost",
-        "storm": "⛈️ Storm",
-        "dream": "💫 Dream",
-        "underwater": "🌊 Underwater",
-        "inferno": "🔥 Inferno",
-        "sacred": "🕊️ Sacred",
-        "corruption": "💀 Corruption",
-        "moonlit": "🌙 Moonlight",
-        "sakura": "🌸 Sakura",
-        "ash_wasteland": "💨 Ash wasteland",
-        "apocalypse": "🌋 Apocalypse",
-        "ethereal_plane": "🔮 Ethereal plane",
-        "blood_moon": "🩸 Blood moon",
-        "void_breach": "🕳️ Void Breach",
-        "cosmic_horror": "🌌 Cosmic Horror",
-        "abyss": "🌊 Abyss",
-        "shadow_intrigue": "🕵️ Shadows and intrigue",
-        "glass_shatter": "🪟 Shattered glass",
-        "sandstorm": "🏜️ Sandstorm",
-        "carnival": "🎉 Carnival",
-        "ghosts": "👻 Ghosts"
+      "searchPlaceholder": "Search effects…",
+      "visualAngle": "Effect angle",
+      "visualAngleReset": "Reset angle",
+      "visualAngleHint": "Moves the source along the screen edges and turns its light into the scene.",
+      "particleMotion": {
+        "label": "Motion",
+        "classic": "Classic",
+        "flutter": "Flutter",
+        "float": "Float",
+        "fall": "Fall"
       },
-      "combosHeader": "Ready-made combinations",
-      "searchPlaceholder": "Search effects…"
+      "particleSettingsScope": {
+        "general": "General",
+        "effect": "For this effect"
+      },
+      "visualSettings": {
+        "floodLevel": "Water level",
+        "eclipsePhase": "Eclipse phase",
+        "snowDepth": "Snowdrift height",
+        "floodColor": "Water color",
+        "cosmicEntity": "Entity type",
+        "entityEye": "Eye",
+        "entityMouth": "Mouth",
+        "entityEyeMouth": "Eye and mouth",
+        "monochromeAmount": "Desaturation",
+        "glassCrackSize": "Crack reach",
+        "glassShardSize": "Shard size",
+        "glassShardSmall": "Small",
+        "glassShardMedium": "Medium",
+        "glassShardLarge": "Large",
+        "mirrorWorldColor": "Wave and reflection color",
+        "hologramScanColor": "Scanline color"
+      },
+      "visualSettingsScope": {
+        "general": "General",
+        "effect": "For this effect"
+      }
     },
     "sounds": {
       "header": "Sounds",
@@ -525,7 +555,7 @@
       "particlesLayerBack": "Behind",
       "particlesLayerMix": "Mixed",
       "particlesLayerFront": "In front",
-      "particleIntensity": "Particle intensity",
+      "particleIntensity": "Amount",
       "currentScene": "Current scene",
       "locateTitle": "Open the folder containing the current background",
       "locateNotFound": "The current background file was not found in the backgrounds folder",
@@ -559,7 +589,25 @@
       "look": "Background look",
       "otherSource": "Other source",
       "emptyFolder": "No backgrounds in this folder yet",
-      "emptyFolderHint": "Put images or videos here or pick another folder."
+      "emptyFolderHint": "Put images or videos here or pick another folder.",
+      "particleWrap": "Wrap particles at edges",
+      "particleSettings": "Particle settings",
+      "particleScale": "Size",
+      "particleOpacity": "Opacity",
+      "particleTempo": "Tempo",
+      "particleTintStrength": "Tint",
+      "visualSettings": "Effect settings",
+      "visualLayerStrength": "Layer strength",
+      "visualLayerStrengthHint": "Controls the strength of rays, glow, flashes, and other effect layers",
+      "visualBackground": "Background treatment",
+      "visualBackgroundHint": "Applies the selected effect’s color grading and distortion to the background",
+      "effectSettingsReset": "Restore defaults",
+      "tintColor": "Tint color",
+      "visualTintStrength": "Layer tint",
+      "particleSolidTexture": "Solid texture",
+      "particleSolidTextureHint": "Makes the texture solid. Layer opacity and particle fades still apply.",
+      "visualForeground": "Over portraits and particles",
+      "visualForegroundHint": "Places scene effect layers over portraits and particles so light and textures blend over them."
     },
     "io": {
       "loadError": "Failed to load presets from {moduleId}: {msg}",
@@ -607,12 +655,24 @@
         "acid": "Acid",
         "large": "Large shards",
         "fine": "Fine shards",
-        "crystal": "Crystal"
+        "crystal": "Crystal",
+        "rotating": "Rotating",
+        "floating": "Floating",
+        "mana": "Mana",
+        "elements": "Elements",
+        "void": "Void"
       },
       "groups": {
-        "css": "CSS effects · light",
-        "svg": "SVG filters · heavier"
-      }
+        "stylization": "Stylization",
+        "signal": "Signal distortion"
+      },
+      "arcane": "Geometry of Power",
+      "archmage": "Archmage",
+      "orbs": "Magic Orbs",
+      "psionic": "Psionic",
+      "reality_rift": "Reality Rift",
+      "marionette": "Marionette",
+      "living_engraving": "Living Engraving"
     },
     "dialog": {
       "charFxTitle": "Portrait effect: {name}",
@@ -963,7 +1023,9 @@
         "flash": "Flash",
         "black": "Through black",
         "sweep": "Wipe",
-        "cut": "Cut"
+        "cut": "Cut",
+        "orbit": "Circular turn",
+        "teleport": "Teleportation"
       },
       "speeds": {
         "fast": "Fast",
@@ -981,7 +1043,12 @@
       "editCancel": "Cancel editing",
       "editLost": "The step was not found — it may have been deleted",
       "barNameTitle": "Step name (empty = automatic; Enter to apply, Esc to cancel)",
-      "stepMore": "More actions"
+      "stepMore": "More actions",
+      "btnEffectTest": "Effect test",
+      "btnEffectTestTitle": "Create a composite preset with every effect",
+      "effectTestFailed": "Could not create the effect test preset",
+      "testParticle": "Particles · {effect}",
+      "testVisual": "Scene effect · {effect}"
     },
     "scenePresets": {
       "title": "Scene dialogs: {scene}",
@@ -1007,6 +1074,49 @@
       "save": "Apply",
       "count": "Selected: {count}",
       "missing": "Not in this world (the link is kept)"
+    },
+    "entrance": {
+      "title": "Portrait entrances",
+      "initialEntrance": "When the scene opens",
+      "characterEntrance": "On an open scene",
+      "initialEntranceHint": "Entrance for all portraits when opening a scene or preset, including starting at a selected step.",
+      "characterEntranceHint": "Entrance for new portraits when editing the scene or changing preset steps. Characters already present do not enter again.",
+      "types": {
+        "none": "No animation",
+        "auto": "From portrait side",
+        "fade": "Fade in",
+        "left": "From the left",
+        "right": "From the right",
+        "rise": "From below",
+        "drop": "From above",
+        "pop": "Scale up",
+        "dramatic": "Dramatic",
+        "shadow": "From the shadows"
+      }
+    },
+    "captionStyle": {
+      "title": "Text appearance",
+      "box": "Box style",
+      "font": "Font",
+      "defaultFont": "Interface font",
+      "color": "Text color",
+      "customColor": "Custom text color",
+      "inherit": "Use preset",
+      "preview": "Every story begins with a meeting…",
+      "presetHint": "Default appearance for all steps. Without a custom color, text adapts to the box style.",
+      "stepHint": "Choose Use preset or turn off custom color to inherit that setting from the composite preset.",
+      "boxes": {
+        "dark": "Dark panel",
+        "glass": "Glass",
+        "parchment": "Parchment",
+        "frame": "Frame",
+        "none": "Text only"
+      },
+      "position": "Text position",
+      "positions": {
+        "bottom": "Bottom",
+        "top": "Top, below controls"
+      }
     }
   },
   "settingsApp": {
@@ -1021,8 +1131,8 @@
         "desc": "Alerts when someone raises a hand. This computer only"
       },
       "camera": {
-        "title": "Camera & parallax",
-        "desc": "How the background and the camera move in a dialog scene. This computer only"
+        "title": "Dialogue scenes",
+        "desc": "Camera, parallax, and the scene editor on this computer"
       },
       "look": {
         "title": "Scene look",
@@ -1040,7 +1150,8 @@
       "priorities": "Sound per priority",
       "plate": "Names on the scene",
       "characters": "Characters",
-      "files": "Files"
+      "files": "Files",
+      "sceneEditor": "Scene editor"
     },
     "autosave": "Changes are saved immediately",
     "saved": "Saved",

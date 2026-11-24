@@ -2,7 +2,8 @@
 // vn-scene-picker.js — window for choosing the Foundry scenes a preset is linked to
 // ============================================================
 
-import { escapeHtml } from '../vn-id-utils.js';
+import { promptDialog } from '../../utils/dialog.js';
+import { escapeHtml } from '../../utils/text.js';
 
 const esc = escapeHtml;
 const loc = (key) => game.i18n.localize(key);
@@ -15,45 +16,41 @@ const loc = (key) => game.i18n.localize(key);
 export class VNScenePicker {
 
     static pick({ title, linked = [] }) {
-        return new Promise(resolve => {
-            const known = new Set(game.scenes.map(s => s.id));
-            const missing = linked.filter(link => !link.id || !known.has(link.id));
-            const chosen = new Set(linked.map(link => link.id).filter(Boolean));
-            const tree = VNScenePicker._tree(game.folders.filter(f => f.type === 'Scene'), game.scenes.contents, 'a');
+        const known = new Set(game.scenes.map(s => s.id));
+        const missing = linked.filter(link => !link.id || !known.has(link.id));
+        const chosen = new Set(linked.map(link => link.id).filter(Boolean));
+        const tree = VNScenePicker._tree(game.folders.filter(f => f.type === 'Scene'), game.scenes.contents, 'a');
 
-            const dialog = new foundry.applications.api.DialogV2({
-                window: { title, icon: 'fas fa-map-location-dot', resizable: true },
-                classes: ['vn-confirm-dialog', 'vn-scpick-dialog'],
-                position: { width: 460, height: 580 },
-                content: `<div class="vn-scpick">
-                    <label class="vn-scpick-search">
-                        <i class="fas fa-magnifying-glass"></i>
-                        <input type="text" class="vn-scpick-q" autocomplete="off" spellcheck="false" placeholder="${esc(loc('vn.scenePicker.search'))}">
-                    </label>
-                    <div class="vn-scpick-bar">
-                        <span class="vn-scpick-count"></span>
-                        <button type="button" class="vn-btn vn-btn-xs vn-scpick-current"${canvas?.scene ? '' : ' disabled'} title="${esc(loc('vn.scenePicker.currentTitle'))}"><i class="fas fa-map-pin"></i> ${loc('vn.scenePicker.current')}</button>
-                        <button type="button" class="vn-btn vn-btn-xs vn-scpick-clear">${loc('vn.scenePicker.clear')}</button>
-                    </div>
-                    <div class="vn-scpick-tree">
-                        ${VNScenePicker._nodeHtml(tree, chosen)}
-                        ${VNScenePicker._missingHtml(missing)}
-                        <div class="vn-empty-hint vn-scpick-nothing" hidden>${loc('vn.scenePicker.nothing')}</div>
-                    </div>
-                </div>`,
-                buttons: [
-                    {
-                        action: 'save', label: loc('vn.scenePicker.save'), icon: 'fas fa-check', default: true,
-                        callback: (event, button, dlg) => VNScenePicker._collect(dlg.element),
-                    },
-                    { action: 'cancel', label: loc('vn.dialog.btnCancel'), icon: 'fas fa-times' },
-                ],
-                rejectClose: false,
-                submit: result => resolve(Array.isArray(result) ? result : null),
-            });
-            dialog.addEventListener('close', () => resolve(null), { once: true });
-            dialog.addEventListener('render', () => VNScenePicker._attach(dialog.element));
-            dialog.render({ force: true });
+        return promptDialog({
+            window: { title, icon: 'fas fa-map-location-dot', resizable: true },
+            classes: ['vn-confirm-dialog', 'vn-scpick-dialog'],
+            position: { width: 460, height: 580 },
+            content: `<div class="vn-scpick">
+                <label class="vn-scpick-search">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="text" class="vn-scpick-q" autocomplete="off" spellcheck="false" placeholder="${esc(loc('vn.scenePicker.search'))}">
+                </label>
+                <div class="vn-scpick-bar">
+                    <span class="vn-scpick-count"></span>
+                    <button type="button" class="vn-btn vn-btn-xs vn-scpick-current"${canvas?.scene ? '' : ' disabled'} title="${esc(loc('vn.scenePicker.currentTitle'))}"><i class="fas fa-map-pin"></i> ${loc('vn.scenePicker.current')}</button>
+                    <button type="button" class="vn-btn vn-btn-xs vn-scpick-clear">${loc('vn.scenePicker.clear')}</button>
+                </div>
+                <div class="vn-scpick-tree">
+                    ${VNScenePicker._nodeHtml(tree, chosen)}
+                    ${VNScenePicker._missingHtml(missing)}
+                    <div class="vn-empty-hint vn-scpick-nothing" hidden>${loc('vn.scenePicker.nothing')}</div>
+                </div>
+            </div>`,
+            buttons: [
+                {
+                    action: 'save', label: loc('vn.scenePicker.save'), icon: 'fas fa-check', default: true,
+                    callback: (event, button, dlg) => VNScenePicker._collect(dlg.element),
+                },
+                { action: 'cancel', label: loc('vn.dialog.btnCancel'), icon: 'fas fa-times' },
+            ],
+        }, {
+            onSubmit: result => Array.isArray(result) ? result : null,
+            onRender: dialog => VNScenePicker._attach(dialog.element),
         });
     }
 

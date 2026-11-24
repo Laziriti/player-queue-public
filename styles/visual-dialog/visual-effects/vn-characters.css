@@ -134,8 +134,8 @@
 /* «Положение покоя» персонажа. У неактивного оно на 4px ниже и с приглушённой плашкой.
    Входные анимации заканчиваются ровно в нём (см. ВХОДЫ), иначе после снятия .vn-entering
    персонаж на секунду выглядел бы активным и «откатывался» в приглушённое состояние. */
-.vn-character { --vn-rest-y: 0px; --vn-name-op: 1; }
-.vn-character:not(.active) { --vn-rest-y: 4px; --vn-name-op: 0.55; }
+.vn-character { --vn-rest-y: 0px; --vn-rest-scale: 1; --vn-name-op: 1; }
+.vn-character:not(.active) { --vn-rest-y: 4px; --vn-rest-scale: 0.97; --vn-name-op: 0.55; }
 
 /* Вид неактивного действует и во время входа/выхода: раньше эти состояния были исключены,
    поэтому персонаж появлялся ярким, затем затухал, а уходя — наоборот вспыхивал.
@@ -178,13 +178,17 @@
 }
 
 /* Свечение у неактивных — приглушено */
+.vn-character-glow {
+    filter: var(--vn-monochrome-filter, none);
+}
+
 .vn-character:not(.active) .vn-character-glow {
     opacity: 0.15 !important;
-    transition: opacity 0.8s ease;
+    transition: opacity 0.8s ease, filter var(--vn-tr-fx, 0.8s) ease;
 }
 
 .vn-character.active .vn-character-glow {
-    transition: opacity 0.6s ease;
+    transition: opacity 0.6s ease, filter var(--vn-tr-fx, 0.8s) ease;
 }
 
 /* Nameplate неактивных — полупрозрачная */
@@ -199,80 +203,21 @@
 }
 
 
-/* ══════════════════════════════════════════════════════════
-   ВХОДЫ ПЕРСОНАЖЕЙ
-   ══════════════════════════════════════════════════════════
-   Только translate + opacity. Filter НЕ ставим —
-   он управляется CSS через .active / :not(.active).
-   ══════════════════════════════════════════════════════════ */
-
-.vn-entering-left .vn-character-img {
-    animation: vnCharEnterLeft 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
+.vn-character.vn-entering-shadow {
+    /* Parent filter composes with portrait dimming, effects and brightness(0) on hidden characters. */
+    animation: vnCharShadowReveal var(--vn-tr-ms, 1000ms) linear both;
 }
 
-.vn-entering-right .vn-character-img {
-    animation: vnCharEnterRight 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
+@keyframes vnCharShadowReveal {
+    0%, 40% { filter: brightness(0); }
+    100% { filter: brightness(1); }
 }
-
-@keyframes vnCharEnterLeft {
-    from { translate: -60px 0; opacity: 0; }
-    to   { translate: 0 var(--vn-rest-y); opacity: 1; }
-}
-
-@keyframes vnCharEnterRight {
-    from { translate: 60px 0; opacity: 0; }
-    to   { translate: 0 var(--vn-rest-y); opacity: 1; }
-}
-
-/* ── Драматичный ── */
-.vn-entering-dramatic .vn-character-img {
-    animation: vnCharEnterDramatic 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
-}
-
-@keyframes vnCharEnterDramatic {
-    0%   { translate: 0 0; opacity: 0; }
-    50%  { opacity: 1; }
-    75%  { translate: 0 2px; }
-    100% { translate: 0 var(--vn-rest-y); }
-}
-
-/* ── Из тени ── */
-.vn-entering-shadow .vn-character-img {
-    animation: vnCharEnterShadow 1s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
-}
-
-@keyframes vnCharEnterShadow {
-    0%   { opacity: 0; }
-    60%  { opacity: 0.6; }
-    100% { opacity: 1; }
-}
-
-/* ── Снизу ── */
-.vn-entering-rise .vn-character-img {
-    animation: vnCharEnterRise 1s cubic-bezier(0.25, 0.1, 0.25, 1) both !important;
-}
-
-@keyframes vnCharEnterRise {
-    from { translate: 0 80px; opacity: 0; }
-    to   { translate: 0 var(--vn-rest-y); opacity: 1; }
-}
-
-
-/* ══════════════════════════════════════════════════════════
-   ВЫХОД ПЕРСОНАЖЕЙ
-   ══════════════════════════════════════════════════════════ */
-
-.vn-exiting .vn-character-img {
-    animation: vnCharExit 0.6s cubic-bezier(0.55, 0, 1, 0.45) both !important;
-}
-
-@keyframes vnCharExit {
-    to { opacity: 0; translate: 0 10px; }
-}
-
 
 /* ── Glow/Nameplate при входе/выходе ── */
 
+.vn-entering-fade .vn-character-glow,
+.vn-entering-drop .vn-character-glow,
+.vn-entering-pop .vn-character-glow,
 .vn-entering-left .vn-character-glow,
 .vn-entering-right .vn-character-glow,
 .vn-entering-dramatic .vn-character-glow,
@@ -286,6 +231,9 @@
     to   { opacity: 1; scale: 1; }
 }
 
+.vn-entering-fade .vn-character-nameplate,
+.vn-entering-drop .vn-character-nameplate,
+.vn-entering-pop .vn-character-nameplate,
 .vn-entering-left .vn-character-nameplate,
 .vn-entering-right .vn-character-nameplate,
 .vn-entering-dramatic .vn-character-nameplate,
@@ -324,11 +272,6 @@
    .vn-tr-timed и --vn-tr-ms; длительность всех слоёв персонажа
    подстраивается под выбранную скорость.
    ══════════════════════════════════════════════════════════ */
-
-.vn-character.vn-tr-timed.vn-entering .vn-character-img,
-.vn-character.vn-tr-timed.vn-exiting .vn-character-img {
-    animation-duration: var(--vn-tr-ms) !important;
-}
 
 .vn-character.vn-tr-timed.vn-entering .vn-character-glow {
     animation-duration: var(--vn-tr-ms);

@@ -58,7 +58,7 @@
 .vn-seq-bar .vn-seq-name:focus {
     outline: none;
     background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(136, 192, 208, 0.5);
+    border-color: var(--vn-accent-edge);
     box-shadow: none;
 }
 
@@ -99,7 +99,7 @@
 
 .vn-seq-btn.active {
     background: var(--vn-accent-dim);
-    border-color: rgba(136, 192, 208, 0.5);
+    border-color: var(--vn-accent-edge);
     color: var(--vn-accent);
 }
 
@@ -147,7 +147,7 @@
     flex-direction: column;
     gap: 3px;
     padding: 8px;
-    background: rgba(8, 8, 16, 0.96);
+    background: var(--vn-bg-deep);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
@@ -203,7 +203,7 @@
 }
 
 .vn-seq-pick:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-.vn-seq-pick.active { background: var(--vn-accent-dim); border-color: rgba(136, 192, 208, 0.5); color: #fff; }
+.vn-seq-pick.active { background: var(--vn-accent-dim); border-color: var(--vn-accent-edge); color: #fff; }
 
 .vn-seq-pick-n { text-align: center; font-weight: 700; color: var(--vn-accent); }
 
@@ -253,13 +253,26 @@
 }
 .vn-caption[hidden] { display: none; }
 
+/* The queue and toolbar occupy the first row (12–66px). Leave a gap below them. */
+.vn-caption:has(> .vn-caption-text[data-caption-position="top"]) {
+    top: 80px;
+    bottom: auto;
+    --vn-caption-enter-y: -14px;
+}
+/* GM preset/step controls occupy a second row at the left. */
+#vn-scene-overlay:has(> .vn-seq-bar) .vn-caption:has(> .vn-caption-text[data-caption-position="top"]) {
+    top: 156px;
+}
+
 .vn-caption-text {
     padding: 16px 28px;
     background: rgba(6, 8, 14, 0.74);
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--vn-radius-lg);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    color: #f2f4f8;
+    color: var(--vn-caption-color, #f2f4f8);
+    font-family: var(--vn-caption-font, inherit);
+    font-weight: var(--vn-caption-weight, inherit);
     font-size: clamp(16px, 1.5vw, 28px);
     line-height: 1.55;
     text-align: center;
@@ -272,8 +285,40 @@
 
 .vn-caption--in { animation: vn-caption-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
+.vn-caption-text[data-caption-box="glass"] {
+    background: linear-gradient(135deg, rgba(104, 130, 162, 0.3), rgba(20, 30, 48, 0.58));
+    border-color: rgba(210, 230, 255, 0.38);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.vn-caption-text[data-caption-box="parchment"] {
+    background: radial-gradient(ellipse at 50% 20%, #f1e2bd, #d3b581);
+    border: 1px solid #967449;
+    border-radius: 3px;
+    box-shadow: inset 0 0 24px rgba(112, 71, 30, 0.25), 0 8px 28px rgba(0, 0, 0, 0.45);
+    text-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.vn-caption-text[data-caption-box="frame"] {
+    background: rgba(12, 13, 20, 0.84);
+    border: 3px double #c6a46a;
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 3px rgba(198, 164, 106, 0.1), 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.vn-caption-text[data-caption-box="none"] {
+    background: none;
+    border-color: transparent;
+    box-shadow: none;
+    text-shadow: 0 2px 4px #000, 0 0 12px #000;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
 @keyframes vn-caption-in {
-    from { opacity: 0; transform: translateX(-50%) translateY(14px); }
+    from { opacity: 0; transform: translateX(-50%) translateY(var(--vn-caption-enter-y, 14px)); }
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 

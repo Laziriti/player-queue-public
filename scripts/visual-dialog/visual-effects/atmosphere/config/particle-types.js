@@ -7,11 +7,11 @@
  */
 export const PARTICLE_GROUPS = [
     { id: 'basic',   label: 'vn.atmosphere.groups.basic',   types: ['none', 'particles', 'snow', 'rain', 'embers', 'fireflies', 'sparks'] },
-    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['bubbles', 'ash', 'sakura', 'dream_orbs', 'sand_grains', 'bokeh', 'hail', 'leaves', 'fluff', 'smoke'] },
-    { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine_motes', 'ether_wisps'] },
-    { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['eldritch_spores', 'blood_motes', 'shadow_wisps', 'glass_dust'] },
-    { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['apocalypse_debris', 'void_shards', 'cosmic_dust', 'abyss_bubbles'] },
-    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['confetti', 'ghosts', 'feathers', 'page_scraps', 'balloons', 'comets', 'shooting_stars'] },
+    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['bubbles', 'ash', 'sakura', 'sand_grains', 'bokeh', 'hail', 'leaves', 'fluff', 'smoke'] },
+    { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine_motes'] },
+    { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['eldritch_spores', 'glass_dust'] },
+    { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['apocalypse_debris', 'void_shards'] },
+    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['confetti', 'ghosts', 'feathers', 'page_scraps', 'balloons', 'meteors'] },
 ];
 
 /**
@@ -33,7 +33,6 @@ export const PARTICLE_LABELS = {
     bubbles:            'vn.atmosphere.particles.bubbles',
     ash:                'vn.atmosphere.particles.ash',
     sakura:             'vn.atmosphere.particles.sakura',
-    dream_orbs:         'vn.atmosphere.particles.dream_orbs',
     sand_grains:        'vn.atmosphere.particles.sand_grains',
     bokeh:              'vn.atmosphere.particles.bokeh',
     hail:               'vn.atmosphere.particles.hail',
@@ -41,22 +40,16 @@ export const PARTICLE_LABELS = {
     fluff:              'vn.atmosphere.particles.fluff',
     smoke:              'vn.atmosphere.particles.smoke',
     divine_motes:       'vn.atmosphere.particles.divine_motes',
-    ether_wisps:        'vn.atmosphere.particles.ether_wisps',
     eldritch_spores:    'vn.atmosphere.particles.eldritch_spores',
-    blood_motes:        'vn.atmosphere.particles.blood_motes',
-    shadow_wisps:       'vn.atmosphere.particles.shadow_wisps',
     glass_dust:         'vn.atmosphere.particles.glass_dust',
     apocalypse_debris:  'vn.atmosphere.particles.apocalypse_debris',
     void_shards:        'vn.atmosphere.particles.void_shards',
-    cosmic_dust:        'vn.atmosphere.particles.cosmic_dust',
-    abyss_bubbles:      'vn.atmosphere.particles.abyss_bubbles',
     confetti:           'vn.atmosphere.particles.confetti',
     ghosts:             'vn.atmosphere.particles.ghosts',
     feathers:           'vn.atmosphere.particles.feathers',
     page_scraps:        'vn.atmosphere.particles.page_scraps',
     balloons:           'vn.atmosphere.particles.balloons',
-    comets:             'vn.atmosphere.particles.comets',
-    shooting_stars:     'vn.atmosphere.particles.shooting_stars',
+    meteors:            'vn.atmosphere.particles.meteors',
 };
 
 /**
@@ -70,6 +63,14 @@ export const PARTICLE_LABELS = {
  * (например "feathers:black"); отсутствие суффикса == 'all'.
  */
 export const PARTICLE_VARIANTS = {
+    ghosts: [
+        { id: 'all', label: 'vn.atmosphere.particleVariants.ghostVortex' },
+        { id: 'vortex_center', label: 'vn.atmosphere.particleVariants.ghostVortexCenter' },
+    ],
+    meteors: [
+        { id: 'all',    label: 'vn.atmosphere.particleVariants.shootingStars' },
+        { id: 'comets', label: 'vn.atmosphere.particleVariants.comets' },
+    ],
     feathers: [
         { id: 'all',   label: 'vn.atmosphere.particleVariants.all' },
         { id: 'black', label: 'vn.atmosphere.particleVariants.black' },
@@ -86,7 +87,6 @@ export const PARTICLE_VARIANTS = {
         { id: 'downpour', label: 'vn.atmosphere.particleVariants.downpour' },
         { id: 'drizzle',  label: 'vn.atmosphere.particleVariants.drizzle' },
         { id: 'slanted',  label: 'vn.atmosphere.particleVariants.slanted' },
-        { id: 'blood',    label: 'vn.atmosphere.particleVariants.bloodRain' },
     ],
     snow: [
         { id: 'all',    label: 'vn.atmosphere.particleVariants.snow' },
@@ -102,6 +102,7 @@ export const PARTICLE_VARIANTS = {
         { id: 'settle', label: 'vn.atmosphere.particleVariants.settlingDust' },
         { id: 'stars',  label: 'vn.atmosphere.particleVariants.starDust' },
         { id: 'motes',  label: 'vn.atmosphere.particleVariants.warmMotes' },
+        { id: 'cosmic', label: 'vn.atmosphere.particleVariants.cosmic' },
     ],
     sparks: [
         { id: 'all',      label: 'vn.atmosphere.particleVariants.sparks' },
@@ -118,11 +119,14 @@ export const PARTICLE_VARIANTS = {
         { id: 'all',  label: 'vn.atmosphere.particleVariants.warmBokeh' },
         { id: 'cool', label: 'vn.atmosphere.particleVariants.coolBokeh' },
         { id: 'neon', label: 'vn.atmosphere.particleVariants.neonBokeh' },
+        { id: 'dream', label: 'vn.atmosphere.particleVariants.dream' },
+        { id: 'ether', label: 'vn.atmosphere.particleVariants.ether' },
     ],
     bubbles: [
         { id: 'all',       label: 'vn.atmosphere.particleVariants.bubbles' },
         { id: 'champagne', label: 'vn.atmosphere.particleVariants.champagne' },
         { id: 'boil',      label: 'vn.atmosphere.particleVariants.boiling' },
+        { id: 'abyss', label: 'vn.atmosphere.particleVariants.abyss' },
     ],
     ash: [
         { id: 'all',   label: 'vn.atmosphere.particleVariants.ash' },
@@ -151,11 +155,6 @@ export const PARTICLE_VARIANTS = {
         { id: 'all',  label: 'vn.atmosphere.particleVariants.fallingLeaves' },
         { id: 'gale', label: 'vn.atmosphere.particleVariants.windblownLeaves' },
     ],
-    fireflies: [
-        { id: 'all',   label: 'vn.atmosphere.particleVariants.greenFireflies' },
-        { id: 'blue',  label: 'vn.atmosphere.particleVariants.blueFireflies' },
-        { id: 'amber', label: 'vn.atmosphere.particleVariants.amberFireflies' },
-    ],
 };
 
 export const PARTICLE_ICONS = {
@@ -169,7 +168,6 @@ export const PARTICLE_ICONS = {
     bubbles: 'fa-water',
     ash: 'fa-smog',
     sakura: 'fa-fan',
-    dream_orbs: 'fa-cloud-moon',
     sand_grains: 'fa-wind',
     bokeh: 'fa-circle-dot',
     hail: 'fa-cloud-meatball',
@@ -177,20 +175,39 @@ export const PARTICLE_ICONS = {
     fluff: 'fa-seedling',
     smoke: 'fa-cloud',
     divine_motes: 'fa-sun',
-    ether_wisps: 'fa-hat-wizard',
     eldritch_spores: 'fa-eye',
-    blood_motes: 'fa-droplet',
-    shadow_wisps: 'fa-user-secret',
     glass_dust: 'fa-window-restore',
     apocalypse_debris: 'fa-explosion',
     void_shards: 'fa-burst',
-    cosmic_dust: 'fa-hurricane',
-    abyss_bubbles: 'fa-circle-notch',
     confetti: 'fa-champagne-glasses',
     ghosts: 'fa-ghost',
     feathers: 'fa-feather',
     page_scraps: 'fa-scroll',
     balloons: 'fa-gift',
-    comets: 'fa-meteor',
-    shooting_stars: 'fa-star',
+    meteors: 'fa-meteor',
 };
+
+// Legacy scene and client filter IDs used before these became variants.
+const LEGACY_PARTICLES = new Map([
+    ['shooting_stars', 'meteors:all'],
+    ['comets', 'meteors:comets'],
+    ['abyss_bubbles', 'bubbles:abyss'],
+    ['dream_orbs', 'bokeh:dream'],
+    ['ether_wisps', 'bokeh:ether'],
+    ['cosmic_dust', 'particles:cosmic'],
+    ['shadow_wisps', 'none'],
+    ['blood_motes', 'none'],
+]);
+
+export function normalizeParticleEffect(value) {
+    const id = LEGACY_PARTICLES.get(value.split(':')[0]) ?? value;
+    if (id === 'meteors:all') return 'meteors';
+    if (id === 'ghosts:all') return 'ghosts';
+    return id;
+}
+
+export const LEGACY_PARTICLE_VARIANTS = [...LEGACY_PARTICLES.values()].filter(id => id !== 'none');
+
+export function normalizeParticleFilterId(id) {
+    return LEGACY_PARTICLES.get(id) ?? id;
+}

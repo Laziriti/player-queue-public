@@ -25,7 +25,7 @@
     justify-content: center;
     gap: 5px;
     padding: 6px 10px 8px;
-    background: rgba(0,0,0,0.15);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
 }
@@ -46,7 +46,7 @@
     padding: 4px 11px;
     border: 1px solid var(--vn-border);
     border-radius: 999px;
-    background: rgba(255,255,255,0.04);
+    background: var(--vn-surface);
     color: var(--vn-text-dim);
     font-size: 0.8em;
     cursor: pointer;
@@ -60,7 +60,7 @@
     pointer-events: none;
 }
 .vn-bg-chip > .fas { font-size: 0.9em; opacity: 0.7; }
-.vn-bg-chip:hover { background: rgba(255,255,255,0.09); color: var(--vn-text); }
+.vn-bg-chip:hover { background: var(--vn-surface-hover); color: var(--vn-text); }
 .vn-bg-chip:has(input:checked) {
     background: var(--vn-accent-dim);
     border-color: var(--vn-accent);
@@ -72,7 +72,7 @@
 
 /* ── Gallery card: toolbar on top, grid below ── */
 .vn-bg-browser {
-    background: rgba(0,0,0,0.12);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
     overflow: hidden;
@@ -84,7 +84,7 @@
     align-items: center;
     gap: 8px 14px;
     padding: 8px 10px;
-    background: rgba(0,0,0,0.18);
+    background: var(--vn-inset);
     border-bottom: 1px solid var(--vn-border);
 }
 
@@ -146,7 +146,7 @@
 }
 .vn-bg-option.selected {
     border-color: var(--vn-accent);
-    background: rgba(136,192,208,0.08);
+    background: var(--vn-accent-soft);
 }
 .vn-bg-option.vn-folder-nav {
     background: var(--vn-gold-dim);
@@ -170,11 +170,12 @@
     position: relative;
 }
 .vn-bg-preview.vn-no-background {
-    background: repeating-conic-gradient(#333 0% 25%, #444 0% 50%) 50% / 10px 10px;
+    background: repeating-conic-gradient(var(--vn-bg-option) 0% 25%,
+        color-mix(in srgb, var(--vn-bg-option), var(--vn-ink) 12%) 0% 50%) 50% / 10px 10px;
     display: flex; align-items: center; justify-content: center;
 }
 .vn-bg-preview.vn-folder-preview {
-    background: linear-gradient(135deg, #3a3a3a, #252525);
+    background: var(--vn-bg-option);
     display: flex; align-items: center; justify-content: center;
 }
 .vn-bg-preview.vn-folder-preview i { font-size: clamp(18px, calc(var(--vn-bg-thumb-w, 150px) * 0.2), 40px); color: var(--vn-gold); }
@@ -219,7 +220,7 @@
     padding: 28px 12px 24px;
     text-align: center;
     color: var(--vn-text-dim);
-    border: 2px dashed rgba(136,192,208,0.2);
+    border: 2px dashed var(--vn-accent-dim);
     border-radius: var(--vn-radius);
     font-size: 0.82em;
 }
@@ -277,7 +278,7 @@
     height: 30px;
     box-sizing: border-box;
     padding: 0 28px 0 32px;
-    background: rgba(0,0,0,0.3);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
@@ -303,7 +304,7 @@
     padding: 5px 10px;
     font-size: max(11px, 0.75em);
     color: var(--vn-text-dim);
-    background: rgba(0,0,0,0.15);
+    background: var(--vn-inset);
     border-radius: var(--vn-radius-sm);
     display: flex; align-items: center; gap: 6px;
 }
@@ -313,7 +314,10 @@
     flex: 1 1 320px;
     min-width: 0;
     display: flex;
+    align-items: center;
+    gap: 8px;
 }
+.vn-bg-current .vn-use-scene-btn { flex: none; white-space: nowrap; }
 .vn-bg-current-body {
     flex: 1;
     min-width: 0;
@@ -322,7 +326,7 @@
     gap: 8px;
     padding: 6px 8px;
     min-height: 52px;
-    background: rgba(136,192,208,0.08);
+    background: var(--vn-accent-soft);
     border: 1px solid var(--vn-accent-dim);
     border-radius: var(--vn-radius);
 }
@@ -375,9 +379,9 @@
     cursor: pointer;
     border-radius: var(--vn-radius-sm);
 }
-.vn-bg-current-clear:hover { color: var(--vn-text); background: rgba(255,255,255,0.08); }
+.vn-bg-current-clear:hover { color: var(--vn-text); background: var(--vn-surface-hover); }
 
-/* ── Other source (scene background / manual path), secondary ── */
+/* ── Other source (manual path), secondary ── */
 .vn-bg-source { margin-top: 10px; }
 .vn-bg-source > summary {
     display: inline-flex;
@@ -416,7 +420,7 @@
 .vn-custom-path input[type="text"] {
     flex: 1;
     padding: 4px 8px;
-    background: rgba(0,0,0,0.3);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
@@ -437,7 +441,7 @@
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
     font-size: 1.4rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--vn-text-dim);
     text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
     transition: opacity 0.2s;
     pointer-events: none;

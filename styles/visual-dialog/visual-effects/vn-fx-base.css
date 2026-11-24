@@ -17,7 +17,6 @@
 
 
 /* Общие циклы сдвига плиток тумана (период плитки: 512px или 768px) */
-@keyframes vnFogSlide512 { to { translate: -512px 0; } }
 @keyframes vnFogSlide768 { to { translate: -768px 0; } }
 @keyframes vnFogSlide1024 { to { translate: -1024px 0; } }
 @keyframes vnFogSlide1536 { to { translate: -1536px 0; } }
@@ -26,6 +25,22 @@
 
 
 /* ── FX Layers (z-index между bg и персонажами) ── */
+
+.vn-fx-before, .vn-fx-after { display: none; }
+.vn-fx-before::before, .vn-fx-after::before { content: var(--vn-fx-text, none); }
+#vn-scene-overlay .vn-fx-angle-paint { background-image: var(--vn-fx-angled-background) !important; }
+
+/* Pixi paints the materials. The source boxes keep their clipping, animation and blend with the scene. */
+#vn-scene-overlay.vn-fx-pixi:not(.vn-fx-sample-paint) :is(.vn-fx-tint, .vn-fx-rays, .vn-fx-edges, .vn-fx-flash,
+    .vn-fx-scan, .vn-fx-bloom, .vn-vignette, .vn-ground-fog, .vn-ambient-light, .vn-fx-grain, .vn-fx-before, .vn-fx-after),
+#vn-scene-overlay:not(.vn-fx-sample-paint) .vn-fx-pixi-painted {
+    background-image: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+#vn-scene-overlay.vn-fx-pixi:not(.vn-fx-sample-paint) :is(.vn-fx-before, .vn-fx-after)::before { visibility: hidden; }
+.vn-fx-pixi-layer { position: absolute; pointer-events: none; }
+.vn-fx-pixi-motion { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 
 .vn-fx-tint,
 .vn-fx-rays,
@@ -60,6 +75,27 @@
 .vn-fx-edges { z-index: 2; }
 .vn-fx-flash { z-index: 8; }
 .vn-fx-scan  { z-index: 3; mix-blend-mode: overlay; }
+
+/* The optional shared foreground mode composites scene layers over portraits and both particle canvases. */
+#vn-scene-overlay.vn-visual-fg :is(.vn-fx-tint, .vn-fx-rays, .vn-fx-edges, .vn-fx-flash, .vn-fx-scan,
+    .vn-fx-bloom, .vn-fx-grain, .vn-vignette, .vn-ground-fog, .vn-ambient-light) { z-index: 20; }
+#vn-scene-overlay.vn-visual-fg :is(.vn-glass-pixi, .vn-quake-pixi, .vn-void-pixi) { z-index: 20; }
+
+#vn-scene-overlay :is(.vn-glass-pixi, .vn-quake-pixi, .vn-void-pixi) {
+    opacity: var(--vn-visual-layer-strength, 1);
+}
+:is(.vn-fx-tint, .vn-fx-rays, .vn-fx-edges, .vn-fx-flash, .vn-fx-scan, .vn-fx-bloom, .vn-ambient-light, .vn-fx-grain) .vn-fx-pixi-layer,
+#vn-scene-overlay :is(.vn-glass-pixi, .vn-quake-pixi, .vn-void-pixi) {
+    filter: var(--vn-visual-layer-tint, none);
+}
+#vn-scene-overlay.vn-visual-plain-background .vn-bg-layer {
+    filter: none !important;
+    animation: none !important;
+}
+#vn-scene-overlay.vn-visual-plain-background .vn-bg-layer::before,
+#vn-scene-overlay.vn-visual-plain-background .vn-bg-layer::after {
+    visibility: hidden !important;
+}
 
 
 /* ── Glitch-механика (используется eldritch, corruption) ── */
@@ -100,104 +136,91 @@
    ПЕРЕХОДЫ ФОНОВ
    ══════════════════════════════════════════════════════════ */
 
-/* Переходы заданы через #vn-scene-overlay и !important: визуальные эффекты вешают на .vn-bg-layer свои
-   animation (!important), и без этого новый слой появлялся бы мгновенно, минуя переход.
-   Длительность приходит из --vn-bg-ms (VNTransitions.switchBackground).
-
-   Ключевые кадры с filter собираются поверх --vn-bg-rest — фильтра, который этому слою даёт активный эффект.
-   Иначе filter переходов затирал бы фильтр эффекта, и эффект «защёлкивался» только в самом конце перехода. */
-
-#vn-scene-overlay .vn-bg-layer.vn-bg-transition-dissolve { animation: vnBgDissolve var(--vn-bg-ms, 1s) ease both !important; }
-
-@keyframes vnBgDissolve {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-
-#vn-scene-overlay .vn-bg-layer.vn-bg-transition-zoom { animation: vnBgZoom var(--vn-bg-ms, 1.2s) cubic-bezier(0.25, 0.1, 0.25, 1) both !important; }
-
-/* Заканчивается на scale 1: после перехода класс снимается, и любое иное значение дало бы скачок */
-@keyframes vnBgZoom {
-    from { opacity: 0; scale: 1.15; filter: var(--vn-bg-rest, brightness(1)) blur(6px); }
-    to   { opacity: 1; scale: 1;    filter: var(--vn-bg-rest, brightness(1)) blur(0); }
-}
-
-#vn-scene-overlay .vn-bg-layer.vn-bg-transition-blur { animation: vnBgBlur var(--vn-bg-ms, 1.4s) ease both !important; }
-
-@keyframes vnBgBlur {
-    0%   { opacity: 0; filter: var(--vn-bg-rest, brightness(1)) blur(25px) brightness(1.3); }
-    40%  { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) blur(8px) brightness(1.1); }
-    100% { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) blur(0) brightness(1); }
-}
-
-#vn-scene-overlay .vn-bg-layer.vn-bg-transition-flash { animation: vnBgFlash var(--vn-bg-ms, 1s) ease both !important; }
-
-@keyframes vnBgFlash {
-    0%   { opacity: 0; filter: var(--vn-bg-rest, brightness(1)) brightness(4) saturate(0); }
-    18%  { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(3) saturate(0.2); }
-    100% { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(1) saturate(1); }
-}
-
-#vn-scene-overlay .vn-bg-layer.vn-bg-transition-black { animation: vnBgBlack var(--vn-bg-ms, 1.8s) ease both !important; }
-
-/* Через чёрный: сначала старый фон плавно уходит в чёрное, затем новый проявляется из него */
-@keyframes vnBgBlack {
-    0%   { opacity: 0; filter: var(--vn-bg-rest, brightness(1)) brightness(0); }
-    40%  { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(0); }
-    100% { opacity: 1; filter: var(--vn-bg-rest, brightness(1)) brightness(1); }
-}
-
-#vn-scene-overlay .vn-bg-layer.vn-bg-transition-sweep {
-    animation: vnBgSweep var(--vn-bg-ms, 1s) cubic-bezier(0.65, 0, 0.35, 1) both !important;
-}
-
-@keyframes vnBgSweep {
-    from { clip-path: inset(0 100% 0 0); }
-    to   { clip-path: inset(0 0 0 0); }
-}
-
+/* Pixi рисует входящий фон поверх предыдущего. Свойство background-image остаётся в inline-стиле для
+   наблюдателей визуальных эффектов, а в отрисовку попадает только текстура Pixi. */
+#vn-scene-overlay .vn-bg-pixi-transition { background: none !important; }
+.vn-bg-pixi-transition > .vn-bg-video { visibility: hidden; }
 
 /* ── Занавес поверх всей сцены (VNTransitions.cover) ──
    flash / black / sweep, когда вместе с фоном меняются и персонажи: сцена закрывается, под занавесом
    всё меняется мгновенно, занавес открывается. Выше персонажей и подписи, ниже тулбара ведущего. */
 
-.vn-tr-cover {
+#vn-scene-overlay .vn-pixi-transition-cover { z-index: 100; }
+#vn-scene-overlay.minimized .vn-pixi-transition-cover { display: none; }
+
+/* A turn around the viewer: turning right brings the next stage in from the right.
+   Backward navigation reverses both paths. UI snapshots stay above the moving picture. */
+.vn-orbit-stage {
     position: absolute;
     inset: 0;
-    z-index: 100;
-    pointer-events: none;
-    opacity: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: inherit;
+    box-sizing: border-box;
+    isolation: isolate;
+    overflow: hidden;
 }
-
-.vn-tr-cover--black { background: #000; }
-.vn-tr-cover--flash { background: #f6f8ff; }
-
-.vn-tr-cover--in  { animation: vnCoverIn  var(--vn-cover-ms, 0.4s) ease-in  both; }
-.vn-tr-cover--out { animation: vnCoverOut var(--vn-cover-ms, 0.6s) ease-out both; }
-
-@keyframes vnCoverIn  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes vnCoverOut { from { opacity: 1; } to { opacity: 0; } }
-
-/* Шторка: панель с мягкими краями проезжает слева направо.
-   Она шире экрана на 12% с каждой стороны, а мягкие края (по 12% экрана) лежат ровно в этих запасах:
-   в закрытом положении (translateX(0)) вся сцена закрыта полностью, и ни одна полоса не просвечивает.
-   translate в процентах считается от ширины самой панели, поэтому ±100% = панель целиком за экраном. */
-.vn-tr-cover--sweep {
+/* Each snapshot must contain the finished look, without a second fade after the turn. */
+#vn-scene-overlay .vn-orbit-stage :is(.vn-bg-layer, .vn-character-img, .vn-character-glow, .vn-character-nameplate,
+    .vn-fx-tint, .vn-fx-rays, .vn-fx-edges, .vn-fx-flash, .vn-fx-scan, .vn-fx-bloom) { transition: none !important; }
+.vn-orbit-stage .vn-caption--in { animation: none; }
+html.vn-orbit-active::view-transition { pointer-events: none; }
+html.vn-orbit-active::view-transition-group(*) { animation: none; z-index: 2; }
+html.vn-orbit-active::view-transition-old(*) { animation: none; opacity: 0; }
+html.vn-orbit-active::view-transition-new(*) { animation: none; opacity: 1; mix-blend-mode: normal; }
+html.vn-orbit-active::view-transition-group(vn-orbit-stage) { z-index: 1; }
+html.vn-orbit-active::view-transition-old(vn-orbit-stage),
+html.vn-orbit-active::view-transition-new(vn-orbit-stage) {
+    backface-visibility: hidden;
+    mix-blend-mode: normal;
+    animation-duration: var(--vn-orbit-ms, 1400ms);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+    animation-fill-mode: both;
+}
+html.vn-orbit-active::view-transition-old(vn-orbit-stage) {
     opacity: 1;
-    left: -12%;
-    right: -12%;
-    transform: translateX(-100%);
-    background: linear-gradient(90deg,
-        rgba(5, 6, 12, 0) 0%, #05060c 9.7%, #05060c 90.3%, rgba(5, 6, 12, 0) 100%);
-    box-shadow: 0 0 80px 30px rgba(136, 192, 208, 0.18);
+    animation-name: vnOrbitOut;
+    transform-origin: calc(50% - var(--vn-orbit-direction, 1) * 50%) 50%;
 }
-.vn-tr-cover--sweep.vn-tr-cover--in  { animation-name: vnCoverSweepIn;  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
-.vn-tr-cover--sweep.vn-tr-cover--out { animation-name: vnCoverSweepOut; animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+html.vn-orbit-active::view-transition-new(vn-orbit-stage) {
+    animation-name: vnOrbitIn;
+    transform-origin: calc(50% + var(--vn-orbit-direction, 1) * 50%) 50%;
+}
+@keyframes vnOrbitOut {
+    from { transform: perspective(1400px) translateX(0) rotateY(0); }
+    to { transform: perspective(1400px) translateX(calc(var(--vn-orbit-direction, 1) * 100%)) rotateY(calc(var(--vn-orbit-direction, 1) * -50deg)); }
+}
+@keyframes vnOrbitIn {
+    from { transform: perspective(1400px) translateX(calc(var(--vn-orbit-direction, 1) * -100%)) rotateY(calc(var(--vn-orbit-direction, 1) * 50deg)); }
+    to { transform: perspective(1400px) translateX(0) rotateY(0); }
+}
 
-@keyframes vnCoverSweepIn  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-@keyframes vnCoverSweepOut { from { transform: translateX(0); }     to { transform: translateX(100%); } }
-
-#vn-scene-overlay.minimized .vn-tr-cover { display: none; }
+/* Keep the outgoing capture until the prepared scene can run the Pixi transition. */
+html.vn-teleport-capture::view-transition { pointer-events: none; }
+html.vn-teleport-capture::view-transition-group(*) { animation: none; z-index: 3; }
+html.vn-teleport-capture::view-transition-old(*) { animation: none; opacity: 0; }
+html.vn-teleport-capture::view-transition-new(*) { animation: none; opacity: 1; mix-blend-mode: normal; }
+html.vn-teleport-capture::view-transition-group(vn-teleport-scene) {
+    z-index: 0;
+    /* The Pixi clock owns the lifetime of the capture. */
+    animation: vnTeleportHold 1s linear both paused;
+}
+html.vn-teleport-capture::view-transition-old(vn-teleport-scene) {
+    z-index: 1;
+    mix-blend-mode: normal;
+    opacity: var(--vn-teleport-background-out, 1);
+}
+html.vn-teleport-capture::view-transition-group(.vn-teleport-cast) { z-index: 1; }
+html.vn-teleport-capture::view-transition-old(.vn-teleport-cast) {
+    mix-blend-mode: normal;
+    opacity: var(--vn-teleport-cast-out, 1);
+}
+html.vn-teleport-capture::view-transition-new(.vn-teleport-cast) { opacity: var(--vn-teleport-cast-in, 0); }
+html.vn-teleport-capture::view-transition-group(vn-teleport-warp) { z-index: 2; }
+html.vn-teleport-capture::view-transition-new(vn-teleport-warp) { opacity: var(--vn-teleport-warp, 0); }
+html.vn-teleport-capture #vn-scene-overlay .vn-caption--in { animation: none; }
+@keyframes vnTeleportHold { from, to { opacity: 1; } }
 
 
 /* ══════════════════════════════════════════════════════════

@@ -6,15 +6,15 @@
  * Группы визуальных эффектов для UI (грид-пикер)
  */
 export const VISUAL_GROUPS = [
-    { id: 'basic',   label: 'vn.atmosphere.groups.basic',   types: ['none', 'warm', 'cold'] },
-    { id: 'time',    label: 'vn.atmosphere.groups.time',    types: ['dawn', 'day', 'sunset', 'dusk', 'overcast'] },
-    { id: 'places',  label: 'vn.atmosphere.groups.places',  types: ['candlelit', 'torchlit', 'windowlight', 'forest', 'cave'] },
-    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['storm', 'underwater', 'moonlight', 'sandstorm', 'frost', 'fog', 'heat', 'earthquake'] },
-    { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine', 'sacred', 'dream', 'ethereal'] },
-    { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['eldritch', 'dark', 'corruption', 'abyss', 'shadow_intrigue'] },
-    { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['fire', 'apocalypse', 'blood_moon', 'cosmic_horror', 'void_breach', 'glass_shatter'] },
-    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['carnival', 'drunk', 'ghosts', 'hologram', 'kaleidoscope', 'cubes'] },
-    { id: 'cinema',  label: 'vn.atmosphere.groups.cinema',  types: ['noir', 'memory', 'neon', 'vhs'] },
+    { id: 'basic',   label: 'vn.atmosphere.groups.basic',   types: ['none'] },
+    { id: 'time',    label: 'vn.atmosphere.groups.time',    types: ['sky'] },
+    { id: 'places',  label: 'vn.atmosphere.groups.places',  types: ['firelight', 'window_scene', 'forest', 'cave'] },
+    { id: 'nature',  label: 'vn.atmosphere.groups.nature',  types: ['storm', 'rain_glass', 'underwater', 'flood', 'eclipse', 'sandstorm', 'ice', 'fog', 'heat', 'earthquake'] },
+    { id: 'magic',   label: 'vn.atmosphere.groups.magic',   types: ['divine', 'sacred', 'dream', 'ethereal', 'mirror_world'] },
+    { id: 'dark',    label: 'vn.atmosphere.groups.dark',    types: ['darkness', 'eldritch_depths'] },
+    { id: 'chaos',   label: 'vn.atmosphere.groups.chaos',   types: ['fire', 'catastrophe', 'cosmic_horror', 'void_breach', 'glass_shatter'] },
+    { id: 'special', label: 'vn.atmosphere.groups.special', types: ['warmth', 'drunk', 'ghosts', 'hologram', 'kaleidoscope', 'cubes'] },
+    { id: 'cinema',  label: 'vn.atmosphere.groups.cinema',  types: ['monochrome', 'noir', 'memory', 'paper_map', 'neon', 'vhs'] },
 ];
 
 /**
@@ -22,53 +22,91 @@ export const VISUAL_GROUPS = [
  */
 export const VISUAL_TYPES = VISUAL_GROUPS.flatMap(g => g.types);
 
+// The former effect IDs remain the CSS/controller identities for each new family variant.
+const VISUAL_STYLE_EFFECTS = {
+    firelight: 'candlelit',
+    'firelight:torchlit': 'torchlit',
+    window_scene: 'windowlight',
+    'window_scene:stained_glass': 'stained_glass',
+    ice: 'frost',
+    'ice:cold': 'cold',
+    'ice:blizzard': 'frost:blizzard',
+    'ice:hoarfrost': 'frost:hoarfrost',
+    sky: 'day',
+    'sky:dawn': 'dawn',
+    'sky:sunset': 'sunset',
+    'sky:dusk': 'dusk',
+    'sky:overcast': 'overcast',
+    'sky:moonlight': 'moonlight',
+    darkness: 'dark',
+    'darkness:corruption': 'corruption',
+    'darkness:shadow_intrigue': 'shadow_intrigue',
+    eldritch_depths: 'eldritch',
+    'eldritch_depths:abyss': 'abyss',
+    catastrophe: 'apocalypse',
+    'catastrophe:blood_moon': 'blood_moon',
+    warmth: 'warm',
+    'warmth:carnival': 'carnival',
+};
+
+const VISUAL_ALIASES = new Map([
+    ...Object.entries(VISUAL_STYLE_EFFECTS).map(([effect, style]) => [style, effect]),
+    ['void_breach:opening', 'void_breach'],
+    ['glass_shatter:center', 'glass_shatter'],
+]);
+
+export function normalizeVisualEffect(effect) {
+    if (typeof effect !== 'string') return effect;
+    const id = effect.endsWith(':all') ? effect.slice(0, -4) : effect;
+    return VISUAL_ALIASES.get(id) ?? id;
+}
+
+export function resolveVisualStyleEffect(effect) {
+    const normalized = normalizeVisualEffect(effect);
+    return Object.hasOwn(VISUAL_STYLE_EFFECTS, normalized) ? VISUAL_STYLE_EFFECTS[normalized] : normalized;
+}
+
 /**
  * Человекочитаемые названия
  */
 export const VISUAL_LABELS = {
     none:            'vn.atmosphere.visual.none',
+    firelight:       'vn.atmosphere.visual.firelightFamily',
+    window_scene:    'vn.atmosphere.visual.windowFamily',
+    ice:             'vn.atmosphere.visual.iceFamily',
+    sky:             'vn.atmosphere.visual.skyFamily',
+    darkness:        'vn.atmosphere.visual.darknessFamily',
+    eldritch_depths: 'vn.atmosphere.visual.eldritchFamily',
+    catastrophe:     'vn.atmosphere.visual.catastropheFamily',
+    warmth:          'vn.atmosphere.visual.warmthFamily',
     divine:          'vn.atmosphere.visual.divine',
-    eldritch:        'vn.atmosphere.visual.eldritch',
-    dark:            'vn.atmosphere.visual.dark',
-    warm:            'vn.atmosphere.visual.warm',
-    cold:            'vn.atmosphere.visual.cold',
     storm:           'vn.atmosphere.visual.storm',
     dream:           'vn.atmosphere.visual.dream',
     underwater:      'vn.atmosphere.visual.underwater',
+    flood:           'vn.atmosphere.visual.flood',
+    rain_glass:      'vn.atmosphere.visual.rainGlass',
+    mirror_world:    'vn.atmosphere.visual.mirrorWorld',
+    eclipse:         'vn.atmosphere.visual.eclipse',
     fire:            'vn.atmosphere.visual.fire',
     sacred:          'vn.atmosphere.visual.sacred',
-    corruption:      'vn.atmosphere.visual.corruption',
-    moonlight:       'vn.atmosphere.visual.moonlight',
-    apocalypse:      'vn.atmosphere.visual.apocalypse',
     ethereal:        'vn.atmosphere.visual.ethereal',
-    blood_moon:      'vn.atmosphere.visual.blood_moon',
     void_breach:     'vn.atmosphere.visual.void_breach',
     cosmic_horror:   'vn.atmosphere.visual.cosmic_horror',
-    abyss:           'vn.atmosphere.visual.abyss',
-    shadow_intrigue: 'vn.atmosphere.visual.shadow_intrigue',
     glass_shatter:   'vn.atmosphere.visual.glass_shatter',
     sandstorm:       'vn.atmosphere.visual.sandstorm',
-    carnival:        'vn.atmosphere.visual.carnival',
     ghosts:          'vn.atmosphere.visual.ghosts',
     hologram:        'vn.atmosphere.visual.hologram',
     kaleidoscope:    'vn.atmosphere.visual.kaleidoscope',
     drunk:           'vn.atmosphere.visual.drunk',
     cubes:           'vn.atmosphere.visual.cubes',
-    frost:          'vn.atmosphere.visual.frost',
     fog:             'vn.atmosphere.visual.fog',
     earthquake:      'vn.atmosphere.visual.earthquake',
+    monochrome:      'vn.atmosphere.visual.monochrome',
     noir:            'vn.atmosphere.visual.noir',
     memory:          'vn.atmosphere.visual.memory',
+    paper_map:       'vn.atmosphere.visual.paperMap',
     neon:            'vn.atmosphere.visual.neon',
     vhs:             'vn.atmosphere.visual.vhs',
-    dawn:            'vn.atmosphere.visual.dawn',
-    day:             'vn.atmosphere.visual.day',
-    sunset:          'vn.atmosphere.visual.sunset',
-    dusk:            'vn.atmosphere.visual.dusk',
-    overcast:        'vn.atmosphere.visual.overcast',
-    candlelit:       'vn.atmosphere.visual.candlelit',
-    torchlit:        'vn.atmosphere.visual.torchlit',
-    windowlight:     'vn.atmosphere.visual.windowlight',
     forest:          'vn.atmosphere.visual.forest',
     cave:            'vn.atmosphere.visual.cave',
     heat:            'vn.atmosphere.visual.heat',
@@ -80,6 +118,50 @@ export const VISUAL_LABELS = {
  * (первый пункт списка). VisualFXSystem вешает на overlay и vn-vfx-<type>, и vn-vfx-<type>-<variant>.
  */
 export const VISUAL_VARIANTS = {
+    firelight: [
+        { id: 'all', label: 'vn.atmosphere.visual.candlelit' },
+        { id: 'torchlit', label: 'vn.atmosphere.visual.torchlit' },
+    ],
+    window_scene: [
+        { id: 'all', label: 'vn.atmosphere.visual.windowlight' },
+        { id: 'stained_glass', label: 'vn.atmosphere.visual.stainedGlass' },
+    ],
+    ice: [
+        { id: 'all',       label: 'vn.atmosphere.visual.frost' },
+        { id: 'cold',      label: 'vn.atmosphere.visual.cold' },
+        { id: 'blizzard',  label: 'vn.atmosphere.visualVariants.blizzard' },
+        { id: 'hoarfrost', label: 'vn.atmosphere.visualVariants.hoarfrost' },
+    ],
+    sky: [
+        { id: 'all',      label: 'vn.atmosphere.visual.day' },
+        { id: 'dawn',     label: 'vn.atmosphere.visual.dawn' },
+        { id: 'sunset',   label: 'vn.atmosphere.visual.sunset' },
+        { id: 'dusk',     label: 'vn.atmosphere.visual.dusk' },
+        { id: 'overcast', label: 'vn.atmosphere.visual.overcast' },
+        { id: 'moonlight',label: 'vn.atmosphere.visual.moonlight' },
+    ],
+    darkness: [
+        { id: 'all',             label: 'vn.atmosphere.visual.dark' },
+        { id: 'corruption',      label: 'vn.atmosphere.visual.corruption' },
+        { id: 'shadow_intrigue', label: 'vn.atmosphere.visual.shadow_intrigue' },
+    ],
+    eldritch_depths: [
+        { id: 'all',   label: 'vn.atmosphere.visual.eldritch' },
+        { id: 'abyss', label: 'vn.atmosphere.visual.abyss' },
+    ],
+    catastrophe: [
+        { id: 'all',       label: 'vn.atmosphere.visual.apocalypse' },
+        { id: 'blood_moon',label: 'vn.atmosphere.visual.blood_moon' },
+    ],
+    warmth: [
+        { id: 'all',      label: 'vn.atmosphere.visual.warm' },
+        { id: 'carnival', label: 'vn.atmosphere.visual.carnival' },
+    ],
+    eclipse: [
+        { id: 'all', label: 'vn.atmosphere.visualVariants.eclipseShadow' },
+        { id: 'sun', label: 'vn.atmosphere.visualVariants.eclipseSun' },
+        { id: 'phase', label: 'vn.atmosphere.visualVariants.eclipsePhase' },
+    ],
     noir: [
         { id: 'all',    label: 'vn.atmosphere.visualVariants.classic' },
         { id: 'blinds', label: 'vn.atmosphere.visualVariants.blinds' },
@@ -93,11 +175,6 @@ export const VISUAL_VARIANTS = {
     fire: [
         { id: 'all',  label: 'vn.atmosphere.visualVariants.inferno' },
         { id: 'room', label: 'vn.atmosphere.visualVariants.roomFire' },
-    ],
-    frost: [
-        { id: 'all',       label: 'vn.atmosphere.visualVariants.rime' },
-        { id: 'blizzard',  label: 'vn.atmosphere.visualVariants.blizzard' },
-        { id: 'hoarfrost', label: 'vn.atmosphere.visualVariants.hoarfrost' },
     ],
     // Базовый вид — прежний «Густой туман»; `light` реже и прозрачнее, `dense` — сплошная пелена, `ground` — только понизу
     fog: [
@@ -142,12 +219,13 @@ export const VISUAL_VARIANTS = {
     ],
     cosmic_horror: [
         { id: 'all',    label: 'vn.atmosphere.visualVariants.eyeSpiral' },
-        { id: 'eye',    label: 'vn.atmosphere.visualVariants.eye' },
+        { id: 'eye',    label: 'vn.atmosphere.visualVariants.entity' },
         { id: 'spiral', label: 'vn.atmosphere.visualVariants.spiral' },
     ],
     glass_shatter: [
-        { id: 'all',    label: 'vn.atmosphere.visualVariants.shardsFrame' },
-        { id: 'center', label: 'vn.atmosphere.visualVariants.crackCenter' },
+        { id: 'all',    label: 'vn.atmosphere.visualVariants.glassCrack' },
+        { id: 'shards', label: 'vn.atmosphere.visualVariants.glassShards' },
+        { id: 'background', label: 'vn.atmosphere.visualVariants.glassBackground' },
     ],
     // Базовый вид — «Пьяный»: середина лестницы, как у портретного эффекта drunk
     drunk: [
@@ -179,48 +257,42 @@ export const VISUAL_VARIANTS = {
  */
 export const VISUAL_ICONS = {
     none: 'fa-ban',
+    firelight: 'fa-fire-flame-simple',
+    window_scene: 'fa-window-maximize',
+    ice: 'fa-temperature-low',
+    sky: 'fa-cloud-sun',
+    darkness: 'fa-circle-half-stroke',
+    eldritch_depths: 'fa-eye',
+    catastrophe: 'fa-explosion',
+    warmth: 'fa-mug-hot',
     divine: 'fa-sun',
-    eldritch: 'fa-eye',
-    dark: 'fa-circle-half-stroke',
-    warm: 'fa-mug-hot',
-    cold: 'fa-icicles',
     storm: 'fa-bolt',
+    rain_glass: 'fa-cloud-rain',
+    mirror_world: 'fa-water',
+    eclipse: 'fa-circle-half-stroke',
     dream: 'fa-cloud-moon',
     underwater: 'fa-water',
+    flood: 'fa-water',
     fire: 'fa-fire-flame-curved',
     sacred: 'fa-dove',
-    corruption: 'fa-skull',
-    moonlight: 'fa-moon',
-    apocalypse: 'fa-explosion',
     ethereal: 'fa-hat-wizard',
-    blood_moon: 'fa-droplet',
     void_breach: 'fa-burst',
     cosmic_horror: 'fa-hurricane',
-    abyss: 'fa-anchor',
-    shadow_intrigue: 'fa-user-secret',
     glass_shatter: 'fa-window-restore',
     sandstorm: 'fa-wind',
-    carnival: 'fa-champagne-glasses',
     ghosts: 'fa-ghost',
     hologram: 'fa-cube',
     kaleidoscope: 'fa-snowflake',
     drunk: 'fa-beer-mug-empty',
     cubes: 'fa-cubes',
-    frost: 'fa-temperature-low',
     fog: 'fa-smog',
     earthquake: 'fa-house-crack',
+    monochrome: 'fa-circle-half-stroke',
     noir: 'fa-film',
     memory: 'fa-clock-rotate-left',
+    paper_map: 'fa-map',
     neon: 'fa-city',
     vhs: 'fa-tape',
-    dawn: 'fa-cloud-sun',
-    day: 'fa-sun',
-    sunset: 'fa-mountain-sun',
-    dusk: 'fa-star',
-    overcast: 'fa-cloud',
-    candlelit: 'fa-fire-flame-simple',
-    torchlit: 'fa-dungeon',
-    windowlight: 'fa-window-maximize',
     forest: 'fa-tree',
     cave: 'fa-mountain',
     heat: 'fa-temperature-high',

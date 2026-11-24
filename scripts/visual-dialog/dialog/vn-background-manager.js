@@ -1,21 +1,19 @@
 // ============================================================
-// vn-background-manager.js — управление фонами, галерея, переходы
+// vn-background-manager.js — browsing, search and selection in the editor's background gallery
 // ============================================================
 
-import { VNTransitions } from '../visual-effects/vn-transitions.js';
-import { VNPreloader } from '../vn-preload.js';
-
-const esc = (s) => String(s ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+import { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, mediaExtension, isVideoSource } from '../media/vn-media-utils.js';
+import { escapeHtml as esc } from '../../utils/text.js';
+import { decodePath } from '../../utils/paths.js';
+import { filePickerImplementation } from '../../utils/file-picker.js';
 
 const loc = (key, data) => data ? game.i18n.format(key, data) : game.i18n.localize(key);
 
 const NATURAL = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
 
 export class VNBackgroundManager {
-    static IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-    static VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogg', 'mov'];
+    static IMAGE_EXTENSIONS = [...IMAGE_EXTENSIONS];
+    static VIDEO_EXTENSIONS = [...VIDEO_EXTENSIONS];
     static get ALL_EXTENSIONS() {
         return this._allExt ??= [...this.IMAGE_EXTENSIONS, ...this.VIDEO_EXTENSIONS];
     }
@@ -50,8 +48,7 @@ export class VNBackgroundManager {
     }
 
     static isVideo(path) {
-        if (!path) return false;
-        return this.VIDEO_EXTENSIONS.includes(path.split('.').pop().split('?')[0].toLowerCase());
+        return isVideoSource(path);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -59,7 +56,7 @@ export class VNBackgroundManager {
     // ══════════════════════════════════════════════════════════
 
     static _decode(p) {
-        try { return decodeURIComponent(p); } catch { return p; }
+        return decodePath(p);
     }
 
     static _cleanPath(p) {
@@ -77,7 +74,7 @@ export class VNBackgroundManager {
     }
 
     async _fetchFolder(targetPath) {
-        const FPImpl = foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+        const FPImpl = filePickerImplementation();
         const response = await FPImpl.browse('data', targetPath);
 
         const folders = (response.dirs || []).map(dir => {
@@ -86,7 +83,7 @@ export class VNBackgroundManager {
         }).sort(NATURAL);
 
         const media = (response.files || [])
-            .filter(f => VNBackgroundManager.ALL_EXTENSIONS.includes(f.split('.').pop().toLowerCase()))
+            .filter(f => VNBackgroundManager.ALL_EXTENSIONS.includes(mediaExtension(f)))
             .map(file => {
                 const name = VNBackgroundManager._fileLabel(file);
                 const isVid = VNBackgroundManager.isVideo(file);
@@ -297,6 +294,28 @@ export class VNBackgroundManager {
         this._syncSelectionUI(root);
     }
 
+    select(root, path) {
+        const value = path || 'none';
+        this.addDynamicOption(root, value, value === 'none' ? '' : VNBackgroundManager._fileLabel(value));
+    }
+
+    applyState(root, state) {
+        this.select(root, state.background);
+        for (const [id, key] of [['background-overlay', 'backgroundOverlay'], ['background-vignette', 'vignette'], ['background-fog', 'groundFog']]) {
+            const input = root.querySelector(`#${id}`);
+            if (input) input.checked = state[key] !== false;
+        }
+    }
+
+    readState(root) {
+        return {
+            background: this._checkedValue(root) || null,
+            backgroundOverlay: root.querySelector('#background-overlay')?.checked ?? true,
+            vignette: root.querySelector('#background-vignette')?.checked ?? true,
+            groundFog: root.querySelector('#background-fog')?.checked ?? true,
+        };
+    }
+
     /** Guarantees a valid selection after the gallery DOM was replaced. */
     _keepSelection(root, current) {
         if (root.querySelector('input[name="background"]:checked')) return;
@@ -356,123 +375,11 @@ export class VNBackgroundManager {
     }
 
     // ══════════════════════════════════════════════════════════
-    // Apply Background to DOM
-    // ══════════════════════════════════════════════════════════
-
-    applyBackground($overlay, background, showOverlay) {
-        const el = $overlay[0] ?? $overlay;
-        if (!el) return;
-
-        const bgLayer = el.querySelector('.vn-bg-layer');
-        VNTransitions.releaseVideos(bgLayer);
-        bgLayer?.querySelector('.vn-bg-video')?.remove();
-
-        if (background && background !== 'none') {
-            if (VNBackgroundManager.isVideo(background)) {
-                if (bgLayer) {
-                    bgLayer.style.backgroundImage = '';
-                    const video = Object.assign(document.createElement('video'), {
-                        className: 'vn-bg-video', src: background,
-                        autoplay: true, loop: true, muted: true, playsInline: true
-                    });
-                    video.setAttribute('playsinline', '');
-                    video.setAttribute('disablepictureinpicture', '');
-                    bgLayer.appendChild(video);
-                    video.play().catch(() => {});
-                }
-            } else if (bgLayer) {
-                const current = bgLayer.style.backgroundImage;
-                const currentBase = current.replace(/\?t=\d+/, '').replace(/url\(["']?|["']?\)/g, '');
-                if (currentBase !== background) {
-                    bgLayer.style.backgroundImage = `url("${background.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`;
-                }
-            }
-
-            const existing = el.querySelector('.vn-background-overlay');
-            if (showOverlay) {
-                if (!existing) bgLayer?.insertAdjacentHTML('afterend', '<div class="vn-background-overlay"></div>');
-            } else existing?.remove();
-        } else {
-            if (bgLayer) bgLayer.style.backgroundImage = '';
-            el.querySelector('.vn-background-overlay')?.remove();
-        }
-    }
-
-    /**
-     * Animated background switch. `timing` comes from VNTransitions.timing (transition type + speed; 'cut' = instant).
-     * The background dimming is NOT handled here: the caller fades it at the start (fadeOverlay).
-     */
-    async switchWithTransition($overlay, newBg, showOverlay, atmosphere, timing) {
-        const el = $overlay[0] ?? $overlay;
-        if (!el || !newBg || newBg === 'none' || timing.type === 'cut') {
-            this.applyBackground($overlay, newBg, showOverlay);
-            return;
-        }
-
-        // Nothing to transition from (first background): just show it. A video counts as content too.
-        const oldBgLayer = el.querySelector('.vn-bg-layer');
-        if (!oldBgLayer?.style.backgroundImage && !oldBgLayer?.querySelector('.vn-bg-video')) {
-            this.applyBackground($overlay, newBg, showOverlay);
-            return;
-        }
-
-        try {
-            // Start the dissolve only once the new image is decoded, otherwise it fades in from an empty layer
-            await VNPreloader.ready(newBg);
-            await VNTransitions.switchBackground(el, newBg, timing.type, timing.bg || null);
-            atmosphere?.resetZoom?.();
-        } catch (e) {
-            console.error('VN: Background transition failed:', e);
-            this.applyBackground($overlay, newBg, showOverlay);
-        }
-    }
-
-    /**
-     * applyBackground without the layer's own 0.8 s background-image cross-fade. Used while a curtain covers the
-     * scene (VNTransitions.cover), where the swap must be instant or it would keep fading after the curtain opens.
-     */
-    applyBackgroundInstant($overlay, background, showOverlay) {
-        const el = $overlay[0] ?? $overlay;
-        const layer = el?.querySelector('.vn-bg-layer');
-        if (layer) layer.style.transition = 'none';
-        this.applyBackground($overlay, background, showOverlay);
-        if (layer) {
-            void layer.offsetWidth; // commit the swap before the transition is switched back on
-            layer.style.transition = '';
-        }
-    }
-
-    /**
-     * Fades the background dimming (.vn-background-overlay) in or out over `--vn-tr-fx`. Used at the START of a
-     * step switch so the dimming changes together with the visual effect instead of after the dissolve.
-     * A leaving overlay is renamed (`vn-bo-leaving`) so applyBackground / setBackgroundOverlay never see it.
-     */
-    fadeOverlay($overlay, show, background) {
-        const el = $overlay[0] ?? $overlay;
-        if (!el) return;
-        const existing = el.querySelector('.vn-background-overlay');
-        const hasBackground = !!background && background !== 'none';
-
-        if (show && hasBackground && !existing) {
-            const layers = el.querySelectorAll('.vn-bg-layer');
-            const dimming = document.createElement('div');
-            dimming.className = 'vn-background-overlay vn-bo-in';
-            dimming.addEventListener('animationend', () => dimming.classList.remove('vn-bo-in'), { once: true });
-            layers[layers.length - 1]?.insertAdjacentElement('afterend', dimming);
-        } else if ((!show || !hasBackground) && existing) {
-            existing.classList.remove('vn-background-overlay', 'vn-bo-in');
-            existing.classList.add('vn-bo-leaving', 'vn-bo-out');
-            existing.addEventListener('animationend', () => existing.remove(), { once: true });
-            setTimeout(() => existing.remove(), 1000);
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════
     // HTML Generation
     // ══════════════════════════════════════════════════════════
 
     generateSelector(currentBg = null, currentOverlay = true, currentVignette = true, currentFog = true) {
-        const sceneBg = canvas.scene?.levels?.contents[0]?.background?.src || '';
+        const sceneBg = this._getSceneBackground();
         const customFolder = VNBackgroundManager.getCustomFolder();
         const thumbSize = parseInt(localStorage.getItem('player-queue.bg-thumb-size')) || VNBackgroundManager.DEFAULT_THUMB;
         const customPath = currentBg && currentBg !== 'none' && !currentBg.startsWith('modules/') ? currentBg : '';
@@ -490,7 +397,10 @@ export class VNBackgroundManager {
             <summary class="vn-collapsible-header"><i class="fas fa-image"></i> ${loc('vn.bg.header')} <i class="fas fa-chevron-down vn-chevron"></i></summary>
             <div class="vn-collapsible-body">
                 <div class="vn-bg-top">
-                    <div class="vn-bg-current">${holder}<div class="vn-bg-current-body">${this._currentBarHtml(currentBg, inGallery ? '' : VNBackgroundManager._fileLabel(currentBg))}</div></div>
+                    <div class="vn-bg-current">
+                        ${holder}<div class="vn-bg-current-body">${this._currentBarHtml(currentBg, inGallery ? '' : VNBackgroundManager._fileLabel(currentBg))}</div>
+                        ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn"><i class="fas fa-map"></i> ${loc('vn.bg.currentScene')}</button>` : ''}
+                    </div>
                     <div class="vn-bg-look" role="group" aria-label="${loc('vn.bg.look')}">
                         <span class="vn-bg-look-title">${loc('vn.bg.look')}</span>
                         <div class="vn-bg-look-chips">
@@ -519,7 +429,6 @@ export class VNBackgroundManager {
                 <details class="vn-bg-source"${customPath ? ' open' : ''}>
                     <summary><i class="fas fa-link"></i> ${loc('vn.bg.otherSource')} <i class="fas fa-chevron-down vn-bg-source-chevron"></i></summary>
                     <div class="vn-bg-source-body">
-                        ${sceneBg ? `<button type="button" class="vn-btn vn-btn-sm vn-use-scene-btn" data-background="${esc(sceneBg)}"><i class="fas fa-map"></i> ${loc('vn.bg.currentScene')}</button>` : ''}
                         <div class="vn-custom-path">
                             <input type="text" id="custom-background-path" placeholder="${loc('vn.bg.pathPlaceholder')}" value="${esc(customPath)}">
                             <button type="button" class="vn-btn vn-btn-sm vn-apply-path-btn" title="${loc('vn.bg.applyPathTitle')}"><i class="fas fa-check"></i></button>
@@ -527,6 +436,11 @@ export class VNBackgroundManager {
                     </div>
                 </details>
             </div></details>`;
+    }
+
+    _getSceneBackground() {
+        const level = canvas.level ?? canvas.scene?.levels?.contents[0];
+        return level?.background?.src;
     }
 
     _crumbsHtml() {
@@ -667,10 +581,9 @@ export class VNBackgroundManager {
                 return;
             }
 
-            const sceneBtn = e.target.closest('.vn-use-scene-btn');
-            if (sceneBtn) {
+            if (e.target.closest('.vn-use-scene-btn')) {
                 e.preventDefault();
-                const bg = sceneBtn.dataset.background;
+                const bg = this._getSceneBackground();
                 if (bg) this.addDynamicOption(root, bg, loc('vn.bg.currentScene'));
                 return;
             }
@@ -739,7 +652,7 @@ export class VNBackgroundManager {
 
     _openFolderPicker(root) {
         const startPath = VNBackgroundManager.getCustomFolder() || this._defaultPath;
-        const FPImpl = foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+        const FPImpl = filePickerImplementation();
         const fp = new FPImpl({
             type: 'folder',
             current: startPath,

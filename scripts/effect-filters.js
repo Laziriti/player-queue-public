@@ -6,20 +6,25 @@
 // ============================================================
 
 import { MODULE_ID, applyForcedTheme } from './queue/queue-constants.js';
-import { FX_TIERS, tierOf } from './visual-dialog/visual-effects/fx-performance.js';
+import { stripEmoji } from './utils/text.js';
+import { FX_TIERS, normalizeFxFilterKey, tierOf } from './visual-dialog/visual-effects/fx-performance.js';
 import { VISUAL_TYPES, VISUAL_LABELS, VISUAL_ICONS, VISUAL_VARIANTS } from './visual-dialog/visual-effects/atmosphere/config/visual-types.js';
-import { PARTICLE_TYPES, PARTICLE_LABELS, PARTICLE_ICONS, PARTICLE_VARIANTS } from './visual-dialog/visual-effects/atmosphere/config/particle-types.js';
+import { LEGACY_PARTICLE_VARIANTS, PARTICLE_TYPES, PARTICLE_LABELS, PARTICLE_ICONS, PARTICLE_VARIANTS } from './visual-dialog/visual-effects/atmosphere/config/particle-types.js';
 import { CHAR_FX_GROUPS, CHAR_FX_VARIANTS, CHAR_FX_ICONS } from './visual-dialog/visual-effects/character-fx/vn-character-fx.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const loc = key => game.i18n.localize(key);
-// В подписях эффектов фона уже есть эмодзи: в списке рядом иконка FontAwesome, второй значок не нужен
-const stripEmoji = text => text.replace(/^[\p{Extended_Pictographic}\p{Emoji_Component}\s]+/u, '');
 
-// Варианты эффекта отдельными пунктами не показываем: отключается весь тип вместе с ними (isFxDisabled отбрасывает вариант),
-// поэтому в списке только базовые типы, а их вариации — подписью под названием. Первый пункт списка вариантов — сам базовый вид.
+// Фильтр базового типа охватывает все его варианты. Бывшие отдельные частицы
+// также имеют свой фильтр, чтобы сохранить ранее выбранные отключения.
 const variantLabels = (map, id) => (map[id] ?? []).slice(1).map(v => loc(v.label));
+const particleFilterLabel = id => {
+    const [base, variant] = id.split(':');
+    const label = loc(PARTICLE_LABELS[base]);
+    const option = PARTICLE_VARIANTS[base]?.find(v => v.id === variant);
+    return option ? `${label} · ${loc(option.label)}` : label;
+};
 
 const KINDS = [
     {
@@ -27,8 +32,9 @@ const KINDS = [
         label: id => stripEmoji(loc(VISUAL_LABELS[id])), variants: id => variantLabels(VISUAL_VARIANTS, id)
     },
     {
-        id: 'particle', icon: 'fa-snowflake', ids: PARTICLE_TYPES, iconOf: id => PARTICLE_ICONS[id],
-        label: id => loc(PARTICLE_LABELS[id]), variants: id => variantLabels(PARTICLE_VARIANTS, id)
+        id: 'particle', icon: 'fa-snowflake', ids: [...PARTICLE_TYPES, ...LEGACY_PARTICLE_VARIANTS],
+        iconOf: id => PARTICLE_ICONS[id.split(':')[0]],
+        label: particleFilterLabel, variants: id => variantLabels(PARTICLE_VARIANTS, id)
     },
     {
         id: 'charfx', icon: 'fa-user-astronaut', iconOf: id => CHAR_FX_ICONS[id],
@@ -63,7 +69,7 @@ class EffectFiltersApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
 
     async _prepareContext(options) {
-        const off = new Set(game.settings.get(MODULE_ID, 'fxDisabled') ?? []);
+        const off = new Set((game.settings.get(MODULE_ID, 'fxDisabled') ?? []).map(normalizeFxFilterKey));
 
         const kinds = KINDS.map((kind, index) => {
             const ids = kind.ids.filter(id => id !== 'none');

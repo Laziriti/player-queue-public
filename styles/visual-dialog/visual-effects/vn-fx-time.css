@@ -9,7 +9,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-dawn .vn-bg-layer {
-    filter: saturate(1.05) brightness(1.02) contrast(1.06) sepia(0.06);
+    --vn-bg-color-grade: saturate(1.05) brightness(1.02) contrast(1.06) sepia(0.06);
 }
 
 .vn-vfx-dawn .vn-fx-tint {
@@ -65,7 +65,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-day .vn-bg-layer {
-    filter: saturate(1.22) brightness(1.12) contrast(1.06);
+    --vn-bg-color-grade: saturate(1.22) brightness(1.12) contrast(1.06);
 }
 
 .vn-vfx-day .vn-fx-tint {
@@ -129,7 +129,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-sunset .vn-bg-layer {
-    filter: saturate(1.2) brightness(0.93) contrast(1.08) sepia(0.15) hue-rotate(-8deg);
+    --vn-bg-color-grade: saturate(1.2) brightness(0.93) contrast(1.08) sepia(0.15) hue-rotate(-8deg);
 }
 
 .vn-vfx-sunset .vn-fx-tint {
@@ -194,7 +194,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-dusk .vn-bg-layer {
-    filter: saturate(0.72) brightness(0.8) contrast(1.08) hue-rotate(-8deg);
+    --vn-bg-color-grade: saturate(0.72) brightness(0.8) contrast(1.08) hue-rotate(-8deg);
 }
 
 .vn-vfx-dusk .vn-fx-tint {
@@ -257,7 +257,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-overcast .vn-bg-layer {
-    filter: saturate(0.65) brightness(0.98) contrast(0.95);
+    --vn-bg-color-grade: saturate(0.65) brightness(0.98) contrast(0.95);
 }
 
 .vn-vfx-overcast .vn-fx-tint {
@@ -275,8 +275,8 @@
     mask: linear-gradient(to bottom, #000 0%, transparent 55%);
 }
 
-.vn-vfx-overcast .vn-fx-rays::before {
-    content: '';
+.vn-vfx-overcast .vn-fx-rays > .vn-fx-before {
+    display: block;
     position: absolute;
     top: 0;
     left: 0;
@@ -324,11 +324,11 @@
 
 /* ══════════════════════════════════════════════════════════
    HEAT (Зной)
-   Жёлто-белый слепящий свет сверху, выцветшие края, тёплое марево из масок тумана медленно ползёт вверх и вбок.
+   Жёлто-белый свет, выцветшие края и преломление фона в горячем воздухе.
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-heat .vn-bg-layer {
-    filter: saturate(1.3) brightness(1.1) contrast(1.05) sepia(0.32);
+    --vn-bg-color-grade: saturate(1.3) brightness(1.1) contrast(1.05) sepia(0.32);
 }
 
 .vn-vfx-heat .vn-fx-tint {
@@ -339,41 +339,6 @@
             rgba(255, 205, 100, 0.22) 45%,
             rgba(255, 150, 60, 0.12) 100%
     );
-}
-
-/* Марево: два шлейфа с разной скоростью (вбок и вверх) */
-.vn-vfx-heat .vn-fx-rays {
-    opacity: 1;
-    overflow: hidden;
-    background: none;
-    animation: none;
-}
-
-.vn-vfx-heat .vn-fx-rays::before,
-.vn-vfx-heat .vn-fx-rays::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: rgba(255, 228, 150, 0.55);
-}
-
-.vn-vfx-heat .vn-fx-rays::before {
-    width: calc(100% + 768px);
-    height: 100%;
-    opacity: 0.17;
-    -webkit-mask: var(--vn-tex-fog) 0 0 / 768px 280px;
-    mask: var(--vn-tex-fog) 0 0 / 768px 280px;
-    animation: vnFogSlide768 38s linear infinite;
-}
-
-.vn-vfx-heat .vn-fx-rays::after {
-    width: 100%;
-    height: calc(100% + 512px);
-    opacity: 0.11;
-    -webkit-mask: var(--vn-tex-fog) 0 0 / 512px 512px;
-    mask: var(--vn-tex-fog) 0 0 / 512px 512px;
-    animation: vnSmokeRise 46s linear infinite;
 }
 
 /* Выцветшие, запылённые края */

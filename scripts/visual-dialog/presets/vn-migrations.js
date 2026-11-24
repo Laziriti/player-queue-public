@@ -1,0 +1,73 @@
+// ============================================================
+// vn-migrations.js — versioned preset migrations
+// ============================================================
+
+export const MIGRATIONS = [
+    {
+        version: '14.2.2',
+        migrate(preset) {
+            if (preset.visibility || !preset.hidden) return preset;
+            const visibility = {};
+            for (const [id, val] of Object.entries(preset.hidden)) {
+                if (val === true) visibility[id] = 'hidden';
+            }
+            const result = { ...preset, visibility };
+            delete result.hidden;
+            return result;
+        }
+    },
+    {
+        version: '14.9.0',
+        migrate(preset) {
+            if ('folderId' in preset) return preset;
+            return { ...preset, folderId: null };
+        }
+    },
+    {
+        version: '14.9.1',
+        migrate(preset) {
+            if ('particleIntensity' in preset) return preset;
+            return { ...preset, particleIntensity: 1 };
+        }
+    },
+    {
+        version: '14.10.0',
+        migrate(preset) {
+            if (preset.atmosphereEffect == null && ('particleEffect' in preset || 'visualEffect' in preset)) return preset;
+            const { atmosphereEffect, ...scene } = preset;
+            return { ...scene, particleEffect: 'none', visualEffect: 'none' };
+        }
+    },
+    {
+        // One scene per preset (sceneId / sceneName) -> a list of scenes
+        version: '14.15.0',
+        migrate(preset) {
+            if (!('sceneId' in preset) && !('sceneName' in preset)) return preset;
+            const { sceneId, sceneName, ...rest } = preset;
+            return { ...rest, scenes: sceneId || sceneName ? [{ id: sceneId ?? null, name: sceneName ?? '' }] : [] };
+        }
+    }
+];
+
+export function countPendingMigrations(preset) {
+    const presetVersion = preset.version ?? '0.0.0';
+    return MIGRATIONS.filter(m => foundry.utils.isNewerVersion(m.version, presetVersion)).length;
+}
+
+export function applyMigrations(preset) {
+    const presetVersion = preset.version ?? '0.0.0';
+    let result = { ...preset };
+    for (const m of MIGRATIONS) {
+        if (foundry.utils.isNewerVersion(m.version, presetVersion)) {
+            result = m.migrate(result) ?? result;
+        }
+    }
+    // Sequence steps are scene-shaped payloads and follow the preset's version
+    if (Array.isArray(result.steps)) {
+        result.steps = result.steps.map(step => {
+            const { version, ...migrated } = applyMigrations({ ...step, version: presetVersion });
+            return migrated;
+        });
+    }
+    return result;
+}

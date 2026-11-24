@@ -6,9 +6,12 @@
 
 import { R, RD } from '../utils.js';
 import { PARTICLE_CONFIGS } from '../config/particles.js';
+import { normalizeParticleEffect } from '../config/particle-types.js';
+import { particleMotion } from '../config/particle-effect-settings.js';
 import { particleIntensityCap } from '../../fx-performance.js';
 import { resolveCanvasSpec } from '../config/particle-canvas.js';
 import { CanvasParticles } from './canvas/particle-canvas.js';
+import { resolveParticleWind } from '../../../scene/vn-scene-contract.js';
 
 // Сила глубины по режиму: 0 — все частицы на одном плане, как раньше
 const DEPTH_STRENGTH = { flat: 0, soft: 0.6, deep: 1 };
@@ -18,8 +21,10 @@ const NEAR_DEPTH = 0.72;
 /** { depth, wind, gusts } из внешнего мира → допустимые значения (нет или мусор — плоско, штиль, порывы) */
 function normalizeLook(look) {
     const depth = Object.hasOwn(DEPTH_STRENGTH, look?.depth) ? look.depth : 'flat';
-    const wind = Math.max(-5, Math.min(5, Math.round(Number(look?.wind)) || 0));
-    return { depth, wind, gusts: look?.gusts !== false };
+    const wind = resolveParticleWind(look?.wind);
+    return { depth, wind, gusts: look?.gusts !== false, wrap: look?.wrap !== false,
+        scale: look?.scale, opacity: look?.opacity, tempo: look?.tempo, solidTexture: look?.solidTexture,
+        tintColor: look?.tintColor, tintStrength: look?.tintStrength, effectSettings: look?.effectSettings };
 }
 
 /** Прозрачность по глубине: далёкие тусклее, средние ярче всех, ближние не в фокусе и полупрозрачны (не закрывают лица) */
@@ -45,8 +50,6 @@ function depthLook(s) {
 
 export class ParticleSystem {
     constructor() {
-        this._container = null;
-        this._upperContainer = null;
         this._type = 'none';
         this._engine = null;
     }
@@ -60,35 +63,33 @@ export class ParticleSystem {
      * @param {number} intensity — множитель количества частиц (1 = базовое, 1–20)
      * @param {HTMLElement|null} upperContainer — элемент .vn-particles-upper; если
      *   передан, часть частиц (случайно) рисуется в нём, а не в основном контейнере
-     * @param {{depth?: 'flat'|'soft'|'deep', wind?: number, gusts?: boolean}} [look] — глубина частиц и ветер (-5…5, плюс — вправо; порывами или ровный)
+     * @param {{depth?: 'flat'|'soft'|'deep', wind?: number, gusts?: boolean, wrap?: boolean}} [look] — глубина частиц, ветер и перенос через боковые края
      */
     fill(container, particleType, intensity = 1, upperContainer = null, look = null) {
-        this._container = container;
-        this._upperContainer = upperContainer;
-        this._type = particleType;
+        this.clear();
+        this._type = normalizeParticleEffect(particleType);
+        if (this._type === 'none') return;
         look = normalizeLook(look);
 
-        this._destroyEngine();
-        container.innerHTML = '';
-        if (upperContainer) upperContainer.innerHTML = '';
-        if (particleType === 'none') return;
-
-        const [type, variant] = particleType.split(':');
+        const [type, variant] = this._type.split(':');
         // Интенсивность ведущего (1–20) дополнительно ограничена клиентским потолком — настройка particleIntensityMax
         const safeIntensity = Math.min(Math.max(intensity, 1), 20, particleIntensityCap());
 
         if (type === 'ghosts') {
-            this._fillGhosts(container, upperContainer, safeIntensity, look);
+            this._fillGhosts(container, upperContainer, safeIntensity, variant, look);
             return;
         }
 
         const base = PARTICLE_CONFIGS[type];
-        const spec = resolveCanvasSpec(type, variant);
+        const movement = particleMotion(type, look.effectSettings);
+        const spec = resolveCanvasSpec(type, variant, movement);
         if (!base || !spec) return;
 
         // Вариант (config.variants[id]) переопределяет поля базового конфига
         const override = variant && variant !== 'all' ? base.variants?.[variant] : null;
-        this._fillSprites(type, variant, spec, override ? { ...base, ...override } : base, container, upperContainer, safeIntensity, look);
+        const config = { ...base, ...override };
+        config.spawn = config.motionSpawns?.[movement] ?? config.spawn;
+        this._fillSprites(type, variant, spec, config, container, upperContainer, safeIntensity, look);
     }
 
     /** Сменить ветер без пересоздания частиц (-5…5) */
@@ -97,18 +98,20 @@ export class ParticleSystem {
         this._engine?.setWind(look.wind, look.gusts);
     }
 
+    setAppearance(scale, opacity, tintColor, tintStrength, solidTexture) {
+        this._engine?.setAppearance(scale, opacity, tintColor, tintStrength, solidTexture);
+    }
+
+    setTempo(tempo) {
+        this._engine?.setTempo(tempo);
+    }
+
     /**
      * Остановить рисование и очистить контейнеры
      */
     clear() {
-        this._destroyEngine();
-        if (this._container) {
-            this._container.innerHTML = '';
-        }
-        if (this._upperContainer) {
-            this._upperContainer.innerHTML = '';
-            this._upperContainer = null;
-        }
+        this._engine?.destroy();
+        this._engine = null;
         this._type = 'none';
     }
 
@@ -121,15 +124,14 @@ export class ParticleSystem {
 
     // ─── Private ─────────────────────────────────────────────
 
-    _destroyEngine() {
-        this._engine?.destroy();
-        this._engine = null;
-    }
-
     _newEngine(container, upper, look) {
         // Эффект сцены «сон» (класс на оверлее) замедляет все частицы до 20 с на круг
         const overlay = container.closest('#vn-scene-overlay');
-        return (this._engine = new CanvasParticles(container, upper, { overlay, wind: look.wind, gusts: look.gusts, parallax: look.depth !== 'flat' }));
+        return (this._engine = new CanvasParticles(container, upper, {
+            overlay, wind: look.wind, gusts: look.gusts, wrap: look.wrap, parallax: look.depth !== 'flat',
+            scale: look.scale, opacity: look.opacity, tempo: look.tempo, solidTexture: look.solidTexture,
+            tintColor: look.tintColor, tintStrength: look.tintStrength,
+        }));
     }
 
     /** Обычные частицы: у каждой параметры старта (spawn), глубина и ветер и, если у типа есть images, номер картинки */
@@ -171,20 +173,23 @@ export class ParticleSystem {
         engine.start();
     }
 
-    /** Призраки: 8 полос тумана позади и души с хвостом и головой-картинкой (число душ — до 84); глубина и ветер их не касаются */
-    _fillGhosts(container, upper, intensity, look) {
+    /** Призраки со своим распределением глубины и траекториями, независимыми от ветра. */
+    _fillGhosts(container, upper, intensity, variant, look) {
         const config = PARTICLE_CONFIGS.ghosts;
-        const engine = this._newEngine(container, upper, { depth: 'flat', wind: 0, gusts: true });
-        engine.setGhostImages(config?.images);
-        const souls = Math.min(Math.round((config?.count || 42) * intensity), 84);
+        const engine = this._newEngine(container, upper, { ...look, depth: 'flat', wind: 0, gusts: true });
+        const atTwo = config.count * 2;
+        const souls = Math.round(intensity <= 2
+            ? config.count * intensity
+            : atTwo + (config.maxCount - atTwo) * (intensity - 2) / 18);
+        engine.setGhosts(config.images, variant, souls);
 
         for (let n = 0; n < 8; n++) engine.addVapor(n);
 
         // Номер среди душ слоя определяет путь и глубину (ghosts.js)
         const placed = { back: 0, front: 0 };
         for (let n = 0; n < souls; n++) {
-            const head = config?.images?.length ? Math.floor(Math.random() * config.images.length) : -1;
-            const layer = engine.split && Math.random() < 0.5 ? 'front' : 'back';
+            const head = Math.floor(Math.random() * config.images.length);
+            const layer = engine.split && Math.random() < (variant === 'vortex_center' ? 0.28 : 0.5) ? 'front' : 'back';
             engine.addSoul(n, ++placed[layer], head, layer);
         }
         engine.start();

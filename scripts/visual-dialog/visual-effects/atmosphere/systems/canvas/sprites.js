@@ -24,6 +24,25 @@ function finalize(canvas) {
     return typeof canvas.transferToImageBitmap === 'function' ? canvas.transferToImageBitmap() : canvas;
 }
 
+const solidTextures = new WeakMap();
+
+/** Bake a solid silhouette once per source, shared by both particle layers. */
+export function solidParticleTexture(image) {
+    const cached = solidTextures.get(image);
+    if (cached) return cached;
+    const canvas = makeCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0);
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = pixels.data;
+    // Leave the faint fringe transparent so texture padding and stray glow don't become solid.
+    for (let i = 3; i < data.length; i += 4) data[i] = data[i] >= 16 ? 255 : 0;
+    ctx.putImageData(pixels, 0, 0);
+    const texture = finalize(canvas);
+    solidTextures.set(image, texture);
+    return texture;
+}
+
 let colorCtx = null;
 const colorCache = new Map();
 
@@ -172,47 +191,61 @@ function valueNoise(x, y, seed) {
 
 const smooth = (lo, hi, v) => { const t = clamp01((v - lo) / (hi - lo)); return t * t * (3 - 2 * t); };
 
-/**
- * Тело-клуб из шума: неровный облачный силуэт, плотнее к середине и прозрачный по краю.
- * noise: { seed, freq (клеток шума поперёк), octaves, cover (порог плотности), soft (мягкость края порога), color: [r, g, b], alpha (макс.) }
- */
-function bakeNoiseBody(w, h, res, noise) {
-    const { seed = 1, freq = 3, octaves = 4, cover = 0.32, soft = 0.4, color = [90, 88, 92], alpha = 0.5 } = noise;
-    const cw = Math.max(1, Math.ceil(w * res)), ch = Math.max(1, Math.ceil(h * res));
-    const canvas = makeCanvas(cw, ch);
-    const ctx = canvas.getContext('2d');
-    const img = ctx.createImageData(cw, ch);
-    const px = img.data;
-    for (let j = 0; j < ch; j++) {
-        const ny = (j + 0.5) / ch;
-        for (let i = 0; i < cw; i++) {
-            const nx = (i + 0.5) / cw;
-            const r = Math.hypot(nx - 0.5, ny - 0.5) * 2;
+function paintPuff(pixels, size, style, seed, phase) {
+    const { color, alpha, frequency, threshold, softness, curl } = style;
+    const flowX = Math.cos(phase) * curl, flowY = Math.sin(phase) * curl;
+    pixels.fill(0);
+    for (let j = 0; j < size; j++) {
+        const y = (j + 0.5) / size * 2 - 1;
+        const bend = Math.sin(phase + y * 3.7 + seed) * curl * 0.18;
+        const spread = 0.84 + 0.14 * y;
+        for (let i = 0; i < size; i++) {
+            const x = (i + 0.5) / size * 2 - 1;
+            const r = Math.hypot((x - bend) / spread, y);
             if (r >= 1) continue;
-            // Огибающая: широкая, к самому краю истончается; сама форма — из шума, а не из круга
-            const env = 1 - smooth(0.45, 1, r);
-            // Искажение координат вторым шумом даёт завитки вместо круглых «комков»
-            const wx = valueNoise(nx * freq * 1.6 + 7.3, ny * freq * 1.6, seed + 99) - 0.5;
-            const wy = valueNoise(nx * freq * 1.6, ny * freq * 1.6 + 3.1, seed + 131) - 0.5;
-            let n = 0, amp = 0.5, f = freq, norm = 0;
-            for (let o = 0; o < octaves; o++) {
-                n += amp * valueNoise(nx * f + wx * 2.2, ny * f + wy * 2.2, seed + o * 31);
-                norm += amp; amp *= 0.5; f *= 2;
-            }
-            const density = (n / norm) * 0.85 + env * 0.3;
-            const a = smooth(cover, cover + soft, density) * env ** 0.5 * alpha;
+            const edge = (1 - smooth(0.32, 1, r)) * (1 - smooth(0.86, 1, Math.abs(x)));
+            const nx = x * frequency, ny = y * frequency;
+            const wx = valueNoise(nx + 7.3 + flowX, ny + flowY, seed + 99) - 0.5;
+            const wy = valueNoise(nx - flowY, ny + 3.1 + flowX, seed + 131) - 0.5;
+            const qx = nx + wx * 1.85 + flowX * 0.32;
+            const qy = ny + wy * 1.85 + flowY * 0.5;
+            const density = 0.57 * valueNoise(qx, qy, seed)
+                + 0.27 * valueNoise(qx * 2.08 - flowY, qy * 2.08, seed + 31)
+                + 0.16 * valueNoise(qx * 4.13, qy * 4.13 + flowX, seed + 62);
+            const a = smooth(threshold, threshold + softness, density + edge * 0.11) * edge * alpha;
             if (a <= 0.002) continue;
-            // Объём: середина светлее, края темнее
-            const shade = 0.8 + 0.35 * smooth(cover, cover + soft + 0.3, density);
-            const o4 = (j * cw + i) * 4;
-            px[o4] = Math.min(255, color[0] * shade);
-            px[o4 + 1] = Math.min(255, color[1] * shade);
-            px[o4 + 2] = Math.min(255, color[2] * shade);
-            px[o4 + 3] = a * 255 + 0.5;
+            const shade = 0.76 + 0.27 * density + 0.19 * (1 - y);
+            const offset = (j * size + i) * 4;
+            pixels[offset] = color[0] * shade;
+            pixels[offset + 1] = color[1] * shade;
+            pixels[offset + 2] = color[2] * shade;
+            pixels[offset + 3] = a * 255;
         }
     }
-    ctx.putImageData(img, 0, 0);
-    return canvas;
+}
+
+const puffAtlases = new WeakMap();
+
+/** Fixed-resolution, seamless puff loops. Every particle uses a frame of the same Pixi texture source. */
+export function bakePuffAtlas(style) {
+    const cached = puffAtlases.get(style);
+    if (cached) return cached;
+
+    const size = 96, columns = 8, framesPerLoop = 24;
+    const seeds = [8, 29];
+    const canvas = makeCanvas(size * columns, size * framesPerLoop * seeds.length / columns);
+    const ctx = canvas.getContext('2d');
+    const tile = ctx.createImageData(size, size);
+    const loops = seeds.map((seed, loop) => Array.from({ length: framesPerLoop }, (_, frame) => {
+        const index = loop * framesPerLoop + frame;
+        const x = index % columns * size, y = Math.floor(index / columns) * size;
+        paintPuff(tile.data, size, style, seed, frame * 2 * Math.PI / framesPerLoop);
+        ctx.putImageData(tile, x, y);
+        return { x, y, width: size, height: size };
+    }));
+    const atlas = { canvas: finalize(canvas), loops };
+    puffAtlases.set(style, atlas);
+    return atlas;
 }
 
 /** Размытие готового рисунка (CSS filter: blur / тень). Если браузер не умеет ctx.filter — рисунок остаётся как есть. */
@@ -235,7 +268,7 @@ function blurred(source, filter, pad) {
 export function bakeSprite(spec, w, h, res) {
     const round = spec.round ?? true;
     const radius = spec.radius ?? 0;
-    const body = spec.noise ? bakeNoiseBody(w, h, res, spec.noise) : bakeBody(w, h, res, spec);
+    const body = bakeBody(w, h, res, spec);
     const blur = spec.blur ?? 0;
     const hue = spec.hue ?? 0;
     const glows = [].concat(spec.glow ?? []);

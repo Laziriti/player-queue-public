@@ -6,6 +6,7 @@ import {
     MODULE_ID, FALLBACK_AVATAR, getPriorityData, setting, priorityTooltip, priorityIconUrl, queueItemLabel,
     prefersReducedMotion
 } from './queue-constants.js';
+import { readLocalJSON, writeLocalJSON } from '../utils/local-storage.js';
 
 const POSITION_KEY = `${MODULE_ID}-position`;
 const KEY_STEP = 10;
@@ -74,23 +75,6 @@ class QueueWidget {
         this.element?.remove();
     }
 
-    // ── Position persistence ──
-
-    #loadPosition() {
-        try {
-            const saved = localStorage.getItem(POSITION_KEY);
-            return saved ? JSON.parse(saved) : null;
-        } catch {
-            return null;
-        }
-    }
-
-    #savePosition(x, y) {
-        try {
-            localStorage.setItem(POSITION_KEY, JSON.stringify({ x, y }));
-        } catch {}
-    }
-
     // ── Element ──
 
     #create(compact) {
@@ -105,7 +89,7 @@ class QueueWidget {
         el.style.setProperty('--queue-size', setting('queueSize') + 'px');
         el.style.setProperty('--queue-max-items', setting('queueMaxItems'));
 
-        const savedPos = this.#loadPosition();
+        const savedPos = readLocalJSON(POSITION_KEY);
         if (savedPos) {
             el.style.position = 'fixed';
             el.style.left = Math.min(Math.max(0, savedPos.x), window.innerWidth  - 60) + 'px';
@@ -203,8 +187,8 @@ class QueueWidget {
     }
 
     #persistPosition(element) {
-        const r = element.getBoundingClientRect();
-        this.#savePosition(r.left, r.top);
+        const { left: x, top: y } = element.getBoundingClientRect();
+        writeLocalJSON(POSITION_KEY, { x, y });
     }
 
     // ── Compact mode: one badge with the count and the priority of the first entry ──

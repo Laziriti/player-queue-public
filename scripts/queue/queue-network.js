@@ -5,16 +5,11 @@
 // and get the result back through the world setting `queueState` (onChange).
 // ============================================================
 
-import { MODULE_ID, ACTION_COOLDOWN_MS, MIN_REMOTE_INTERVAL_MS, VALID_PRIORITIES, setting } from './queue-constants.js';
+import { MODULE_ID, ACTION_COOLDOWN_MS, MIN_REMOTE_INTERVAL_MS, VALID_PRIORITIES } from './queue-constants.js';
 import { QueueModel } from './queue-model.js';
 
-const DEBUG = false;
-function log(...args) {
-    if (DEBUG) console.log('[PlayerQueue]', ...args);
-}
-
-/** Thrown by the host when a committed state could not be saved (the local state is rolled back first). */
 class PersistError extends Error {}
+class HostChangedError extends Error {}
 
 /** Failures worth telling the player about: the click did nothing and trying again may help. */
 const RETRYABLE_REASONS = new Set(['not-host', 'not-ready', 'error']);
@@ -91,12 +86,11 @@ class QueueNetwork {
         const user = game.users.get(sender);
         if (!user || !req || typeof req !== 'object') return { ok: false, reason: 'invalid' };
 
-        log('request:', req, 'from', sender);
-
         try {
             return await this.#dispatch(req, user, sender);
         } catch (error) {
             if (error instanceof PersistError) return { ok: false, reason: 'error' };
+            if (error instanceof HostChangedError) return { ok: false, reason: 'not-host' };
             throw error;
         }
     }
@@ -153,16 +147,14 @@ class QueueNetwork {
         const { model } = this.#controller;
 
         const run = async () => {
+            if (!this.isHost) throw new HostChangedError();
             const draft = model.createDraft();
             if (!fn(draft)) return false;
 
             const state = model.nextState(draft, last);
-            this.#controller.applyState(state);
-            if (!await this.#persist(state)) {
-                // Nobody else ever saw this state: go back to what is saved so this client does not diverge from the rest
-                this.#controller.applyState(QueueModel.normalize(setting('queueState')));
-                throw new PersistError('queue state was not saved');
-            }
+            await this.#persist(state);
+            // Foundry may have already delivered the setting's onChange.
+            if (model.rev < state.rev) this.#controller.applyState(state);
             return true;
         };
 
@@ -171,14 +163,12 @@ class QueueNetwork {
         return result;
     }
 
-    /** @returns {Promise<boolean>} whether the state was saved */
     async #persist(state) {
         try {
             await game.settings.set(MODULE_ID, 'queueState', structuredClone(state));
-            return true;
         } catch (error) {
             console.error('[PlayerQueue] Error saving queue state:', error);
-            return false;
+            throw new PersistError('Queue state could not be saved', { cause: error });
         }
     }
 }

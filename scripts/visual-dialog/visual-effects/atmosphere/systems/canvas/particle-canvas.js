@@ -9,6 +9,7 @@
 // ============================================================
 
 import { ParticleRenderer } from './renderer.js';
+import { observeParticleNameplates } from './particle-nameplates.js';
 
 // Холст не больше ~12 млн пикселей (нативный 4K с запасом на то, что контейнер шире экрана на 3–5%): это до 48 МБ на слой.
 // Выше разрешение понижается; пока предел не достигнут, холст рисуется в точности 1:1 к пикселям экрана — иначе браузер растягивает
@@ -16,7 +17,7 @@ import { ParticleRenderer } from './renderer.js';
 const MAX_CANVAS_PIXELS = 12e6;
 // Адреса картинок воркер разрешал бы от адреса своего скрипта, а не страницы (в Foundry это 404): делаем их абсолютными здесь
 const absolute = url => new URL(url, document.baseURI).href;
-const WORKER_URL =new URL('./particle-worker.js', import.meta.url);
+const WORKER_URL = new URL('./particle-worker.js', import.meta.url);
 
 /** Пикселей на css px: не больше 2 и так, чтобы холст контейнера не превышал MAX_CANVAS_PIXELS */
 function pickRes(container) {
@@ -37,14 +38,22 @@ export class CanvasParticles {
      * @param {HTMLElement} back      контейнер под персонажами (.vn-particles)
      * @param {HTMLElement|null} front  контейнер над персонажами (.vn-particles-upper) или null
      * @param {object} [opts]  { overlay } — оверлей сцены: его класс vn-vfx-dream замедляет частицы до 20 с на круг;
-     *   { wind } — ветер -5…5, { gusts } — порывами (иначе ровный); { parallax } — частицы с глубиной сдвигаются за мышью
+     *   { wind } — ветер -10…10, { gusts } — порывами (иначе ровный); { parallax } — частицы с глубиной сдвигаются за мышью
+     *   { wrap } — перенос через боковые края (по умолчанию включён)
      */
     constructor(back, front = null, opts = {}) {
         this.res = pickRes(back);
         this.overlay = opts.overlay ?? null;
         this.wind = opts.wind ?? 0;
+        this.wrap = opts.wrap !== false;
         this.gusts = opts.gusts !== false;
         this.parallax = !!opts.parallax;
+        this.scale = opts.scale ?? 1;
+        this.opacity = opts.opacity ?? 100;
+        this.solidTexture = opts.solidTexture ?? false;
+        this.tempo = opts.tempo ?? 1;
+        this.tintColor = opts.tintColor ?? '#ffffff';
+        this.tintStrength = opts.tintStrength ?? 0;
         this.layers = { back: { container: back } };
         if (front) this.layers.front = { container: front };
         for (const layer of Object.values(this.layers)) this.#placeCanvas(layer);
@@ -77,13 +86,40 @@ export class CanvasParticles {
         this.scene.items.push({ t: 's', k: kindId, p, l: layer });
     }
 
-    setGhostImages(images) { this.scene.ghost = { images: (images ?? []).map(absolute) }; }
+    setGhosts(images, variant, count) { this.scene.ghost = { images: images.map(absolute), variant, count }; }
 
     /** Ветер -5…5 (плюс — вправо), порывами или ровный: рисовальщик плавно переходит к новому значению */
     setWind(level, gusts = true) {
         this.wind = level;
         this.gusts = gusts;
         this.#post({ type: 'wind', level, gusts });
+    }
+
+    setAppearance(scale, opacity, tintColor = this.tintColor, tintStrength = this.tintStrength,
+        solidTexture = this.solidTexture) {
+        if (this.solidTexture !== solidTexture) {
+            this.solidTexture = solidTexture;
+            this.#post({ type: 'solid-texture', enabled: solidTexture });
+        }
+        if (this.scale !== scale) {
+            this.scale = scale;
+            this.#post({ type: 'scale', scale });
+        }
+        if (this.opacity !== opacity) {
+            this.opacity = opacity;
+            for (const { canvas } of Object.values(this.layers)) canvas.style.opacity = opacity / 100;
+        }
+        if (this.tintColor !== tintColor || this.tintStrength !== tintStrength) {
+            this.tintColor = tintColor;
+            this.tintStrength = tintStrength;
+            this.#post({ type: 'tint', color: tintColor, strength: tintStrength });
+        }
+    }
+
+    setTempo(tempo) {
+        if (this.tempo === tempo) return;
+        this.tempo = tempo;
+        this.#post({ type: 'tempo', tempo });
     }
 
     addVapor(n) { this.scene.items.push({ t: 'v', n, l: 'back' }); }
@@ -101,7 +137,10 @@ export class CanvasParticles {
         let started = false;
         if (canWorker) {
             try { this.#startWorker(); started = true; }
-            catch (err) { console.warn('player-queue | particle worker unavailable, drawing on the main thread', err); }
+            catch (err) {
+                console.warn('player-queue | particle worker unavailable, drawing on the main thread', err);
+                this.#resetRenderer();
+            }
         }
         if (!started) this.#startLocal();
         this.#observe();
@@ -110,6 +149,7 @@ export class CanvasParticles {
     #placeCanvas(layer) {
         layer.canvas = document.createElement('canvas');
         layer.canvas.className = 'vn-particles-canvas';
+        layer.canvas.style.opacity = this.opacity / 100;
         layer.container.appendChild(layer.canvas);
     }
 
@@ -120,7 +160,9 @@ export class CanvasParticles {
     #init(canvases) {
         return {
             type: 'init', scene: this.scene, res: this.res, vh: window.innerHeight / 100, vw: window.innerWidth / 100,
-            sizes: this.#sizes(), override: this.#override(), wind: this.wind, gusts: this.gusts, canvases,
+            sizes: this.#sizes(), override: this.#override(), wind: this.wind, gusts: this.gusts, wrap: this.wrap,
+            scale: this.scale, tempo: this.tempo, solidTexture: this.solidTexture,
+            tintColor: this.tintColor, tintStrength: this.tintStrength, canvases,
         };
     }
 
@@ -144,35 +186,61 @@ export class CanvasParticles {
 
     #startWorker() {
         const canvases = Object.fromEntries(Object.entries(this.layers).map(([name, l]) => [name, l.canvas.transferControlToOffscreen()]));
-        this.worker = new Worker(WORKER_URL, { type: 'module' });
-        this.worker.onmessage = e => this.#onReply(e.data);
-        this.worker.onerror = e => {
-            console.warn('player-queue | particle worker failed, drawing on the main thread', e.message);
-            this.#fallbackToLocal();
+        const worker = this.worker = new Worker(WORKER_URL, { type: 'module' });
+        worker.onmessage = e => {
+            if (this.worker === worker) this.#onReply(e.data);
         };
-        this.worker.postMessage(this.#init(canvases), Object.values(canvases));
+        worker.onerror = e => {
+            if (this.worker === worker) this.#renderFailed(e.message);
+        };
+        worker.postMessage(this.#init(canvases), Object.values(canvases));
     }
 
     #startLocal() {
-        this.renderer = new ParticleRenderer(msg => this.#onReply(msg));
-        this.renderer.handle(this.#init(Object.fromEntries(Object.entries(this.layers).map(([name, l]) => [name, l.canvas]))));
+        const renderer = this.renderer = new ParticleRenderer(msg => {
+            if (this.renderer === renderer) this.#onReply(msg);
+        });
+        renderer.handle(this.#init(Object.fromEntries(Object.entries(this.layers).map(([name, l]) => [name, l.canvas]))));
     }
 
     /** Канвас, отданный воркеру, назад не вернуть: заменяем его новым и рисуем на главном потоке */
     #fallbackToLocal() {
+        this.#resetRenderer();
+        this.#startLocal();
+        this.#repeatFreeze();
+    }
+
+    #resetRenderer() {
         this.worker?.terminate();
         this.worker = null;
+        this.renderer?.handle({ type: 'destroy' });
+        this.renderer = null;
         for (const layer of Object.values(this.layers)) {
             const old = layer.canvas;
             this.#placeCanvas(layer);
             old.remove();
         }
-        this.#startLocal();
+    }
+
+    #renderFailed(reason, contextLost) {
+        if (this.worker) {
+            console.warn('player-queue | Pixi particle worker failed, drawing on the main thread', reason);
+            this.#fallbackToLocal();
+        } else if (contextLost && !this.retriedLocal) {
+            this.retriedLocal = true;
+            this.#fallbackToLocal();
+        } else {
+            console.error('player-queue | Pixi particles failed', reason);
+            this.destroy();
+        }
     }
 
     #onReply(msg) {
         if (msg.type === 'frozen') { this.pendingFreeze?.(); this.pendingFreeze = null; }
         else if (msg.type === 'stats') this.stats = msg;
+        else if (msg.type === 'ready') {
+            for (const { canvas } of Object.values(this.layers)) canvas.dataset.backend = msg.backend;
+        } else if (msg.type === 'render-failed') this.#renderFailed(msg.reason, msg.contextLost);
     }
 
     #post(msg) {
@@ -217,9 +285,23 @@ export class CanvasParticles {
         this.#watchPixelRatio();
         this.#watchMouse();
         if (this.overlay) {
-            const mo = new MutationObserver(() => this.#post({ type: 'override', seconds: this.#override() }));
+            const upper = this.layers.front?.container;
+            let nameplates;
+            const syncNameplates = () => {
+                if (upper || this.overlay.classList.contains('vn-particles-fg')) {
+                    nameplates ??= observeParticleNameplates(this.overlay, this.layers.back.container, upper);
+                } else {
+                    nameplates?.disconnect();
+                    nameplates = null;
+                }
+            };
+            const mo = new MutationObserver(() => {
+                this.#post({ type: 'override', seconds: this.#override() });
+                syncNameplates();
+            });
             mo.observe(this.overlay, { attributes: true, attributeFilter: ['class'] });
-            this.observers.push(mo);
+            this.observers.push(mo, { disconnect: () => nameplates?.disconnect() });
+            syncNameplates();
         }
     }
 
@@ -229,8 +311,13 @@ export class CanvasParticles {
     freeze(ms) {
         return new Promise(resolve => {
             this.pendingFreeze = resolve;
-            this.#post({ type: 'freeze', ms });
+            this.freezeTime = ms;
+            this.#repeatFreeze();
         });
+    }
+
+    #repeatFreeze() {
+        if (this.pendingFreeze) this.#post({ type: 'freeze', ms: this.freezeTime });
     }
 
     static freezeAll(ms) {
@@ -246,6 +333,8 @@ export class CanvasParticles {
         this.worker = null;
         this.renderer = null;
         for (const layer of Object.values(this.layers)) layer.canvas.remove();
+        this.pendingFreeze?.();
+        this.pendingFreeze = null;
         CanvasParticles.instances.delete(this);
     }
 }

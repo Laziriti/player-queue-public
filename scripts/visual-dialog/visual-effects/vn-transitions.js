@@ -2,22 +2,47 @@
 // vn-transitions.js — Character & Background transitions
 // ============================================================
 
-import { VNPreloader } from '../vn-preload.js';
+import { VNPreloader } from '../media/vn-preload.js';
+import { createBackgroundVideo, releaseVideo } from '../media/vn-media-utils.js';
+import { cssUrl } from '../../utils/paths.js';
+import { VNStageTransition } from './vn-stage-transition.js';
+import { startPortraitMotion, stopPortraitMotion } from './character-fx/portrait-effects.js';
+import { ENTER_TYPES, DEFAULT_ENTRANCE, TRANSITION_TYPES, TRANSITION_SPEEDS } from './vn-transition-config.js';
 
 class VNTransitions {
 
-    static ENTER_TYPES = ['left', 'right', 'dramatic', 'shadow', 'rise'];
+    static ENTER_TYPES = ENTER_TYPES;
+    static DEFAULT_ENTRANCE = DEFAULT_ENTRANCE;
 
-    static BG_TYPES = ['dissolve', 'zoom', 'blur', 'flash', 'black', 'sweep'];
+    static resolveEntrance(value) { return this.ENTER_TYPES.includes(value) ? value : this.DEFAULT_ENTRANCE; }
+
+    static _running = new WeakMap();
+    static _characterRuns = new WeakMap();
+
+    static _start(overlay, type) {
+        this.cancel(overlay);
+        const run = new AbortController();
+        this._running.set(overlay, { run, type });
+        return run;
+    }
+
+    static _finish(overlay, run) {
+        if (this._running.get(overlay)?.run === run) this._running.delete(overlay);
+    }
+
+    static cancel(overlay) {
+        this._running.get(overlay)?.run.abort();
+        VNStageTransition.cancel(overlay);
+    }
 
     static BG_DURATIONS = {
         dissolve: 1000, zoom: 1200, blur: 1400,
-        flash: 1000, black: 1800, sweep: 1000
+        flash: 1000, black: 1800, sweep: 1000, orbit: 1400, teleport: 1500
     };
 
     static ENTER_DURATIONS = {
         left: 800, right: 800, dramatic: 1200,
-        shadow: 1000, rise: 1000
+        shadow: 1000, rise: 1000, fade: 800, drop: 1000, pop: 800
     };
 
     // ═══════════════════════════════════════════
@@ -28,15 +53,16 @@ class VNTransitions {
     // ═══════════════════════════════════════════
 
     /** 'cut' — фон меняется мгновенно, остальное как обычно. */
-    static TRANSITION_TYPES = ['dissolve', 'zoom', 'blur', 'flash', 'black', 'sweep', 'cut'];
+    static TRANSITION_TYPES = TRANSITION_TYPES;
 
-    static SPEEDS = { fast: 0.6, normal: 1, slow: 1.6 };
+    static SPEEDS = TRANSITION_SPEEDS;
 
     /**
      * «Занавесные» переходы. Когда вместе с фоном меняются и персонажи, они накрывают всю сцену слоем-занавесом
      * (см. cover()), а не только слой фона; остальные типы — плавные перетекания, там персонажи справляются сами.
      */
     static COVER_TYPES = ['flash', 'black', 'sweep'];
+    static STAGE_TYPES = ['orbit', 'teleport'];
 
     /** Доля общей длительности, которую занавес закрывается (остальное — открывается). */
     static COVER_SPLIT = { black: 0.4, flash: 0.18, sweep: 0.5 };
@@ -52,6 +78,7 @@ class VNTransitions {
         const k = this.SPEEDS[spec.speed] ?? 1;
         return {
             type,
+            direction: spec.direction === -1 ? -1 : 1,
             cover: this.COVER_TYPES.includes(type),
             bg: type === 'cut' ? 0 : Math.round(this.BG_DURATIONS[type] * k),
             exit: Math.round(this.STEP_EXIT_MS * k),
@@ -64,8 +91,14 @@ class VNTransitions {
     // Вход персонажа
     // ═══════════════════════════════════════════
 
-    static enterCharacter(charEl, type = 'auto', duration = null) {
+    static enterCharacter(charEl, type = this.DEFAULT_ENTRANCE, duration = null) {
         if (!charEl) return Promise.resolve();
+        type = this.resolveEntrance(type);
+        this._cleanAnimClasses(charEl);
+        const img = charEl.querySelector('.vn-character-img');
+        charEl.style.visibility = '';
+        if (img) img.style.opacity = '';
+        if (type === 'none' || duration === 0) return Promise.resolve();
 
         if (type === 'auto') {
             const side = charEl.closest('.vn-side');
@@ -75,27 +108,14 @@ class VNTransitions {
             else type = 'left'; // center → left entrance
         }
 
-        this._cleanAnimClasses(charEl);
-
-        const img = charEl.querySelector('.vn-character-img');
-        if (img) img.style.opacity = '0';
-
         const timed = Number.isFinite(duration);
         if (timed) this._applyTimed(charEl, duration);
         charEl.classList.add('vn-entering', `vn-entering-${type}`);
 
-        requestAnimationFrame(() => {
-            if (img) img.style.opacity = '';
-        });
-
         const ms = timed ? duration : (this.ENTER_DURATIONS[type] || 800);
 
-        return new Promise(resolve => {
-            setTimeout(() => {
-                this._cleanAnimClasses(charEl);
-                resolve();
-            }, ms + 50);
-        });
+        startPortraitMotion(charEl, type, ms);
+        return this._waitCharacter(charEl, ms + 50, true);
     }
 
     // ═══════════════════════════════════════════
@@ -110,8 +130,22 @@ class VNTransitions {
         if (timed) this._applyTimed(charEl, duration);
         charEl.classList.add('vn-exiting');
 
+        if (duration !== 0) startPortraitMotion(charEl, 'exit', timed ? duration : 600);
+        return this._waitCharacter(charEl, timed ? duration : 650, false);
+    }
+
+    static _waitCharacter(el, ms, entering) {
         return new Promise(resolve => {
-            setTimeout(resolve, timed ? duration : 650);
+            const finish = () => {
+                clearTimeout(timer);
+                this._characterRuns.delete(el);
+                resolve();
+            };
+            const timer = setTimeout(() => {
+                finish();
+                if (entering) this._cleanAnimClasses(el);
+            }, ms);
+            this._characterRuns.set(el, finish);
         });
     }
 
@@ -124,89 +158,73 @@ class VNTransitions {
      * продолжает декодироваться и держать память до сборки мусора.
      */
     static releaseVideos(root) {
-        root?.querySelectorAll?.('video').forEach(v => {
-            v.pause();
-            v.removeAttribute('src');
-            v.load();
-        });
+        const videos = [...(root?.querySelectorAll?.('video') ?? [])];
+        if (root?.matches?.('video')) videos.unshift(root);
+        videos.forEach(releaseVideo);
     }
 
-    static async switchBackground(overlayEl, newImageUrl, type = 'dissolve', duration = null) {
+    static async switchBackground(overlayEl, newImageUrl, type = 'dissolve', duration = null, isCurrent = () => true) {
         if (!overlayEl || !newImageUrl) return;
 
-        // A video background is loaded off-screen first, so the layer is never shown empty
-        const video = VNPreloader.isVideo(newImageUrl) ? await this._loadVideo(newImageUrl) : null;
+        const run = this._start(overlayEl);
+        const { signal } = run;
+        let video;
+        let promote;
+        try {
+            // Load video off-screen; the outgoing background stays visible until the incoming media is ready.
+            video = VNPreloader.isVideo(newImageUrl) ? await this._loadVideo(newImageUrl, signal) : null;
+            const oldBg = overlayEl.querySelector('.vn-bg-layer');
+            if (signal.aborted || !isCurrent() || !oldBg) return;
+            duration = duration || this.BG_DURATIONS[type] || 1000;
 
-        // A previous switch may still be running (fast stepping): finish it so layers never stack up
-        const layers = [...overlayEl.querySelectorAll('.vn-bg-layer')];
-        if (layers.length > 1) {
-            layers.slice(0, -1).forEach(layer => { this.releaseVideos(layer); layer.remove(); });
-            const newest = layers[layers.length - 1];
-            newest.className = 'vn-bg-layer';
-            newest.style.removeProperty('--vn-bg-rest');
-            newest.style.removeProperty('--vn-bg-ms');
-        }
+            const newBg = document.createElement('div');
+            newBg.className = 'vn-bg-layer vn-bg-transitioning';
+            newBg.style.visibility = 'hidden';
+            newBg.style.transform = oldBg.style.transform;
+            if (video) {
+                newBg.style.inset = '-15px';
+                newBg.appendChild(video);
+            } else newBg.style.backgroundImage = cssUrl(newImageUrl);
+            oldBg.insertAdjacentElement('afterend', newBg);
 
-        const oldBg = overlayEl.querySelector('.vn-bg-layer');
-        if (!oldBg) return;
-
-        duration = duration || this.BG_DURATIONS[type] || 1000;
-
-        const currentTransform = oldBg.style.transform || '';
-
-        const newBg = document.createElement('div');
-        newBg.className = 'vn-bg-layer';
-        if (video) newBg.appendChild(video);
-        else newBg.style.backgroundImage = `url("${newImageUrl.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`;
-        if (currentTransform) newBg.style.transform = currentTransform;
-        newBg.style.position = 'absolute';
-        newBg.style.inset = '-15px';
-        newBg.style.zIndex = '0';
-        newBg.style.backgroundSize = 'cover';
-        newBg.style.backgroundPosition = 'center';
-
-        oldBg.insertAdjacentElement('afterend', newBg);
-
-        // The look the active visual effect gives this layer. The transition keyframes animate `filter` as well, so
-        // they are built on top of it (--vn-bg-rest, see vn-fx-base.css); otherwise the effect would only snap in
-        // when the transition ends. Read it before the transition class (and its animation) is added.
-        const restFilter = getComputedStyle(newBg).filter;
-        if (restFilter && restFilter !== 'none') newBg.style.setProperty('--vn-bg-rest', restFilter);
-        newBg.style.setProperty('--vn-bg-ms', `${duration}ms`);
-        newBg.classList.add(`vn-bg-transition-${type}`);
-
-        return new Promise(resolve => {
-            let resolved = false;
-
-            const cleanup = () => {
-                if (resolved) return;
-                resolved = true;
+            promote = () => {
                 newBg.className = 'vn-bg-layer';
-                newBg.style.removeProperty('--vn-bg-rest');
-                newBg.style.removeProperty('--vn-bg-ms');
+                newBg.style.visibility = '';
                 if (oldBg.parentNode) { this.releaseVideos(oldBg); oldBg.remove(); }
-                resolve();
             };
-
-            newBg.addEventListener('animationend', cleanup, { once: true });
-            setTimeout(cleanup, duration + 200);
-        });
+            signal.addEventListener('abort', promote, { once: true });
+            try {
+                const { playPixiBackground } = await import('./vn-pixi-transitions.js');
+                if (!signal.aborted) await playPixiBackground(newBg, newImageUrl, video, type, duration, signal);
+            } catch (error) {
+                if (!signal.aborted) console.error('VN: Pixi background transition failed', error);
+            }
+        } finally {
+            if (!signal.aborted) promote?.();
+            if (video && !video.isConnected) this.releaseVideos(video);
+            this._finish(overlayEl, run);
+        }
     }
 
-    /** Same element VNBackgroundManager.applyBackground builds for a video background; resolves once data is loaded (max 2.5 s). */
-    static async _loadVideo(url) {
-        const video = Object.assign(document.createElement('video'), {
-            className: 'vn-bg-video', src: url,
-            autoplay: true, loop: true, muted: true, playsInline: true, preload: 'auto'
+    /** Same element VNSceneBackground.applyBackground builds for a video background; resolves once data is loaded (max 2.5 s). */
+    static prepareVideo(url) { return this._loadVideo(url); }
+
+    static async _loadVideo(url, signal) {
+        const video = createBackgroundVideo(url);
+        video.preload = 'auto';
+        if (!signal?.aborted) await new Promise(resolve => {
+            const listeners = new AbortController();
+            const finish = () => {
+                clearTimeout(timer);
+                listeners.abort();
+                resolve();
+            };
+            const timer = setTimeout(finish, 2500);
+            video.addEventListener('loadeddata', finish, { signal: listeners.signal });
+            video.addEventListener('error', finish, { signal: listeners.signal });
+            signal?.addEventListener('abort', finish, { signal: listeners.signal });
         });
-        video.setAttribute('playsinline', '');
-        video.setAttribute('disablepictureinpicture', '');
-        await new Promise(resolve => {
-            video.addEventListener('loadeddata', resolve, { once: true });
-            video.addEventListener('error', resolve, { once: true });
-            setTimeout(resolve, 2500);
-        });
-        video.play().catch(() => {});
+        if (!signal?.aborted) video.play().catch(() => {});
         return video;
     }
 
@@ -219,29 +237,50 @@ class VNTransitions {
      * и открывает снова. Общая длительность — `timing.bg`.
      */
     static async cover(overlayEl, timing, swap) {
+        const run = this._start(overlayEl);
+        const { signal } = run;
         const total = Math.max(timing.bg, 300);
         const msIn = Math.round(total * (this.COVER_SPLIT[timing.type] ?? 0.4));
-        const curtain = document.createElement('div');
-        curtain.className = `vn-tr-cover vn-tr-cover--${timing.type}`;
-        overlayEl.appendChild(curtain);
+        const msOut = total - msIn;
         try {
-            await this._coverPhase(curtain, 'in', msIn);
-            await swap();
-            await this._coverPhase(curtain, 'out', total - msIn);
-        } finally {
-            curtain.remove();
-        }
+            const pixi = await import('./vn-pixi-transitions.js').catch(error => {
+                if (!signal.aborted) console.error('VN: Pixi curtain failed to load', error);
+            });
+            if (signal.aborted || !overlayEl.isConnected) return;
+            if (pixi) await pixi.playPixiCover(overlayEl, timing.type, msIn, msOut, swap, signal);
+            else await swap();
+        } finally { this._finish(overlayEl, run); }
     }
 
-    static _coverPhase(curtain, phase, ms) {
-        return new Promise(resolve => {
-            curtain.style.setProperty('--vn-cover-ms', `${ms}ms`);
-            curtain.classList.remove('vn-tr-cover--in', 'vn-tr-cover--out');
-            void curtain.offsetWidth; // restart the animation for the new phase
-            curtain.classList.add(`vn-tr-cover--${phase}`);
-            curtain.addEventListener('animationend', resolve, { once: true });
-            setTimeout(resolve, ms + 80);
-        });
+    static async stage(overlay, timing, swap, media) {
+        if (timing.type === 'orbit') return VNStageTransition.run(overlay, timing, swap);
+        if (!overlay?.isConnected) return;
+        if (overlay.classList.contains('minimized') || matchMedia('(prefers-reduced-motion: reduce)').matches
+            || !document.startViewTransition || !CSS.supports('view-transition-class: vn-teleport-cast')) return swap();
+        const run = this._start(overlay, timing.type);
+        let swapped = false, swapping = false;
+        const commit = async () => {
+            swapped = swapping = true;
+            await swap();
+            swapping = false;
+        };
+        try {
+            const { playPixiTeleport } = await import('./vn-pixi-transitions.js');
+            if (!run.signal.aborted) await playPixiTeleport(overlay, timing, media, commit, run.signal);
+        } catch (error) {
+            if (swapping) throw error;
+            if (!run.signal.aborted) console.warn('VN: Pixi teleport skipped:', error.message);
+        } finally {
+            this._finish(overlay, run);
+        }
+        // The layout revision guard rejects a stale swap after navigation or close.
+        if (!swapped && overlay.isConnected) await swap();
+    }
+
+    static cancelStage(overlay) {
+        const active = this._running.get(overlay);
+        if (active?.type === 'teleport') active.run.abort();
+        VNStageTransition.cancel(overlay);
     }
 
     // ═══════════════════════════════════════════
@@ -256,13 +295,13 @@ class VNTransitions {
 
     static _cleanAnimClasses(el) {
         if (!el) return;
+        this._characterRuns.get(el)?.();
+        stopPortraitMotion(el);
         el.style.removeProperty('--vn-tr-ms');
         el.classList.remove(
             'vn-tr-timed',
             'vn-entering', 'vn-exiting',
-            'vn-entering-left', 'vn-entering-right',
-            'vn-entering-dramatic', 'vn-entering-shadow',
-            'vn-entering-rise'
+            ...this.ENTER_TYPES.map(type => `vn-entering-${type}`)
         );
     }
 }

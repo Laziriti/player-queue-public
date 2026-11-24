@@ -4,7 +4,8 @@
 
 import { PlayerQueue } from './queue/player-queue.js';
 import { ModuleSettingsApp } from './module-settings.js';
-import { NAMEPLATE_FONTS, applyNameplateImage, applyNameplateFont } from './visual-dialog/vn-nameplate.js';
+import { NAMEPLATE_FONTS, applyNameplateImage, applyNameplateFont, applyNameplateColor } from './visual-dialog/overlay/vn-nameplate.js';
+import { setPortraitFxPhaseRandomization } from './visual-dialog/visual-effects/character-fx/portrait-effects.js';
 
 // Every setting below has config:false: they are all edited in ModuleSettingsApp (scripts/module-settings.js), whose single menu button
 // is the only thing the standard Foundry settings page shows for this module.
@@ -35,10 +36,10 @@ function registerSettings() {
         hint: 'settings.queuePosition.hint',
         scope: 'client', config: false, type: String, default: 'bottom-right',
         choices: {
-            'top-left':     game.i18n.localize('settings.queuePosition.topLeft'),
-            'top-right':    game.i18n.localize('settings.queuePosition.topRight'),
-            'bottom-left':  game.i18n.localize('settings.queuePosition.bottomLeft'),
-            'bottom-right': game.i18n.localize('settings.queuePosition.bottomRight')
+            'top-left':     'settings.queuePosition.topLeft',
+            'top-right':    'settings.queuePosition.topRight',
+            'bottom-left':  'settings.queuePosition.bottomLeft',
+            'bottom-right': 'settings.queuePosition.bottomRight'
         },
         onChange: () => {
             localStorage.removeItem(`${PlayerQueue.ID}-position`);
@@ -51,8 +52,8 @@ function registerSettings() {
         hint: 'settings.queueOrientation.hint',
         scope: 'client', config: false, type: String, default: 'vertical',
         choices: {
-            vertical:   game.i18n.localize('settings.queueOrientation.vertical'),
-            horizontal: game.i18n.localize('settings.queueOrientation.horizontal')
+            vertical:   'settings.queueOrientation.vertical',
+            horizontal: 'settings.queueOrientation.horizontal'
         },
         onChange: onFloatingChange
     });
@@ -85,8 +86,8 @@ function registerSettings() {
         hint: 'settings.queueDuringScene.hint',
         scope: 'client', config: false, type: String, default: 'top',
         choices: {
-            top:  game.i18n.localize('settings.queueDuringScene.top'),
-            keep: game.i18n.localize('settings.queueDuringScene.keep')
+            top:  'settings.queueDuringScene.top',
+            keep: 'settings.queueDuringScene.keep'
         },
         onChange: () => {
             PlayerQueue.instance?.widget.rebuild();
@@ -137,6 +138,12 @@ function registerSettings() {
         scope: 'client', config: false, type: Boolean, default: true
     });
 
+    S('keepSceneEditorOpen', {
+        name: 'settings.keepSceneEditorOpen.name',
+        hint: 'settings.keepSceneEditorOpen.hint',
+        scope: 'client', config: false, type: Boolean, default: false
+    });
+
     S('darkTheme', {
         name: 'settings.darkTheme.name',
         hint: 'settings.darkTheme.hint',
@@ -163,6 +170,13 @@ function registerSettings() {
         onChange: (v) => applyNameplateFont(v)
     });
 
+    S('nameplateColor', {
+        name: 'settings.nameplateColor.name',
+        hint: 'settings.nameplateColor.hint',
+        scope: 'world', config: false, type: String, default: '',
+        onChange: (v) => applyNameplateColor(v)
+    });
+
     S('backgroundFolder', {
         scope: 'world', config: false, type: String, default: ''
     });
@@ -172,6 +186,13 @@ function registerSettings() {
         name: 'settings.thumbnailFolder.name',
         hint: 'settings.thumbnailFolder.hint',
         scope: 'world', config: false, type: String, default: ''
+    });
+
+    S('randomizePortraitFxPhase', {
+        name: 'settings.randomizePortraitFxPhase.name',
+        hint: 'settings.randomizePortraitFxPhase.hint',
+        scope: 'world', config: false, type: Boolean, default: true,
+        onChange: setPortraitFxPhaseRandomization
     });
 
     S('liteMode', {

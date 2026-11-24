@@ -38,6 +38,13 @@ export const PARTICLE_CONFIGS = {
         sizeRange: 4,
         spawn: () => ({ left: R(100), bottom: -5, delay: R(20), duration: 12 + R(18), drift: RD(60) }),
         variants: {
+            cosmic: {
+                count: 42,
+                sizeMin: 3,
+                sizeRange: 5,
+                spawn: () => ({ left: R(100), top: R(100), delay: R(18) - 14, duration: 10 + R(15), drift: RD(60), driftY: RD(50) }),
+            },
+
             // Пыль не поднимается, а медленно оседает
             settle: {
                 count: 32,
@@ -153,7 +160,7 @@ export const PARTICLE_CONFIGS = {
         images: fluffImages,
     },
 
-    // Дым: крупные клубы поднимаются, растут и тают; форму каждому даёт шум (sprite.noise в particle-canvas.js)
+    // Дым и пар поднимаются, растут и рассеиваются.
     smoke: {
         count: 30,
         sizeMin: 90,
@@ -164,7 +171,7 @@ export const PARTICLE_CONFIGS = {
                 count: 28,
                 sizeMin: 80,
                 sizeRange: 90,
-                spawn: () => ({ left: R(100), bottom: -12, delay: R(8), duration: 6 + R(6), drift: RD(120), rotation: RD(160) }),
+                spawn: size => ({ w: size * 0.72, h: size * 1.18, left: R(100), bottom: -12, delay: R(8), duration: 6 + R(6), drift: RD(88), rotation: RD(35) }),
             },
         },
     },
@@ -232,6 +239,13 @@ export const PARTICLE_CONFIGS = {
         sizeRange: 10,
         spawn: () => ({ left: R(100), bottom: -5, delay: R(15), duration: 8 + R(12), drift: RD(60) }),
         variants: {
+            abyss: {
+                count: 20,
+                sizeMin: 3,
+                sizeRange: 8,
+                spawn: () => ({ left: R(100), bottom: -5, delay: R(18), duration: 10 + R(14), drift: RD(40) }),
+            },
+
             champagne: {
                 count: 60,
                 sizeMin: 2,
@@ -246,13 +260,6 @@ export const PARTICLE_CONFIGS = {
                 spawn: () => ({ left: R(100), bottom: -5, delay: R(4), duration: 1.8 + R(2.4), drift: RD(30), rise: 35 + R(55) }),
             },
         },
-    },
-
-    dream_orbs: {
-        count: 12,
-        sizeMin: 8,
-        sizeRange: 20,
-        spawn: () => ({ left: 5 + R(90), top: 5 + R(85), delay: R(12), duration: 12 + R(16), drift: RD(80), driftY: RD(60) }),
     },
 
     ash: {
@@ -320,7 +327,22 @@ export const PARTICLE_CONFIGS = {
         sizeRange: 40,
         spawn: () => ({ left: R(100), top: R(100), delay: R(15), duration: 10 + R(15), drift: RD(40), driftY: RD(30) }),
         // Те же круги другого цвета: оттенок задаёт sprite варианта в config/particle-canvas.js
-        variants: { cool: {}, neon: {} },
+        variants: {
+            ether: {
+                count: 18,
+                sizeMin: 10,
+                sizeRange: 30,
+                spawn: () => ({ left: R(100), top: R(100), delay: R(15), duration: 12 + R(18), drift: RD(100), driftY: RD(80) }),
+            },
+
+            dream: {
+                count: 12,
+                sizeMin: 8,
+                sizeRange: 20,
+                spawn: () => ({ left: 5 + R(90), top: 5 + R(85), delay: R(12), duration: 12 + R(16), drift: RD(80), driftY: RD(60) }),
+            },
+            cool: {}, neon: {},
+        },
     },
     apocalypse_debris: {
         count: 50,
@@ -330,34 +352,16 @@ export const PARTICLE_CONFIGS = {
         images: [1, 2, 3].map(n => `${PARTICLES_PATH}/debris_apocalypse/debris_apocalypse_${n}.webp`),
     },
 
-    ether_wisps: {
-        count: 18,
-        sizeMin: 10,
-        sizeRange: 30,
-        spawn: () => ({ left: R(100), top: R(100), delay: R(15), duration: 12 + R(18), drift: RD(100), driftY: RD(80) }),
-    },
-
-    blood_motes: {
-        count: 30,
-        sizeMin: 16,
-        sizeRange: 14,
-        spawn: () => ({ left: R(100), top: -5, delay: R(15), duration: 6 + R(10), drift: RD(60) }),
-        images: [1, 2].map(n => `${PARTICLES_PATH}/blood_motes/blood_mote_${n}.webp`),
-    },
-
-    shadow_wisps: {
-        count: 22,
-        sizeMin: 3,
-        sizeRange: 8,
-        spawn: () => ({ left: R(100), bottom: R(50), delay: R(28), duration: 20 + R(22), drift: RD(70) }),
-    },
-
     glass_dust: {
         count: 25,
         sizeMin: 13,
         sizeRange: 14,
         spawn: () => ({ left: R(100), top: R(100), delay: R(14), duration: 5 + R(9), drift: RD(80), driftY: RD(60) }),
-        images: [1, 2].map(n => `${PARTICLES_PATH}/glass_dust/glass_dust_${n}.webp`),
+        images: [1, 2, 3].map(n => `${PARTICLES_PATH}/glass_dust/glass_dust_${n}.webp`),
+        motionSpawns: {
+            fall: () => ({ left: R(100), top: -8, delay: R(0.7), duration: 1.8 + R(1.4),
+                drift: RD(75), rotation: (Math.random() < 0.5 ? -1 : 1) * (360 + R(540)) }),
+        },
     },
 
     void_shards: {
@@ -368,25 +372,11 @@ export const PARTICLE_CONFIGS = {
         images: [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/void_shards/void_shard_${n}.webp`),
     },
 
-    cosmic_dust: {
-        count: 35,
-        sizeMin: 1,
-        sizeRange: 4,
-        spawn: () => ({ left: R(100), top: R(100), delay: R(20), duration: 10 + R(15), drift: RD(60), driftY: RD(50) }),
-    },
-
-    abyss_bubbles: {
-        count: 20,
-        sizeMin: 3,
-        sizeRange: 8,
-        spawn: () => ({ left: R(100), bottom: -5, delay: R(18), duration: 10 + R(14), drift: RD(40) }),
-    },
-
     sand_grains: {
-        count: 60,
+        count: 72,
         sizeMin: 1,
         sizeRange: 2,
-        spawn: (s) => ({ w: s * 3, h: s, left: -5, top: 15 + R(70), delay: R(5), duration: 1.2 + R(2.5), driftY: RD(25) }),
+        spawn: (s) => ({ w: s * 3, h: s, left: -5, top: R(100), delay: R(5), duration: 1.2 + R(2.5), driftY: RD(25) }),
         variants: {
             // Позёмка: песок стелется низко над землёй, длинными быстрыми штрихами
             ground: {
@@ -414,7 +404,8 @@ export const PARTICLE_CONFIGS = {
     // (хвост и туман рисует canvas/ghosts.js)
     ghosts: {
         count: 42,
-        images: [1, 2].map(n => `${PARTICLES_PATH}/ghosts/ghost_${n}.webp`),
+        maxCount: 240,
+        images: [1, 2, 3, 4].map(n => `${PARTICLES_PATH}/ghosts/ghost_${n}.webp`),
     },
 
     feathers: {
@@ -445,32 +436,14 @@ export const PARTICLE_CONFIGS = {
     // (поднимаются вверх с покачиванием, а не падают вниз)
     balloons: {
         count: 9,
-        sizeMin: 34,
+        sizeMin: 50,
         sizeRange: 26,
         spawn: (s) => ({ w: s, h: s * 1.25, left: R(100), bottom: -10, delay: R(18), duration: 16 + R(14), drift: RD(120) }),
         images: [1, 2, 3, 4, 5, 6].map(n => `${PARTICLES_PATH}/balloons/balloon_${n}.webp`),
     },
 
-    // Кометы — летят по диагонали вниз-влево. Хвост нарисован в самой
-    // картинке (comet_with_trail_to_right), поворот спрайта считается
-    // через atan2 от того же --drift/--drift-y, что и движение, — угол
-    // гарантированно совпадает с траекторией (не подбирается вручную).
-    comets: {
-        count: 16,
-        sizeMin: 60,
-        sizeRange: 50,
-        spawn: (s) => {
-            const dx = -(900 + R(600));
-            const dy = 650 + R(400);
-            const rotation = Math.atan2(dy, dx) * 180 / Math.PI;
-            return { w: s, h: s * 0.45, left: 45 + R(55), top: -8 + R(12), delay: R(9), duration: 1.2 + R(1), drift: dx, driftY: dy, rotation };
-        },
-        images: [1, 2].map(n => `${PARTICLES_PATH}/comets/comet_with_trail_to_right_${n}.webp`),
-    },
-
-    // Падающие звёзды — то же самое, но летят вниз-вправо (хвост
-    // star_with_trail_to_left нарисован в другую сторону).
-    shooting_stars: {
+    // The sprite rotation and travel direction use the same displacement.
+    meteors: {
         count: 16,
         sizeMin: 60,
         sizeRange: 50,
@@ -481,5 +454,16 @@ export const PARTICLE_CONFIGS = {
             return { w: s, h: s * 0.45, left: R(55), top: -8 + R(12), delay: R(9), duration: 1.2 + R(1), drift: dx, driftY: dy, rotation };
         },
         images: [1, 2, 3].map(n => `${PARTICLES_PATH}/stars/star_with_trail_to_left_${n}.webp`),
+        variants: {
+            comets: {
+                spawn: (s) => {
+                    const dx = -(900 + R(600));
+                    const dy = 650 + R(400);
+                    const rotation = Math.atan2(dy, dx) * 180 / Math.PI;
+                    return { w: s, h: s * 0.45, left: 45 + R(55), top: -8 + R(12), delay: R(9), duration: 1.2 + R(1), drift: dx, driftY: dy, rotation };
+                },
+                images: [1, 2].map(n => `${PARTICLES_PATH}/comets/comet_with_trail_to_right_${n}.webp`),
+            },
+        },
     },
 };

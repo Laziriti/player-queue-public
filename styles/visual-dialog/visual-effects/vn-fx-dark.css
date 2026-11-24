@@ -34,7 +34,8 @@
 @property --eld-br  { syntax: '<number>'; inherits: false; initial-value: 1; }
 
 .vn-vfx-eldritch .vn-bg-layer {
-    filter: saturate(var(--eld-sat)) hue-rotate(var(--eld-hue)) brightness(var(--eld-br)) url(#vn-distort-eldritch);
+    --vn-bg-color-grade: saturate(var(--eld-sat)) hue-rotate(var(--eld-hue)) brightness(var(--eld-br));
+    --vn-bg-distortion: eldritch;
     animation: vnEldritchDistort 15s ease-in-out infinite !important;
 }
 
@@ -66,8 +67,8 @@
     overflow: hidden;
 }
 
-.vn-vfx-eldritch .vn-fx-scan::before {
-    content: '';
+.vn-vfx-eldritch .vn-fx-scan > .vn-fx-before {
+    display: block;
     position: absolute;
     top: -200px;
     left: 0;
@@ -155,7 +156,7 @@
 }
 
 .vn-vfx-dark .vn-bg-layer {
-    filter: saturate(0.3) brightness(0.7) contrast(1.1);
+    --vn-bg-color-grade: saturate(0.3) brightness(0.7) contrast(1.1);
 }
 
 .vn-vfx-dark .vn-vignette {
@@ -232,7 +233,7 @@
 }
 
 .vn-vfx-corruption .vn-bg-layer {
-    filter: saturate(0.3) contrast(1.2) brightness(0.7);
+    --vn-bg-color-grade: saturate(0.3) contrast(1.2) brightness(0.7);
     animation: vnCorruptionDistort 8s ease-in-out infinite !important;
 }
 
@@ -305,7 +306,7 @@
 }
 
 .vn-vfx-abyss .vn-bg-layer {
-    filter: saturate(0.15) brightness(0.35) contrast(1.2) hue-rotate(10deg);
+    --vn-bg-color-grade: saturate(0.15) brightness(0.35) contrast(1.2) hue-rotate(10deg);
     /* Без scale-анимации — стабильный */
 }
 
@@ -539,7 +540,7 @@
 
 /* ── Фон: приглушён, чуть холоднее ── */
 .vn-vfx-shadow_intrigue .vn-bg-layer {
-    filter: saturate(0.55) brightness(0.65) contrast(1.1);
+    --vn-bg-color-grade: saturate(0.55) brightness(0.65) contrast(1.1);
     animation: vnIntrigueBgBreath 30s ease-in-out infinite !important;
 }
 

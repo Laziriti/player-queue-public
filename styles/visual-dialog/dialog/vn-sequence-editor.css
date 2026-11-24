@@ -28,7 +28,7 @@
     gap: 3px;
     font-size: max(11px, 0.58em);
     font-weight: 700;
-    color: var(--vn-gold);
+    color: var(--vn-accent-fill);
     background: rgba(0, 0, 0, 0.65);
     padding: 1px 5px;
     border-radius: 10px;
@@ -52,9 +52,9 @@
 .vn-preset-card--seq .vn-preset-card-poster {
     border-color: rgba(235, 203, 139, 0.5);
     box-shadow:
-        3px 3px 0 0 rgba(24, 24, 34, 1),
+        3px 3px 0 0 var(--vn-bg-panel),
         3px 3px 0 1px rgba(235, 203, 139, 0.4),
-        6px 6px 0 0 rgba(24, 24, 34, 1),
+        6px 6px 0 0 var(--vn-bg-panel),
         6px 6px 0 1px rgba(235, 203, 139, 0.22);
 }
 
@@ -72,7 +72,7 @@
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+    scrollbar-color: var(--vn-border-hover) transparent;
 }
 
 /* ── Step editor ── */
@@ -90,7 +90,7 @@
 
 .vn-seqed-step {
     position: relative;
-    background: rgba(0, 0, 0, 0.18);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     transition: border-color var(--vn-transition), background var(--vn-transition), opacity var(--vn-transition);
@@ -247,7 +247,7 @@
     width: 100%;
     box-sizing: border-box;
     padding: 5px 8px;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
@@ -279,6 +279,22 @@
 
 .vn-seqed-hint { margin: 0; font-size: max(11px, 0.68em); line-height: 1.4; color: var(--vn-text-dim); }
 .vn-seqed-hint i { color: var(--vn-accent); opacity: 0.7; margin-right: 3px; }
+
+.vn-caption-editor {
+    margin: 8px 0;
+    padding: 8px;
+    border: 1px solid var(--vn-border);
+    border-radius: var(--vn-radius-sm);
+}
+.vn-caption-editor > summary { cursor: pointer; color: var(--vn-text); font-size: 0.82em; }
+.vn-caption-editor-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding-top: 10px; }
+.vn-caption-editor-fields > .vn-seqed-hint,
+.vn-caption-editor-fields > .vn-caption-editor-position,
+.vn-caption-editor-fields > .vn-caption-preview { grid-column: 1 / -1; }
+.vn-caption-editor-color { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+.vn-caption-editor-color input[type="color"] { width: 48px; height: 28px; padding: 2px; cursor: pointer; }
+.vn-caption-editor-color input:disabled { opacity: 0.4; cursor: default; }
+.vn-caption-text.vn-caption-preview { padding: 12px 16px; font-size: 18px; max-height: 160px; overflow-y: auto; }
 
 .vn-seqed-drop-hint {
     padding: 10px;

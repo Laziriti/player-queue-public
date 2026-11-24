@@ -32,7 +32,7 @@
     padding: 12px 14px;
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
-    background: rgba(0, 0, 0, 0.14);
+    background: var(--vn-inset);
 }
 
 .vn-music-head { display: flex; flex-direction: column; gap: 3px; }
@@ -59,7 +59,7 @@
 .vn-cue-drop-zone {
     flex: 1;
     min-height: 120px;
-    border: 2px dashed rgba(136, 192, 208, 0.28);
+    border: 2px dashed var(--vn-accent-dim);
     border-radius: var(--vn-radius);
     padding: 18px 12px;
     display: flex;
@@ -116,8 +116,8 @@
     align-items: center;
     gap: 12px;
     padding: 12px 12px;
-    background: linear-gradient(135deg, rgba(136, 192, 208, 0.14), rgba(136, 192, 208, 0.05));
-    border: 1px solid rgba(136, 192, 208, 0.35);
+    background: linear-gradient(135deg, var(--vn-accent-soft), var(--vn-accent-soft));
+    border: 1px solid var(--vn-accent-dim);
     border-radius: var(--vn-radius);
     font-size: 0.9em;
     color: var(--vn-text);
@@ -179,12 +179,12 @@
     align-items: center;
     gap: 10px;
     padding: 6px 8px 6px 6px;
-    background: rgba(0, 0, 0, 0.18);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     transition: border-color var(--vn-transition), background var(--vn-transition);
 }
-.vn-cue-item:hover { border-color: var(--vn-border-hover); background: rgba(0, 0, 0, 0.26); }
+.vn-cue-item:hover { border-color: var(--vn-border-hover); background: var(--vn-inset); }
 
 .vn-cue-index {
     flex: none;
@@ -203,7 +203,7 @@
 .vn-cue-label-input {
     flex: 1 1 140px;
     min-width: 0;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--vn-inset);
     border: 1px solid transparent;
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
@@ -213,7 +213,7 @@
     transition: border-color var(--vn-transition), background var(--vn-transition);
 }
 .vn-cue-label-input:hover { border-color: var(--vn-border); }
-.vn-cue-label-input:focus { border-color: var(--vn-accent); background: rgba(0,0,0,0.3); }
+.vn-cue-label-input:focus { border-color: var(--vn-accent); background: var(--vn-inset); }
 .vn-cue-label-input::placeholder { color: var(--vn-text-dim); opacity: 0.5; }
 
 .vn-cue-source {
@@ -253,7 +253,7 @@
     width: 100%;
     height: 34px;
     padding: 0 64px 0 32px;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius-sm);
     color: var(--vn-text);
@@ -271,7 +271,7 @@
     height: min(440px, 60vh);
     overflow-y: auto;
     padding: 4px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--vn-inset);
     border: 1px solid var(--vn-border);
     border-radius: var(--vn-radius);
     scrollbar-width: thin;
@@ -294,7 +294,7 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--vn-gold);
-    background: #1b1b26;
+    background: var(--vn-bg-option);
     border-bottom: 1px solid var(--vn-border);
 }
 .vn-pick-group-hdr > span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -315,8 +315,8 @@
 }
 .vn-pick-item > i { color: var(--vn-accent); opacity: 0.6; flex-shrink: 0; }
 .vn-pick-item > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-pick-item:hover { background: rgba(255, 255, 255, 0.07); }
-.vn-pick-item.selected { background: rgba(136, 192, 208, 0.15); border-color: var(--vn-accent); color: var(--vn-accent); }
+.vn-pick-item:hover { background: var(--vn-surface-hover); }
+.vn-pick-item.selected { background: var(--vn-accent-soft); border-color: var(--vn-accent); color: var(--vn-accent); }
 .vn-pick-item.selected > i { opacity: 1; }
 
 .vn-pick-empty { padding: 28px; text-align: center; color: var(--vn-text-dim); font-style: italic; }

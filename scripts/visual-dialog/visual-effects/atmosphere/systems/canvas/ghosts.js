@@ -1,9 +1,5 @@
-// ============================================================
-// canvas/ghosts.js — призраки на канвасе: души с хвостом из 13 сегментов и головой-картинкой, пар позади
-// Души идут по четырём кривым: у каждого сегмента хвоста своя задержка (0.073 с), фаза и скорость зависят от номера души.
-// ============================================================
-
-import { bakeSprite, bakeBlurredBody } from './sprites.js';
+import { bakeBlurredBody } from './sprites.js';
+import { GHOST_TRAIL_POINTS } from './pixi-ghost-trails.js';
 
 // Пути (px от левого верхнего угла сцены); тот же расчёт кривых раньше делал tools/dev/ghost-keyframes.mjs
 const PATH_DATA = {
@@ -13,9 +9,6 @@ const PATH_DATA = {
     D: 'M -450 770 C 180 795 910 685 1430 515 C 1840 380 2130 140 2420 -10',
 };
 const N = 64;
-const TAIL_SEGMENTS = 13;
-const SEGMENT_DELAY = 0.073;
-const TAIL_W = 125;
 const HEAD_BOX = { w: 48, h: 78, left: -39.84, top: -39 };
 
 const bez = (p, t) => {
@@ -50,142 +43,176 @@ function samplePath(d) {
 let paths = null;
 const getPaths = () => (paths ??= Object.fromEntries(Object.entries(PATH_DATA).map(([k, d]) => [k, samplePath(d)])));
 
-// opacity из vnGhostTravel*: 0% → 0, 10% → 1, 87% → 1, 100% → 0
-const envelope = u => (u < 0.1 ? u / 0.1 : u < 0.87 ? 1 : (1 - u) / 0.13);
+const envelope = u => Math.min(1, u / 0.10, (1 - u) / 0.13);
+const fraction = n => n - Math.floor(n);
+const trailSeconds = 0.9;
+const centerBands = 8;
+const out = { x: 0, y: 0, perspective: 1 };
 
-// Точка на пути в доле u (0…1): линейно между соседними из N+1 точек, как интерполирует CSS между ключевыми кадрами
-const out = { x: 0, y: 0, ang: 0 };
-function at(path, u) {
+// The original tracks are authored for 1920 × 1080. Scale positions and tangents to the current view.
+function distantPath(path, u, lane, view) {
     const f = u * N;
-    const i = Math.min(N - 1, f | 0);
+    const i = Math.min(N - 1, Math.floor(f));
     const k = f - i;
-    out.x = path.x[i] + (path.x[i + 1] - path.x[i]) * k;
-    out.y = path.y[i] + (path.y[i + 1] - path.y[i]) * k;
-    out.ang = path.ang[i] + (path.ang[i + 1] - path.ang[i]) * k;
+    const sx = view.W / 1920, sy = view.H / 1080;
+    out.x = (path.x[i] + (path.x[i + 1] - path.x[i]) * k) * sx;
+    out.y = (path.y[i] + (path.y[i + 1] - path.y[i]) * k + lane * 1000 - 500) * sy;
+    const angle = path.ang[i] + (path.ang[i + 1] - path.ang[i]) * k;
+    return Math.atan2(Math.sin(angle) * sy, Math.cos(angle) * sx);
 }
 
-/** Спрайты хвоста и тумана — общие для всех душ, запекаются один раз на движок. */
-// Спрайты (хвост, пар) почти не масштабируются — им хватает билинейной выборки без мип-уровней (быстро); голова-картинка уменьшается
-// в разы, поэтому для неё 'medium'. Переключение запоминаем в v.quality, чтобы не трогать свойство контекста зря.
-export function setQuality(ctx, v, quality) {
-    if (v.quality !== quality) { ctx.imageSmoothingQuality = quality; v.quality = quality; }
+// A forward-facing camera at the centre of the orbit sees the far arc nearly side-on.
+// Project the ring with x/z. The edges are closer to the camera, so the ghosts grow on either side.
+function centerPath(u, lane, orbit, view) {
+    const yaw = (u - 0.5) * 2.04;
+    const tangent = Math.tan(yaw);
+    const secant = Math.hypot(1, tangent);
+    const focal = view.W * (0.46 + orbit * 0.07);
+    const elevation = (lane - 0.5) * 1.02;
+    const bend = 0.19 + orbit * 0.09;
+    const swayPhase = u * 6 + orbit * 7;
+    out.x = view.W * 0.5 + tangent * focal;
+    out.y = view.H * (0.5 + elevation * secant - bend * (secant - 1) + Math.sin(swayPhase) * 0.024);
+    out.perspective = secant;
+    const dy = view.H * ((elevation - bend) * tangent * secant + Math.cos(swayPhase) * (0.024 * 6 / 2.04));
+    return Math.atan2(dy, focal * secant * secant);
 }
 
 export class GhostSprites {
-    constructor(res, imageUrls) {
-        const bake = res * 1.5;
-        this.res = res;
-        this.tail = [];
-        for (let t = 1; t <= TAIL_SEGMENTS; t++) {
-            const h = 36 - t * 2.15;
-            const rgba = (r, g, b, a) => `rgba(${r},${g},${b},${a})`;
-            this.tail[t] = bakeSprite({
-                gradient: {
-                    type: 'radial', shape: 'ellipse', at: [0.67, 0.5],
-                    stops: [
-                        [0, rgba(238, 241, 245, 0.67 - t * 0.035)],
-                        [0.33, rgba(194, 202, 212, 0.45 - t * 0.025)],
-                        [0.53, rgba(151, 164, 179, 0.23 - t * 0.014)],
-                        [0.74, 'transparent'],
-                    ],
-                },
-            }, TAIL_W, h, bake);
-        }
+    constructor(imageUrls) {
         this.vapor = bakeBlurredBody({
             gradient: {
                 type: 'radial', shape: 'ellipse', at: [0.65, 0.5],
                 stops: [[0, '#d0d9e261'], [0.35, '#a8b7c534'], [0.73, 'transparent']],
             },
-        }, 570, 105, 24, res);
-        this.all = () => [...this.tail.filter(Boolean), this.vapor];
-        // Головы грузятся fetch + createImageBitmap (в воркере нет Image); пока не загрузились — душа рисуется без головы
+        }, 570, 105, 24, 1);
         this.heads = [];
-        (imageUrls ?? []).forEach((url, i) => {
-            fetch(url).then(r => r.blob()).then(createImageBitmap).then(bmp => { this.heads[i] = bmp; }).catch(() => {});
+        this.abort = new AbortController();
+        imageUrls.forEach(async (url, i) => {
+            try {
+                const response = await fetch(url, { signal: this.abort.signal });
+                if (!response.ok) return;
+                const bitmap = await createImageBitmap(await response.blob());
+                if (this.abort.signal.aborted) bitmap.close();
+                else this.heads[i] = bitmap;
+            } catch {
+                // The trail still renders if a head fails to load.
+            }
         });
     }
+
+    destroy() {
+        this.abort.abort();
+        for (const bitmap of this.heads) bitmap?.close();
+    }
 }
 
-/** Пар: две размытые полосы, едущие по одному пути (одна на 6 с позади другой). */
-export class GhostVapor {
-    constructor(n, sprites) {
-        this.sprites = sprites;
-        this.lane = (n - 3.5) * 150;
-        const even = n % 2 === 1; // :nth-child(even) среди восьми
-        this.path = getPaths()[even ? 'C' : 'B'];
-        this.duration = even ? 14 : 12;
-        this.phase = -21 - n * 1.93;
+class GhostTrack {
+    constructor(n, position, variant) {
+        this.inside = variant === 'vortex_center';
+        this.lane = fraction(0.44 + n * 0.61803398875);
+        this.orbit = fraction(0.71 + n * 0.41421356237);
+        this.path = this.inside ? null : getPaths()['ABCD'[(position - 1) % 4]];
     }
 
-    draw(ctx, v) {
-        setQuality(ctx, v, 'low');
-        const spr = this.sprites.vapor, res = v.res;
-        for (const delay of [this.phase, this.phase - 6]) {
-            const u = (((v.t - delay) % this.duration) / this.duration);
-            at(this.path, u);
-            const c = Math.cos(out.ang), s = Math.sin(out.ang);
-            ctx.setTransform(c * res, s * res, -s * res, c * res, out.x * res, (out.y + this.lane) * res);
-            ctx.globalAlpha = 0.34 * envelope(u);
-            ctx.drawImage(spr.canvas, -456 - spr.padX, -52.5 - spr.padY, spr.canvas.width / res, spr.canvas.height / res);
+    sample(u, view) {
+        return this.inside ? centerPath(u, this.lane, this.orbit, view) : distantPath(this.path, u, this.lane, view);
+    }
+}
+
+export class GhostVapor extends GhostTrack {
+    constructor(n, sprites, variant) {
+        super(n, n + 1, variant);
+        this.sprites = sprites;
+        this.duration = 12 + n * 0.35;
+        this.phase = 0.35 + n * 0.23;
+    }
+
+    draw(ctx, view) {
+        const spr = this.sprites.vapor;
+        for (let i = 0; i < 2; i++) {
+            const u = fraction(view.t / this.duration + this.phase + i * 0.5);
+            const angle = this.sample(u, view);
+            const scale = view.res * (view.scale ?? 1) * Math.min(view.W / 1920, view.H / 1080) * (this.inside ? out.perspective : 1);
+            const c = Math.cos(angle) * scale, s = Math.sin(angle) * scale;
+            ctx.setTransform(c, s, -s, c, out.x * view.res, out.y * view.res);
+            ctx.globalAlpha = 0.30 * envelope(u);
+            ctx.drawImage(spr.canvas, -456 - spr.padX, -52.5 - spr.padY, spr.canvas.width, spr.canvas.height);
         }
     }
 }
 
-/** Душа: голова-картинка и 13 сегментов хвоста; каждый — на пути с задержкой 0.073 с относительно соседнего. */
-export class GhostSoul {
-    /**
-     * @param {number} n          сквозной номер души (--n)
-     * @param {number} position   номер среди душ своего слоя, с 1 (на нём в CSS держатся :nth-child)
-     * @param {number} headIndex  какая из картинок головы
-     */
-    constructor(n, position, headIndex, sprites) {
+export class GhostSoul extends GhostTrack {
+    constructor(n, position, headIndex, sprites, { variant, count }) {
+        super(n, position, variant);
         this.sprites = sprites;
         this.headIndex = headIndex;
-        this.lane = (n - 20.5) * 28;
-        this.path = getPaths()['ABCD'[(position - 1) % 4]];
-        this.phase = -17 - n * 1.379;
-
-        let size = 1, brightness = 0.84, duration = 8.1 + n * 0.047;
-        if (position % 7 === 0) { size = 1.58; brightness = 1; duration = 6.5 + n * 0.024; }
-        else if (position % 5 === 0) { size = 1.24; brightness = 0.92; duration = 7.2 + n * 0.028; }
-        else if (position % 3 === 0) { size = 0.72; brightness = 0.45; duration = 10.8 + n * 0.036; }
-        Object.assign(this, { size, brightness, duration });
+        this.phase = fraction(0.37 + n * 0.75487766625);
+        this.size = 0.72 + this.orbit * 0.85;
+        this.brightness = 0.47 + this.orbit * 0.49;
+        this.duration = 12 - this.orbit * 4.5;
+        if (this.inside) {
+            // Keep jittered slots in each band at the same angular speed so they cannot bunch up.
+            // Vary speeds between bands so neighbouring streams keep overtaking each other.
+            const band = n % centerBands;
+            const slot = Math.floor(n / centerBands);
+            const slots = Math.ceil((count - band) / centerBands);
+            const offset = (this.orbit - 0.5) * 0.64;
+            const height = fraction(0.44 + slot * 0.61803398875 + band * 0.41421356237);
+            this.lane = (band + height) / centerBands;
+            this.phase = (slot + 0.5 + offset) / slots + band * 0.61803398875;
+            this.duration = 4.2 + fraction(0.13 + band * 0.61803398875) * 2.4;
+        }
     }
 
-    draw(ctx, v) {
-        const { size, duration, brightness, lane, phase } = this;
-        const res = v.res;
-        setQuality(ctx, v, 'low');
-
-        for (let t = TAIL_SEGMENTS; t >= 1; t--) {
-            const u = (((v.t - (phase + t * SEGMENT_DELAY)) % duration) / duration);
-            const o = envelope(u) * brightness;
-            if (o <= 0.003) continue;
-            at(this.path, u);
-            const c = Math.cos(out.ang) * size, s = Math.sin(out.ang) * size;
-            const spr = this.sprites.tail[t];
-            ctx.setTransform(c * res, s * res, -s * res, c * res, out.x * res, (out.y + lane) * res);
-            ctx.globalAlpha = o;
-            ctx.drawImage(spr.canvas, -TAIL_W * 0.83, -spr.h / 2, TAIL_W, spr.h);
+    draw(ctx, view) {
+        const u = fraction(view.t / this.duration + this.phase);
+        const angle = this.sample(u, view);
+        const { x, y } = out;
+        const opacity = envelope(u) * this.brightness;
+        const screenScale = (view.scale ?? 1) * Math.max(0.6, Math.min(view.W / 1920, view.H / 1080));
+        const size = this.size * screenScale * (this.inside ? out.perspective : 1);
+        const margin = 90 * size;
+        if (x < -margin || opacity < 0.004) return;
+        if (x > view.W + margin) {
+            this.sample(Math.max(0, u - trailSeconds / this.duration), view);
+            if (out.x > view.W + margin) return;
         }
 
+        this.drawTrail(ctx.ghostTrails, view, u, screenScale);
         const img = this.sprites.heads[this.headIndex];
         if (!img) return;
-        const u = (((v.t - phase) % duration) / duration);
-        const o = envelope(u) * brightness;
-        if (o <= 0.003) return;
-        at(this.path, u);
-        setQuality(ctx, v, 'medium');
-        // Картинка нарисована «головой вверх», путь почти горизонтален: поворот на 90° вокруг центра (см. .vn-particle-ghost-head-img)
-        ctx.setTransform(res, 0, 0, res, 0, 0);
-        ctx.translate(out.x, out.y + lane);
-        ctx.rotate(out.ang);
-        ctx.translate(-15.84, 15.84 * size);
-        ctx.rotate(Math.PI / 2);
-        ctx.scale(size, size);
-        ctx.globalAlpha = o;
+        const res = view.res;
+        const c = Math.cos(angle), s = Math.sin(angle);
+        const headScale = res * size;
+        // The artwork faces up. Turn it into the direction of travel.
+        ctx.setTransform(-s * headScale, c * headScale, -c * headScale, -s * headScale,
+            (x - (c + s * size) * 15.84) * res, (y + (c * size - s) * 15.84) * res);
+        ctx.globalAlpha = opacity;
         const fit = Math.min(HEAD_BOX.w / img.width, HEAD_BOX.h / img.height);
         const w = img.width * fit, h = img.height * fit;
         ctx.drawImage(img, HEAD_BOX.left + (HEAD_BOX.w - w) / 2, HEAD_BOX.top + (HEAD_BOX.h - h) / 2, w, h);
+    }
+
+    drawTrail(batch, view, u, screenScale) {
+        const { data } = batch;
+        const res = view.res;
+        let offset = batch.add();
+        for (let i = 0; i < GHOST_TRAIL_POINTS; i++) {
+            const age = i / (GHOST_TRAIL_POINTS - 1);
+            const time = Math.max(0, u - age * trailSeconds / this.duration);
+            const angle = this.sample(time, view);
+            const size = this.size * screenScale * (this.inside ? out.perspective : 1);
+            const halfWidth = (14 + 12 * Math.sin(age * Math.PI) - 11 * age) * size;
+            const dx = -Math.sin(angle) * halfWidth, dy = Math.cos(angle) * halfWidth;
+            const alpha = envelope(time) * this.brightness;
+            for (let side = -1; side <= 1; side += 2) {
+                data[offset++] = (out.x + dx * side) * res;
+                data[offset++] = (out.y + dy * side) * res;
+                data[offset++] = age;
+                data[offset++] = side;
+                data[offset++] = alpha;
+            }
+        }
     }
 }

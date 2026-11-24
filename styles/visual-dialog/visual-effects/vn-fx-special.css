@@ -27,7 +27,7 @@
 }
 
 .vn-vfx-carnival .vn-bg-layer {
-    filter: saturate(1.08) brightness(1.04) contrast(0.97);
+    --vn-bg-color-grade: saturate(1.08) brightness(1.04) contrast(0.97);
 }
 
 /* Праздничные прожекторы сверху */
@@ -250,12 +250,11 @@
    Вся сцена — проекция: циановый дуотон фона, строчная развёртка
    с бегущим лучом, сетка-пол, конус света проектора, редкие сбои
    (JS добавляет .vn-glitch-active — см. visual-fx.js).
-   Не анимируем filter у .vn-bg-layer: его читают переходы фонов (--vn-bg-rest),
    мерцание сделано отдельным слоем .vn-fx-flash.
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-hologram .vn-bg-layer {
-    filter: grayscale(0.55) sepia(0.85) hue-rotate(150deg) saturate(2.2) brightness(0.6) contrast(1.2);
+    --vn-bg-color-grade: grayscale(0.55) sepia(0.85) hue-rotate(150deg) saturate(2.2) brightness(0.6) contrast(1.2);
 }
 
 .vn-vfx-hologram .vn-fx-tint {
@@ -300,8 +299,8 @@
         linear-gradient(to bottom, rgba(5, 20, 50, 0.50) 0%, transparent 22%);
 }
 
-.vn-vfx-hologram .vn-fx-edges::before {
-    content: '';
+.vn-vfx-hologram .vn-fx-edges > .vn-fx-before {
+    display: block;
     position: absolute;
     left: -30%;
     right: -30%;
@@ -325,17 +324,26 @@
 .vn-vfx-hologram .vn-fx-scan {
     opacity: 0.6;
     overflow: hidden;
-    background: repeating-linear-gradient(to bottom, rgba(0, 18, 34, 0.55) 0 1px, transparent 1px 3px);
+    background: repeating-linear-gradient(to bottom,
+        var(--vn-hologram-scan-line, rgba(0, 18, 34, 0.55)) 0 1px, transparent 1px 3px);
 }
 
-.vn-vfx-hologram .vn-fx-scan::before {
-    content: '';
+.vn-vfx-hologram-custom-scan .vn-fx-scan {
+    --vn-hologram-scan-line: color-mix(in srgb, var(--vn-hologram-scan-color) 32%, transparent);
+    --vn-hologram-scan-beam: color-mix(in srgb, var(--vn-hologram-scan-color) 35%, transparent);
+    --vn-visual-layer-tint: none;
+    mix-blend-mode: normal;
+}
+
+.vn-vfx-hologram .vn-fx-scan > .vn-fx-before {
+    display: block;
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
     height: 22%;
-    background: linear-gradient(to bottom, transparent 0%, rgba(150, 250, 255, 0.35) 50%, transparent 100%);
+    background: linear-gradient(to bottom, transparent 0%,
+        var(--vn-hologram-scan-beam, rgba(150, 250, 255, 0.35)) 50%, transparent 100%);
     animation: vnHoloRoll 5s linear infinite;
 }
 
@@ -403,69 +411,8 @@
 }
 
 
-/* ══════════════════════════════════════════════════════════
-   KALEIDOSCOPE (Калейдоскоп)
-   Фон раскладывается на зеркальные клинья (.vn-kd-seg, строит visual-fx.js
-   внутри .vn-kd-wheel каждого .vn-bg-layer): колесо вращается целиком, картинка в клиньях слегка качается.
-   Только фон: персонажи лежат отдельными DOM-слоями выше.
-   ══════════════════════════════════════════════════════════ */
+/* KALEIDOSCOPE */
 
-/* Намеренно без filter на .vn-bg-layer: фильтр над шестью крупными анимируемыми клиньями заставляет
-   рисовать их через промежуточную поверхность, и при каждом шаге параллакса куски слоя перерисовываются
-   (на экране мелькали тёмные многоугольники) */
-
-/* Клинья полностью закрывают слой; собственный фон слоя прячем, чтобы он не просвечивал по швам */
-.vn-vfx-kaleidoscope .vn-bg-layer:has(> .vn-kd-wheel) {
-    overflow: hidden;
-    background-size: 0 0;
-}
-
-/* «Колесо» из клиньев целиком вращается в одну сторону; поворот — единственная анимация на этом уровне */
-.vn-vfx-kaleidoscope .vn-kd-wheel {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image: inherit;
-    background-size: 0 0;
-    will-change: transform;
-    animation: vnKdSpin 60s linear infinite;
-}
-
-@keyframes vnKdSpin {
-    from { rotate: 0deg; }
-    to   { rotate: 360deg; }
-}
-
-/* Клин того же размера, что и слой: центр поворота = центр кадра. Форму клина (clip-path) и --kd-zoom
-   выставляет visual-fx.js по размеру слоя */
-.vn-vfx-kaleidoscope .vn-kd-seg {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    /* Сам клин ничего не рисует (размер 0): inherit лишь передаёт url картинки слоя вниз, в .vn-kd-img */
-    background-image: inherit;
-    background-size: 0 0;
-}
-
-/* Зум задан размером бокса, а не transform: scale — анимируется только rotate, растр слоя не меняется.
-   inset в процентах считается по своей оси, поэтому бокс растёт симметрично от центра */
-.vn-vfx-kaleidoscope .vn-kd-img {
-    position: absolute;
-    inset: calc(50% * (1 - var(--kd-zoom, 1.3)));
-    background-image: inherit;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    will-change: transform;
-    animation: vnKdSway 32s ease-in-out infinite;
-}
-
-@keyframes vnKdSway {
-    0%, 100% { rotate: calc(var(--kd-sway, 6deg) * -1); }
-    50%      { rotate: var(--kd-sway, 6deg); }
-}
-
-/* Радужная вуаль, медленно вращающаяся (scale убирает углы при повороте) */
 .vn-vfx-kaleidoscope .vn-fx-tint {
     opacity: 0.35;
     scale: 1.5;
@@ -492,7 +439,7 @@
    DRUNK (Опьянение)
    Мы смотрим на сцену пьяными глазами: кадр плывёт, кренится и двоится. Степень — переменные на оверлее
    (база «Пьяный», варианты tipsy / wasted). Анимируются только свойства translate / rotate / scale и opacity:
-   transform занят параллаксом, а filter читают переходы фонов (--vn-bg-rest), поэтому «расфокус» — это не анимация
+   transform занят параллаксом, поэтому «расфокус» — это не анимация
    фильтра, а полупрозрачные копии фона (как у VHS): одна смещается, вторая заранее размыта и то проступает, то гаснет.
    Длительности простые числа секунд и не кратны друг другу, чтобы качание не складывалось в заметный ритм.
    Копии бывают только у картинки: у видеофона остаются качание и колонки.
@@ -504,23 +451,17 @@
     --dr-rot: 0.7deg;   /* крен кадра */
     --dr-base: 0.035;   /* запас масштаба, чтобы края слоя не показывались при качании и крене */
     --dr-zoom: 0.02;    /* «дыхание» масштаба */
-    --dr-split: 15px;   /* на сколько расходится двоение */
-    --dr-ghost: 0.34;   /* непрозрачность двоения */
-    --dr-blur: 5px;     /* размытие второй копии */
 }
 
 .vn-vfx-drunk-tipsy {
     --dr-x: 5px; --dr-y: 3px; --dr-rot: 0.3deg; --dr-base: 0.022; --dr-zoom: 0.01;
-    --dr-split: 7px; --dr-ghost: 0.18; --dr-blur: 3px;
 }
 
 .vn-vfx-drunk-wasted {
     --dr-x: 22px; --dr-y: 13px; --dr-rot: 1.5deg; --dr-base: 0.06; --dr-zoom: 0.04;
-    --dr-split: 34px; --dr-ghost: 0.5; --dr-blur: 9px;
 }
 
 .vn-vfx-drunk .vn-bg-layer {
-    filter: saturate(1.1) contrast(1.04);
     animation:
         vnDrunkSway 9.3s ease-in-out infinite,
         vnDrunkTilt 13.7s ease-in-out infinite,
@@ -558,48 +499,6 @@
     88%      { translate: calc(var(--dr-x) * 0.4) calc(var(--dr-y) * 0.6); }
 }
 
-.vn-vfx-drunk .vn-bg-layer::before,
-.vn-vfx-drunk .vn-bg-layer::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: inherit;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    pointer-events: none;
-    opacity: 0;
-}
-
-.vn-vfx-drunk .vn-bg-layer::before {
-    animation: vnDrunkGhostA 8.3s ease-in-out infinite;
-}
-
-.vn-vfx-drunk .vn-bg-layer::after {
-    filter: blur(var(--dr-blur));
-    animation: vnDrunkGhostB 11.9s ease-in-out infinite;
-}
-
-@keyframes vnDrunkGhostA {
-    0%, 100% { translate: 0 0;                                                   opacity: 0; }
-    25%      { translate: calc(var(--dr-split) * -1) calc(var(--dr-y) * 0.4);    opacity: var(--dr-ghost); }
-    50%      { translate: calc(var(--dr-split) * 0.6) calc(var(--dr-y) * -0.5);  opacity: calc(var(--dr-ghost) * 0.6); }
-    75%      { translate: var(--dr-split) calc(var(--dr-y) * 0.3);               opacity: var(--dr-ghost); }
-}
-
-@keyframes vnDrunkGhostB {
-    0%, 100% { translate: 0 0;                                                   opacity: 0; }
-    30%      { translate: calc(var(--dr-split) * 0.8) calc(var(--dr-y) * -0.6);  opacity: calc(var(--dr-ghost) * 1.2); }
-    55%      { translate: calc(var(--dr-split) * -1.2) calc(var(--dr-y) * 0.5);  opacity: calc(var(--dr-ghost) * 0.5); }
-    80%      { translate: calc(var(--dr-split) * 0.4) 0;                         opacity: calc(var(--dr-ghost) * 1.2); }
-}
-
-.vn-vfx-drunk .vn-bg-layer:has(> .vn-bg-video)::before,
-.vn-vfx-drunk .vn-bg-layer:has(> .vn-bg-video)::after {
-    display: none;
-}
-
-/* Тёплая муть и тяжёлая виньетка: в таверне мутно и жарко */
 .vn-vfx-drunk .vn-fx-tint {
     opacity: 1;
     background: radial-gradient(ellipse at 50% 65%, rgba(255, 185, 105, 0.10) 0%, rgba(110, 40, 60, 0.18) 100%);
@@ -612,100 +511,25 @@
 .vn-vfx-drunk .vn-fx-grain { opacity: 0.05; }
 
 
-/* ══════════════════════════════════════════════════════════
-   CUBES (Стена из кубов)
-   Фон — плоская стена, из которой выдвигаются отдельные кубы (.vn-cb, строит visual-fx.js внутри .vn-cb-wall каждого
-   .vn-bg-layer). Лицевая грань куба показывает свой кусок того же фона, поэтому в покое куб неотличим от стены.
-   Куб — коробка единичной глубины (100px), растянутая по Z свойством scale: z от 0 до --cb-k, то есть боковины
-   всегда доходят от стены до лицевой грани, а двигается всё через scale/opacity на композиторе.
-   Параллакс фона под этим эффектом отключён (parallax.js), точка схода следует за мышью (--cb-ox / --cb-oy).
-   Видеофон: JS ставит видео на паузу и кладёт его кадр в грани (--cb-frame).
-   ══════════════════════════════════════════════════════════ */
-
-.vn-cb-wall {
+.vn-pixi-background {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
     pointer-events: none;
-    perspective: 1100px;
-    perspective-origin: var(--cb-ox, 50%) var(--cb-oy, 50%);
-    /* Все кубы лежат в одном трёхмерном контексте: браузер сам решает, какой куб ближе, а не порядок в DOM или z-index.
-       Поэтому ни у .vn-cb, ни у его предков до стены нет z-index / overflow / opacity — они «сплющили» бы контекст */
-    transform-style: preserve-3d;
-    background-image: inherit;
-    background-size: 0 0;
 }
 
-.vn-cb {
-    position: absolute;
-    transform-style: preserve-3d;
-    background-image: inherit;
-    background-size: 0 0;
+.vn-pixi-background.vn-glass-pixi {
+    z-index: 3;
 }
 
-/* Тёмный проём под кубом и его тень на стене вокруг: проступают, пока куб выдвинут */
-.vn-cb-hole {
-    position: absolute;
-    inset: 0;
-    background: #060504;
-    box-shadow: 0 0 36px 14px rgba(0, 0, 0, 0.7);
-    opacity: 0;
-    animation: vnCbHole var(--cb-dur) linear var(--cb-delay) infinite;
+.vn-pixi-background.vn-quake-pixi {
+    z-index: 2;
 }
 
-.vn-cb-body {
-    position: absolute;
-    inset: 0;
-    transform-style: preserve-3d;
-    background-image: inherit;
-    background-size: 0 0;
-    scale: 1 1 0.001;
-    animation: vnCbBody var(--cb-dur) linear var(--cb-delay) infinite;
-}
-
-@keyframes vnCbBody {
-    0%, 16%   { scale: 1 1 0.001; animation-timing-function: cubic-bezier(0.25, 1.2, 0.4, 1); }
-    34%, 64%  { scale: 1 1 var(--cb-k); animation-timing-function: ease-in-out; }
-    84%, 100% { scale: 1 1 0.001; }
-}
-
-@keyframes vnCbHole {
-    0%, 16%   { opacity: 0; animation-timing-function: ease-out; }
-    34%, 64%  { opacity: 1; animation-timing-function: ease-in-out; }
-    84%, 100% { opacity: 0; }
-}
-
-/* Боковины: длина по Z — 100px локально, лежат от стены (z = 0) к лицевой грани; цвет темнеет к стене */
-.vn-cb-side {
-    position: absolute;
-    background: #14110d;
-}
-
-.vn-cb-top    { left: 0; right: 0; top: 0;    height: 100px; transform-origin: 50% 0;    transform: rotateX(90deg);  background: linear-gradient(to bottom, #0b0907, #4a4136); }
-.vn-cb-bottom { left: 0; right: 0; bottom: 0; height: 100px; transform-origin: 50% 100%; transform: rotateX(-90deg); background: linear-gradient(to top,    #060504, #241e18); }
-.vn-cb-left   { top: 0; bottom: 0; left: 0;   width: 100px;  transform-origin: 0 50%;    transform: rotateY(-90deg); background: linear-gradient(to right,  #080605, #382f27); }
-.vn-cb-right  { top: 0; bottom: 0; right: 0;  width: 100px;  transform-origin: 100% 50%; transform: rotateY(90deg);  background: linear-gradient(to left,   #080605, #382f27); }
-
-.vn-cb-front {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    transform: translateZ(100px);
-    background-image: inherit;
-    background-size: 0 0;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.45);
-}
-
-/* Кусок целого фона: слой размером с фон, смещённый JS так, что в клетке виден её участок; cover/center как у самого фона */
-.vn-cb-img {
-    position: absolute;
-    background-image: inherit;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-.vn-cb-wall.vn-cb-frame .vn-cb-img {
-    background-image: var(--cb-frame);
+#vn-scene-overlay .vn-bg-layer:has(> :is(.vn-grade-pixi, .vn-drunk-pixi, .vn-vhs-pixi)) {
+    filter: none !important;
 }
 
 .vn-vfx-cubes .vn-vignette {
@@ -742,22 +566,22 @@
     background: none;
 }
 
-.vn-vfx-ghosts-lights .vn-fx-rays::before,
-.vn-vfx-ghosts-lights .vn-fx-rays::after,
-.vn-vfx-ghosts-lights .vn-fx-edges::before {
-    content: '';
+.vn-vfx-ghosts-lights .vn-fx-rays > .vn-fx-before,
+.vn-vfx-ghosts-lights .vn-fx-rays > .vn-fx-after,
+.vn-vfx-ghosts-lights .vn-fx-edges > .vn-fx-before {
+    display: block;
     position: absolute;
     inset: 0;
     animation: vnLanternFade 19s linear infinite;
 }
 
-.vn-vfx-ghosts-lights .vn-fx-rays::before {
+.vn-vfx-ghosts-lights .vn-fx-rays > .vn-fx-before {
     background:
         radial-gradient(circle at 13% 56%, #fff3d0 0 3px, rgba(255, 200, 110, 0.9) 6px, rgba(255, 150, 60, 0.32) 24px, transparent 78px),
         radial-gradient(circle at 87% 54%, #fff3d0 0 3px, rgba(255, 200, 110, 0.9) 6px, rgba(255, 150, 60, 0.32) 24px, transparent 78px);
 }
 
-.vn-vfx-ghosts-lights .vn-fx-rays::after {
+.vn-vfx-ghosts-lights .vn-fx-rays > .vn-fx-after {
     background:
         radial-gradient(circle at 29% 43%, #fff3d0 0 2.5px, rgba(255, 200, 110, 0.85) 5px, rgba(255, 150, 60, 0.28) 20px, transparent 64px),
         radial-gradient(circle at 71% 41%, #fff3d0 0 2.5px, rgba(255, 200, 110, 0.85) 5px, rgba(255, 150, 60, 0.28) 20px, transparent 64px);
@@ -765,7 +589,7 @@
     animation-delay: -9s;
 }
 
-.vn-vfx-ghosts-lights .vn-fx-edges::before {
+.vn-vfx-ghosts-lights .vn-fx-edges > .vn-fx-before {
     background:
         radial-gradient(circle at 40% 30%, #fff3d0 0 2px, rgba(255, 200, 110, 0.8) 4px, rgba(255, 150, 60, 0.25) 16px, transparent 52px),
         radial-gradient(circle at 60% 29%, #fff3d0 0 2px, rgba(255, 200, 110, 0.8) 4px, rgba(255, 150, 60, 0.25) 16px, transparent 52px);
@@ -790,8 +614,8 @@
 }
 
 /* Туман по полу: плитка тумана плывёт вбок, маской обрезана до нижней половины кадра */
-.vn-vfx-ghosts-lights .vn-fx-edges::after {
-    content: '';
+.vn-vfx-ghosts-lights .vn-fx-edges > .vn-fx-after {
+    display: block;
     position: absolute;
     top: 0;
     left: 0;
@@ -822,11 +646,11 @@
     background: none;
 }
 
-.vn-vfx-ghosts-shadows .vn-fx-edges::before,
-.vn-vfx-ghosts-shadows .vn-fx-edges::after,
-.vn-vfx-ghosts-shadows .vn-fx-rays::before,
-.vn-vfx-ghosts-shadows .vn-fx-rays::after {
-    content: '';
+.vn-vfx-ghosts-shadows .vn-fx-edges > .vn-fx-before,
+.vn-vfx-ghosts-shadows .vn-fx-edges > .vn-fx-after,
+.vn-vfx-ghosts-shadows .vn-fx-rays > .vn-fx-before,
+.vn-vfx-ghosts-shadows .vn-fx-rays > .vn-fx-after {
+    display: block;
     position: absolute;
     top: 0;
     height: calc(100% + 640px);
@@ -839,14 +663,14 @@
     mask-composite: intersect;
 }
 
-.vn-vfx-ghosts-shadows .vn-fx-edges::before {
+.vn-vfx-ghosts-shadows .vn-fx-edges > .vn-fx-before {
     left: 0;
     width: 54%;
     transform-origin: 0 50%;
     animation: vnShadowCreep 34s linear infinite, vnShadowBreathe 7s ease-in-out infinite alternate;
 }
 
-.vn-vfx-ghosts-shadows .vn-fx-edges::after {
+.vn-vfx-ghosts-shadows .vn-fx-edges > .vn-fx-after {
     right: 0;
     width: 54%;
     transform-origin: 100% 50%;
@@ -858,8 +682,8 @@
 }
 
 /* Второй, более медленный ярус — мельче и тоньше, на слое лунного света (rays) */
-.vn-vfx-ghosts-shadows .vn-fx-rays::before,
-.vn-vfx-ghosts-shadows .vn-fx-rays::after {
+.vn-vfx-ghosts-shadows .vn-fx-rays > .vn-fx-before,
+.vn-vfx-ghosts-shadows .vn-fx-rays > .vn-fx-after {
     width: 30%;
     opacity: 0.7;
     -webkit-mask-size: 300px 460px, 100% 100%;
@@ -867,12 +691,12 @@
     height: calc(100% + 460px);
 }
 
-.vn-vfx-ghosts-shadows .vn-fx-rays::before {
+.vn-vfx-ghosts-shadows .vn-fx-rays > .vn-fx-before {
     left: 0;
     animation: vnShadowCreepSmall 46s linear infinite reverse, vnShadowBreathe 11s ease-in-out -5s infinite alternate;
 }
 
-.vn-vfx-ghosts-shadows .vn-fx-rays::after {
+.vn-vfx-ghosts-shadows .vn-fx-rays > .vn-fx-after {
     right: 0;
     -webkit-mask-image: var(--vn-tex-fog), linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);
     mask-image: var(--vn-tex-fog), linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.55) 45%, transparent 100%);

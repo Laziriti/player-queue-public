@@ -8,6 +8,9 @@
 // Файл без импортов намеренно: его читают и атмосфера, и эффекты портретов, а меню настроек собирает из реестров.
 // ============================================================
 
+import { normalizeParticleEffect, normalizeParticleFilterId } from './atmosphere/config/particle-types.js';
+import { normalizeVisualEffect } from './atmosphere/config/visual-types.js';
+
 const MODULE_ID = 'player-queue';
 
 export const FX_KINDS = ['visual', 'particle', 'charfx'];
@@ -23,24 +26,27 @@ export const FX_TIERS = ['heavy', 'medium', 'light'];
  */
 export const FX_PERF = {
     visual: {
-        heavy:  ['underwater', 'dream', 'eldritch', 'kaleidoscope', 'cubes', 'void_breach', 'earthquake', 'glass_shatter', 'cosmic_horror', 'ghosts', 'ethereal', 'apocalypse'],
-        medium: ['divine', 'sacred', 'abyss', 'fire', 'blood_moon', 'corruption', 'shadow_intrigue', 'storm', 'hologram', 'neon', 'vhs', 'sandstorm', 'frost', 'fog', 'drunk', 'candlelit', 'torchlit', 'heat'],
-        light:  ['warm', 'cold', 'moonlight', 'dark', 'carnival', 'noir', 'memory', 'dawn', 'day', 'sunset', 'dusk', 'overcast', 'windowlight', 'forest', 'cave'],
+        heavy:  ['underwater', 'dream', 'eldritch_depths', 'kaleidoscope', 'cubes', 'void_breach', 'earthquake', 'glass_shatter', 'cosmic_horror', 'ghosts', 'ethereal', 'catastrophe'],
+        medium: ['divine', 'sacred', 'fire', 'darkness', 'storm', 'rain_glass', 'hologram', 'neon', 'vhs', 'sandstorm', 'ice', 'fog', 'drunk', 'firelight', 'window_scene', 'heat', 'paper_map', 'warmth'],
+        light:  ['sky', 'monochrome', 'noir', 'memory', 'forest', 'cave'],
     },
     particle: {
-        heavy:  ['ghosts', 'shadow_wisps', 'ether_wisps', 'dream_orbs', 'bokeh', 'smoke'],
-        medium: ['sakura', 'embers', 'fireflies', 'sparks', 'divine_motes', 'eldritch_spores', 'blood_motes', 'apocalypse_debris', 'void_shards', 'cosmic_dust', 'abyss_bubbles', 'glass_dust', 'comets', 'shooting_stars', 'confetti'],
+        heavy:  ['ghosts', 'bokeh', 'smoke'],
+        medium: ['sakura', 'embers', 'fireflies', 'sparks', 'divine_motes', 'eldritch_spores', 'apocalypse_debris', 'void_shards', 'particles:cosmic', 'bubbles:abyss', 'glass_dust', 'meteors', 'confetti'],
         light:  ['particles', 'snow', 'rain', 'bubbles', 'ash', 'sand_grains', 'feathers', 'page_scraps', 'balloons', 'hail', 'leaves', 'fluff'],
     },
     charfx: {
         heavy:  ['vhs', 'glass', 'fire', 'possessed'],
-        medium: ['hologram', 'glitch', 'ghost', 'shadow', 'ice', 'noir', 'drunk', 'rage', 'holy', 'memory', 'dream', 'neon', 'xray', 'gold'],
-        light:  ['stone', 'cracked', 'invisible'],
+        medium: ['hologram', 'glitch', 'ghost', 'shadow', 'ice', 'noir', 'drunk', 'rage', 'holy', 'memory', 'dream', 'neon', 'xray', 'gold', 'arcane', 'archmage', 'orbs', 'psionic', 'reality_rift', 'marionette'],
+        light:  ['stone', 'cracked', 'invisible', 'living_engraving'],
     },
 };
 
 export function tierOf(kind, id) {
+    if (kind === 'visual') id = normalizeVisualEffect(id);
     for (const tier of FX_TIERS) if (FX_PERF[kind]?.[tier]?.includes(id)) return tier;
+    const [base, variant] = id.split(':');
+    if (variant) return tierOf(kind, base);
     return 'medium';
 }
 
@@ -52,13 +58,35 @@ function readSetting(key, fallback) {
 // Вариант, который хранится самостоятельным id, но в меню настроек входит в базовый тип
 const BASE_ALIASES = { charfx: { holy_radiant: 'holy' } };
 
-/** Отключён ли эффект на этом клиенте. Вариант («feathers:black», «noir:blinds», «holy_radiant») отбрасывается: отключается весь тип. */
+export function normalizeFxFilterKey(key) {
+    if (typeof key === 'string' && key.startsWith('visual:')) {
+        const id = normalizeVisualEffect(key.slice('visual:'.length));
+        return id === 'none' ? null : `visual:${id.split(':')[0]}`;
+    }
+    if (typeof key !== 'string' || !key.startsWith('particle:')) return key;
+    const id = normalizeParticleFilterId(key.slice('particle:'.length));
+    return id === 'none' ? null : `particle:${id}`;
+}
+
+/** Базовый фильтр отключает всё семейство. Бывшие отдельные частицы также фильтруются по варианту. */
 export function isFxDisabled(kind, id) {
     if (!id || id === 'none') return false;
+    const off = readSetting('fxDisabled', []);
+    if (!Array.isArray(off)) return false;
+    if (kind === 'particle') {
+        const [base, variant = 'all'] = normalizeParticleEffect(id).split(':');
+        return off.some(key => {
+            const normalized = normalizeFxFilterKey(key);
+            return normalized === `particle:${base}` || normalized === `particle:${base}:${variant}`;
+        });
+    }
+    if (kind === 'visual') {
+        const [base] = normalizeVisualEffect(String(id)).split(':');
+        return off.some(key => normalizeFxFilterKey(key) === `visual:${base}`);
+    }
     let base = String(id).split(':')[0];
     base = BASE_ALIASES[kind]?.[base] ?? base;
-    const off = readSetting('fxDisabled', []);
-    return Array.isArray(off) && off.includes(`${kind}:${base}`);
+    return off.includes(`${kind}:${base}`);
 }
 
 /** Потолок интенсивности частиц (1–20): выше него этот клиент не рисует, что бы ни поставил ведущий. 20 — без ограничения. */

@@ -10,7 +10,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-candlelit .vn-bg-layer {
-    filter: brightness(0.82) saturate(1.15) sepia(0.2) contrast(1.05);
+    --vn-bg-color-grade: brightness(0.82) saturate(1.15) sepia(0.2) contrast(1.05);
 }
 
 .vn-vfx-candlelit .vn-fx-tint {
@@ -26,15 +26,15 @@
     background: none;
 }
 
-.vn-vfx-candlelit .vn-fx-rays::before,
-.vn-vfx-candlelit .vn-fx-rays::after {
-    content: '';
+.vn-vfx-candlelit .vn-fx-rays > .vn-fx-before,
+.vn-vfx-candlelit .vn-fx-rays > .vn-fx-after {
+    display: block;
     position: absolute;
     inset: 0;
     will-change: opacity;
 }
 
-.vn-vfx-candlelit .vn-fx-rays::before {
+.vn-vfx-candlelit .vn-fx-rays > .vn-fx-before {
     background:
             radial-gradient(ellipse 14% 22% at 16% 76%, rgba(255, 190, 90, 0.5) 0%, rgba(255, 150, 50, 0.2) 45%, transparent 100%),
             radial-gradient(ellipse 16% 24% at 47% 82%, rgba(255, 200, 100, 0.55) 0%, rgba(255, 150, 50, 0.22) 45%, transparent 100%),
@@ -42,7 +42,7 @@
     animation: vnCandleFlickA 3.7s ease-in-out infinite;
 }
 
-.vn-vfx-candlelit .vn-fx-rays::after {
+.vn-vfx-candlelit .vn-fx-rays > .vn-fx-after {
     background:
             radial-gradient(ellipse 12% 19% at 31% 80%, rgba(255, 195, 95, 0.45) 0%, rgba(255, 145, 45, 0.18) 45%, transparent 100%),
             radial-gradient(ellipse 15% 22% at 64% 85%, rgba(255, 190, 90, 0.5) 0%, rgba(255, 145, 45, 0.2) 45%, transparent 100%),
@@ -136,7 +136,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-torchlit .vn-bg-layer {
-    filter: saturate(0.55) brightness(0.74) contrast(1.12) hue-rotate(-6deg);
+    --vn-bg-color-grade: saturate(0.55) brightness(0.74) contrast(1.12) hue-rotate(-6deg);
 }
 
 .vn-vfx-torchlit .vn-fx-tint {
@@ -152,9 +152,9 @@
     background: none;
 }
 
-.vn-vfx-torchlit .vn-fx-rays::before,
-.vn-vfx-torchlit .vn-fx-rays::after {
-    content: '';
+.vn-vfx-torchlit .vn-fx-rays > .vn-fx-before,
+.vn-vfx-torchlit .vn-fx-rays > .vn-fx-after {
+    display: block;
     position: absolute;
     top: 0;
     bottom: 0;
@@ -162,7 +162,7 @@
     will-change: opacity;
 }
 
-.vn-vfx-torchlit .vn-fx-rays::before {
+.vn-vfx-torchlit .vn-fx-rays > .vn-fx-before {
     left: 0;
     background:
             radial-gradient(ellipse 9% 12% at 14% 42%, rgba(255, 230, 150, 0.7) 0%, rgba(255, 170, 60, 0.35) 40%, transparent 100%),
@@ -170,7 +170,7 @@
     animation: vnTorchFlickL 2.9s ease-in-out infinite;
 }
 
-.vn-vfx-torchlit .vn-fx-rays::after {
+.vn-vfx-torchlit .vn-fx-rays > .vn-fx-after {
     right: 0;
     background:
             radial-gradient(ellipse 9% 12% at 86% 42%, rgba(255, 230, 150, 0.7) 0%, rgba(255, 170, 60, 0.35) 40%, transparent 100%),
@@ -256,7 +256,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-windowlight .vn-bg-layer {
-    filter: brightness(0.72) saturate(0.85) contrast(1.08) sepia(0.08);
+    --vn-bg-color-grade: brightness(0.72) saturate(0.85) contrast(1.08) sepia(0.08);
 }
 
 .vn-vfx-windowlight .vn-fx-tint {
@@ -273,8 +273,8 @@
     animation: vnWindowPulse 14s ease-in-out infinite alternate;
 }
 
-.vn-vfx-windowlight .vn-fx-rays::before {
-    content: '';
+.vn-vfx-windowlight .vn-fx-rays > .vn-fx-before {
+    display: block;
     position: absolute;
     top: -30%;
     left: -4%;
@@ -288,7 +288,7 @@
     mask-image: linear-gradient(to bottom,
             #000 0%, #000 34%, transparent 34.5%, transparent 38.5%, #000 39%, rgba(0, 0, 0, 0.55) 70%, transparent 100%);
     transform-origin: 0 0;
-    transform: rotate(-34deg) skewX(-22deg);
+    transform: var(--vn-window-transform, rotate(-34deg) skewX(-22deg));
 }
 
 @keyframes vnWindowPulse {
@@ -353,7 +353,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-forest .vn-bg-layer {
-    filter: brightness(0.8) saturate(0.95) hue-rotate(12deg) contrast(1.05);
+    --vn-bg-color-grade: brightness(0.8) saturate(0.95) hue-rotate(12deg) contrast(1.05);
 }
 
 .vn-vfx-forest .vn-fx-tint {
@@ -370,8 +370,8 @@
     animation: vnForestShafts 11s ease-in-out infinite alternate;
 }
 
-.vn-vfx-forest .vn-fx-rays::before {
-    content: '';
+.vn-vfx-forest .vn-fx-rays > .vn-fx-before {
+    display: block;
     position: absolute;
     top: 0;
     bottom: 0;
@@ -471,7 +471,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .vn-vfx-cave .vn-bg-layer {
-    filter: brightness(0.68) saturate(0.6) contrast(1.12) hue-rotate(-8deg);
+    --vn-bg-color-grade: brightness(0.68) saturate(0.6) contrast(1.12) hue-rotate(-8deg);
 }
 
 .vn-vfx-cave .vn-fx-tint {
@@ -499,8 +499,8 @@
     background: linear-gradient(to top, rgba(150, 190, 205, 0.1) 0%, transparent 35%);
 }
 
-.vn-vfx-cave .vn-fx-edges::before {
-    content: '';
+.vn-vfx-cave .vn-fx-edges > .vn-fx-before {
+    display: block;
     position: absolute;
     left: 0;
     bottom: 0;
@@ -559,3 +559,38 @@
 }
 
 .vn-vfx-cave .vn-fx-grain { opacity: 0.1; }
+
+@property --vn-stained-glass-rim {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+}
+
+.vn-vfx-stained_glass .vn-character.active:not(.vn-entering, .vn-exiting, .vn-character-hidden) {
+    animation: vnStainedGlassRim 1.8s ease-out both;
+}
+
+.vn-vfx-stained_glass .vn-character.active:not(.vn-entering, .vn-exiting, .vn-character-hidden) .vn-character-img {
+    filter: drop-shadow(-2px 0 1px var(--vn-stained-glass-rim))
+        drop-shadow(-4px 0 7px var(--vn-stained-glass-rim))
+        drop-shadow(0 0 25px var(--vn-accent-glow)) drop-shadow(0 5px 15px rgba(0, 0, 0, 0.6));
+}
+
+#vn-scene-overlay.vn-vfx-stained_glass .vn-character.active:not(.vn-entering, .vn-exiting, .vn-character-hidden)
+.vn-character-fx > .vn-fx-portrait:not(.vn-fx-portrait-plain) {
+    filter: drop-shadow(-2px 0 1px var(--vn-stained-glass-rim))
+        drop-shadow(-4px 0 7px var(--vn-stained-glass-rim)) !important;
+}
+
+@keyframes vnStainedGlassRim {
+    0%, 100% { --vn-stained-glass-rim: transparent; }
+    14% { --vn-stained-glass-rim: rgba(255, 76, 112, 0.92); }
+    49% { --vn-stained-glass-rim: rgba(245, 150, 83, 0.74); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vn-vfx-stained_glass .vn-character.active:not(.vn-entering, .vn-exiting, .vn-character-hidden) {
+        animation: none;
+        --vn-stained-glass-rim: rgba(255, 116, 111, 0.42);
+    }
+}

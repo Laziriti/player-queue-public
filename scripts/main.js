@@ -5,10 +5,12 @@
 import { PlayerQueue } from './queue/player-queue.js';
 import { registerSettings } from './settings.js';
 import { ModuleSettingsApp } from './module-settings.js';
-import { applyNameplateImage, applyNameplateFont } from './visual-dialog/vn-nameplate.js';
+import { applyNameplateImage, applyNameplateFont, applyNameplateColor } from './visual-dialog/overlay/vn-nameplate.js';
 import { VisualNovelScene } from './visual-dialog/visual-novel-scene.js';
-import { VNPresets } from './visual-dialog/vn-state.js';
-import { escapeHtml, presetScenes } from './visual-dialog/vn-id-utils.js';
+import { VNPresets } from './visual-dialog/presets/vn-presets.js';
+import { VNStore } from './visual-dialog/presets/vn-store.js';
+import { escapeHtml } from './utils/text.js';
+import { presetScenes } from './visual-dialog/presets/vn-preset-utils.js';
 
 // ============================================================
 // Scene Control Buttons
@@ -85,6 +87,10 @@ Hooks.once('socketlib.ready', () => {
     const socket = socketlib.registerModule('player-queue');
 
     PlayerQueue.socket = socket;
+    VNStore.socket = socket;
+    socket.register('vnStoreCommit', function (request) {
+        return VNStore.handleRequest(request, this?.socketdata?.userId);
+    });
 
     socket.register('playerQueueRequest', function (req) {
         return PlayerQueue.instance?.network.handleRequest(req, this?.socketdata?.userId)
@@ -116,6 +122,7 @@ Hooks.once('ready', async () => {
     }
     applyNameplateImage(nameplateValue);
     applyNameplateFont(PlayerQueue.setting('nameplateFont'));
+    applyNameplateColor(PlayerQueue.setting('nameplateColor'));
 
     // Visual Novel Scene
     const vns = new VisualNovelScene();

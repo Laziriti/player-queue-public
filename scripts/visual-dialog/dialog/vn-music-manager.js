@@ -2,11 +2,25 @@
 // vn-music-manager.js — вкладка "Музыка": фоновый трек + звуковые реплики
 // ============================================================
 
-import { parsePlaylistUuid, escapeHtml } from '../vn-id-utils.js';
+import { promptDialog } from '../../utils/dialog.js';
+import { parsePlaylistUuid } from '../media/vn-audio-utils.js';
+import { escapeHtml } from '../../utils/text.js';
 
 const loc = (key) => game.i18n.localize(key);
 
 export class VNMusicManager {
+    applyState(root, state) {
+        this.setMusic(root, state.musicUuid || null);
+        this.applyCues(root, state.soundCues || []);
+    }
+
+    readState(root) {
+        return {
+            musicUuid: root.querySelector('#vn-music-uuid')?.value || null,
+            soundCues: this.gatherCues(root),
+        };
+    }
+
     _resolveSoundFromUuid(uuid) {
         return parsePlaylistUuid(uuid)?.sound ?? null;
     }
@@ -30,30 +44,26 @@ export class VNMusicManager {
             </section>`;
         }).join('');
 
-        return new Promise(resolve => {
-            let picked = null, submitted = false;
-            const dlg = new foundry.applications.api.DialogV2({
-                window: { title: loc('vn.dialog.pickSoundTitle') },
-                classes: ['vn-confirm-dialog', 'vn-pick-dialog'],
-                position: { width: 680 },
-                content: `<div class="vn-pick-sound">
-                    <div class="vn-pick-search">
-                        <i class="fas fa-magnifying-glass"></i>
-                        <input type="text" class="vn-pick-search-input" placeholder="${loc('vn.dialog.pickSoundSearch')}" autocomplete="off" spellcheck="false">
-                        <span class="vn-pick-count">${total}</span>
-                    </div>
-                    <div class="vn-pick-list">${groups}<div class="vn-pick-empty" hidden>${loc('vn.dialog.nothingFound')}</div></div>
-                </div>`,
-                buttons: [
-                    { action: 'select', label: loc('vn.dialog.pickSoundConfirm'), icon: 'fas fa-check', default: false },
-                    { action: 'cancel', label: loc('vn.dialog.btnCancel'), icon: 'fas fa-times' },
-                ],
-                rejectClose: false,
-                submit: (action) => { submitted = true; resolve(action === 'select' ? picked : null); },
-            });
-            dlg.addEventListener('close', () => { if (!submitted) resolve(null); }, { once: true });
-
-            dlg.render({ force: true }).then(() => {
+        let picked = null;
+        return promptDialog({
+            window: { title: loc('vn.dialog.pickSoundTitle') },
+            classes: ['vn-confirm-dialog', 'vn-pick-dialog'],
+            position: { width: 680 },
+            content: `<div class="vn-pick-sound">
+                <div class="vn-pick-search">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="text" class="vn-pick-search-input" placeholder="${loc('vn.dialog.pickSoundSearch')}" autocomplete="off" spellcheck="false">
+                    <span class="vn-pick-count">${total}</span>
+                </div>
+                <div class="vn-pick-list">${groups}<div class="vn-pick-empty" hidden>${loc('vn.dialog.nothingFound')}</div></div>
+            </div>`,
+            buttons: [
+                { action: 'select', label: loc('vn.dialog.pickSoundConfirm'), icon: 'fas fa-check', default: false },
+                { action: 'cancel', label: loc('vn.dialog.btnCancel'), icon: 'fas fa-times' },
+            ],
+        }, {
+            onSubmit: action => action === 'select' ? picked : null,
+            onRender: dlg => {
                 const el = dlg.element;
                 const input = el.querySelector('.vn-pick-search-input');
                 const list = el.querySelector('.vn-pick-list');
@@ -113,7 +123,7 @@ export class VNMusicManager {
                     if (ev.target.closest('.vn-pick-item')) okBtn.click();
                 });
                 input.focus();
-            });
+            },
         });
     }
 

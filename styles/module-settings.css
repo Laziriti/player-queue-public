@@ -365,6 +365,22 @@ label.pqs-row.is-disabled {
     text-align: right;
 }
 
+.pqs-color {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pqs-color input[type="color"] {
+    width: 44px;
+    height: 32px;
+    padding: 3px;
+    border: 1px solid var(--pqs-line);
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+}
+
 /* ── сегменты ── */
 .pqs-seg {
     display: inline-flex;

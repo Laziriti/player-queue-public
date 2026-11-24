@@ -176,6 +176,19 @@
       "name": "Настройки модуля",
       "label": "Открыть настройки",
       "hint": "Очередь, звуки, камера, оформление сцен и производительность в одном окне. Изменения сохраняются сразу"
+    },
+    "nameplateColor": {
+      "name": "Цвет текста имени",
+      "hint": "Цвет имён всех персонажей на сцене. «По умолчанию» сохраняет стандартные цвета, включая выделение активного персонажа и приоритетов очереди.",
+      "defaultColor": "По умолчанию"
+    },
+    "keepSceneEditorOpen": {
+      "name": "Оставлять окно редактора открытым",
+      "hint": "Окно остаётся открытым после создания и обновления сцены. Двойной щелчок по заголовку сворачивает окно."
+    },
+    "randomizePortraitFxPhase": {
+      "name": "Разные фазы эффектов портретов",
+      "hint": "У каждого персонажа своя точка старта в цикле эффекта. Выключите, чтобы персонажи с одинаковым эффектом начинали цикл с одной фазы."
     }
   },
   "fxFilters": {
@@ -228,9 +241,8 @@
       "sizeReset": "Сброс",
       "sizeIncrease": "Увеличить",
       "sizeSettings": "Настройка",
-      "fxSettings": "Частицы, затенение и виньетка",
-      "fxSettingsHeader": "Кадр и частицы",
-      "fxSettingsFrame": "Кадр"
+      "fxSettings": "Настройки кадра",
+      "fxSettingsHeader": "Кадр"
     },
     "help": {
       "btnTitle": "Подсказка по управлению",
@@ -281,7 +293,6 @@
         "downpour": "Ливень",
         "drizzle": "Морось",
         "slanted": "Косой дождь",
-        "bloodRain": "Кровавый дождь",
         "snow": "Снег",
         "snowfall": "Снегопад",
         "flurry": "Вьюга",
@@ -294,15 +305,12 @@
         "sparkFountain": "Фонтан искр",
         "fallingSparks": "Падающие искры",
         "electric": "Электрические",
-        "greenFireflies": "Зелёные",
-        "blueFireflies": "Голубые",
-        "amberFireflies": "Янтарные",
         "embers": "Угли",
         "bonfire": "Костёр",
         "smolder": "Тлеющие",
-        "warmBokeh": "Тёплое",
-        "coolBokeh": "Холодное",
-        "neonBokeh": "Неоновое",
+        "warmBokeh": "Тёплые",
+        "coolBokeh": "Холодные",
+        "neonBokeh": "Неоновые",
         "bubbles": "Пузыри",
         "champagne": "Шампанское",
         "boiling": "Кипение",
@@ -323,7 +331,15 @@
         "windblownLeaves": "Листья на ветру",
         "smoke": "Дым",
         "steam": "Пар",
-        "warmMotes": "Тёплые пылинки"
+        "warmMotes": "Тёплые пылинки",
+        "shootingStars": "Звёзды",
+        "comets": "Кометы",
+        "cosmic": "Космическая пыль",
+        "abyss": "Глубинные пузыри",
+        "dream": "Сонные сферы",
+        "ether": "Эфирные сферы",
+        "ghostVortex": "Вихрь издалека",
+        "ghostVortexCenter": "В центре вихря"
       },
       "visualVariants": {
         "classic": "Классический",
@@ -364,10 +380,7 @@
         "fadingLights": "Гаснущие огни",
         "shadowWhispers": "Шёпот теней",
         "eyeSpiral": "Глаз и спираль",
-        "eye": "Глаз",
         "spiral": "Спираль",
-        "shardsFrame": "Осколки по кадру",
-        "crackCenter": "Трещины в центре",
         "drunk": "Пьяный",
         "tipsy": "Навеселе",
         "wasted": "В стельку",
@@ -376,7 +389,14 @@
         "fogMedium": "Туман",
         "fogLight": "Лёгкая дымка",
         "fogDense": "Плотная пелена",
-        "fogGround": "Стелющийся туман"
+        "fogGround": "Стелющийся туман",
+        "eclipseShadow": "Без солнца",
+        "eclipseSun": "С солнцем",
+        "eclipsePhase": "Управляемая фаза",
+        "entity": "Сущность",
+        "glassCrack": "Трещина",
+        "glassShards": "Разбитое стекло",
+        "glassBackground": "Разбитый фон"
       },
       "groups": {
         "basic": "Базовые",
@@ -391,7 +411,7 @@
       },
       "particles": {
         "none": "Выкл",
-        "particles": "Частицы",
+        "particles": "Пыль",
         "snow": "Снег",
         "rain": "Дождь",
         "embers": "Угли",
@@ -400,30 +420,23 @@
         "bubbles": "Пузырьки",
         "ash": "Пепел",
         "sakura": "Сакура",
-        "dream_orbs": "Сонные сферы",
         "sand_grains": "Песчинки",
-        "bokeh": "Боке",
+        "bokeh": "Светящиеся шары",
         "divine_motes": "Божественные пылинки",
-        "ether_wisps": "Эфирные вихри",
         "eldritch_spores": "Элдритч-споры",
-        "blood_motes": "Кровавые частицы",
-        "shadow_wisps": "Тени-вихри",
         "glass_dust": "Стеклянная пыль",
         "apocalypse_debris": "Обломки апокалипсиса",
         "void_shards": "Осколки пустоты",
-        "cosmic_dust": "Космическая пыль",
-        "abyss_bubbles": "Пузыри бездны",
         "confetti": "Конфетти",
         "ghosts": "Призраки",
         "feathers": "Перья",
         "page_scraps": "Обрывки страниц",
         "balloons": "Воздушные шарики",
-        "comets": "Кометы",
-        "shooting_stars": "Падающие звёзды",
         "hail": "Град",
         "leaves": "Листопад",
         "fluff": "Пух и пыльца",
-        "smoke": "Дым и пар"
+        "smoke": "Дым и пар",
+        "meteors": "Падающие звёзды"
       },
       "visual": {
         "none": "Выкл",
@@ -447,7 +460,7 @@
         "blood_moon": "🩸 Кровавая луна",
         "cosmic_horror": "🌌 Космический ужас",
         "void_breach": "🕳️ Разрыв пустоты",
-        "glass_shatter": "🪟 Разбитое стекло",
+        "glass_shatter": "🪟 Стекло",
         "carnival": "🎉 Праздник",
         "ghosts": "👻 Призраки",
         "hologram": "💠 Голограмма",
@@ -471,43 +484,60 @@
         "windowlight": "🪟 Свет из окна",
         "forest": "🌲 Лес",
         "cave": "🦇 Пещера",
-        "heat": "🌡️ Зной"
+        "heat": "🌡️ Зной",
+        "rainGlass": "Дождь на стекле",
+        "mirrorWorld": "Мир по ту сторону зеркала",
+        "eclipse": "Затмение",
+        "paperMap": "Мир становится картой",
+        "stainedGlass": "Витраж",
+        "flood": "Затопление",
+        "firelightFamily": "🔥 Свет огня",
+        "windowFamily": "🪟 Окно и витраж",
+        "iceFamily": "❄️ Мороз и иней",
+        "skyFamily": "🌅 Небо и время суток",
+        "darknessFamily": "🌑 Тёмные образы",
+        "eldritchFamily": "🐙 Элдритч и бездна",
+        "catastropheFamily": "🌋 Катастрофы",
+        "warmthFamily": "🎉 Тепло и праздник",
+        "monochrome": "◐ Монохром"
       },
-      "effects": {
-        "none": "Выкл",
-        "particles": "Частицы",
-        "snow": "Снег",
-        "rain": "Дождь",
-        "embers": "Угли",
-        "fireflies": "Светлячки",
-        "divine": "✨ Божественное",
-        "eldritch": "🐙 Элдритч",
-        "dark_ritual": "🌑 Тёмный ритуал",
-        "warm": "🔥 Тёплая атмосфера",
-        "frozen": "❄️ Мороз",
-        "storm": "⛈️ Гроза",
-        "dream": "💫 Сон",
-        "underwater": "🌊 Под водой",
-        "inferno": "🔥 Инферно",
-        "sacred": "🕊️ Священное",
-        "corruption": "💀 Порча",
-        "moonlit": "🌙 Лунный свет",
-        "sakura": "🌸 Сакура",
-        "ash_wasteland": "💨 Пепелище",
-        "apocalypse": "🌋 Апокалипсис",
-        "ethereal_plane": "🔮 Эфирный план",
-        "blood_moon": "🩸 Кровавая луна",
-        "void_breach": "🕳️ Разрыв Пустоты",
-        "cosmic_horror": "🌌 Космический Ужас",
-        "abyss": "🌊 Бездна",
-        "shadow_intrigue": "🕵️ Тени и интриги",
-        "glass_shatter": "🪟 Разбитое стекло",
-        "sandstorm": "🏜️ Песчаная буря",
-        "carnival": "🎉 Праздник",
-        "ghosts": "👻 Призраки"
+      "searchPlaceholder": "Поиск эффекта…",
+      "visualAngle": "Угол эффекта",
+      "visualAngleReset": "Сбросить угол",
+      "visualAngleHint": "Перемещает источник вдоль края экрана и поворачивает свет внутрь сцены.",
+      "particleMotion": {
+        "label": "Движение",
+        "classic": "Классическое",
+        "flutter": "Порхание",
+        "float": "Парение",
+        "fall": "Падение"
       },
-      "combosHeader": "Готовые сочетания",
-      "searchPlaceholder": "Поиск эффекта…"
+      "particleSettingsScope": {
+        "general": "Общие",
+        "effect": "Для эффекта"
+      },
+      "visualSettings": {
+        "floodLevel": "Уровень воды",
+        "eclipsePhase": "Фаза затмения",
+        "snowDepth": "Высота сугробов",
+        "floodColor": "Цвет воды",
+        "cosmicEntity": "Подтип сущности",
+        "entityEye": "Глаз",
+        "entityMouth": "Пасть",
+        "entityEyeMouth": "Глаз и пасть",
+        "monochromeAmount": "Обесцвечивание",
+        "glassCrackSize": "Длина трещин",
+        "glassShardSize": "Размер осколков",
+        "glassShardSmall": "Мелкие",
+        "glassShardMedium": "Средние",
+        "glassShardLarge": "Крупные",
+        "mirrorWorldColor": "Цвет волны и отражения",
+        "hologramScanColor": "Цвет полос развёртки"
+      },
+      "visualSettingsScope": {
+        "general": "Общие",
+        "effect": "Для эффекта"
+      }
     },
     "sounds": {
       "header": "Звуки",
@@ -525,7 +555,7 @@
       "particlesLayerBack": "За",
       "particlesLayerMix": "Вперемешку",
       "particlesLayerFront": "Перед",
-      "particleIntensity": "Интенсивность частиц",
+      "particleIntensity": "Количество",
       "currentScene": "Текущая сцена",
       "locateTitle": "Открыть папку с текущим фоном",
       "locateNotFound": "Файл текущего фона не найден в папке фонов",
@@ -559,7 +589,25 @@
       "look": "Оформление фона",
       "otherSource": "Другой источник",
       "emptyFolder": "В этой папке пока нет фонов",
-      "emptyFolderHint": "Положите сюда изображения или видео либо выберите другую папку."
+      "emptyFolderHint": "Положите сюда изображения или видео либо выберите другую папку.",
+      "particleWrap": "Перенос частиц через край",
+      "particleSettings": "Настройки частиц",
+      "particleScale": "Размер",
+      "particleOpacity": "Непрозрачность",
+      "particleTempo": "Темп",
+      "particleTintStrength": "Тонировка",
+      "visualSettings": "Настройки эффекта",
+      "visualLayerStrength": "Сила слоёв",
+      "visualLayerStrengthHint": "Управляет яркостью лучей, свечения, вспышек и других слоёв эффекта",
+      "visualBackground": "Обработка фона",
+      "visualBackgroundHint": "Применяет к фону цветокоррекцию и искажения выбранного эффекта",
+      "effectSettingsReset": "Вернуть по умолчанию",
+      "tintColor": "Цвет тонировки",
+      "visualTintStrength": "Тонировка слоёв",
+      "particleSolidTexture": "Плотная текстура",
+      "particleSolidTextureHint": "Убирает просвечивание внутри текстуры. Общая непрозрачность и плавное появление частиц действуют отдельно.",
+      "visualForeground": "Поверх портретов и частиц",
+      "visualForegroundHint": "Поднимает слои визуального эффекта над портретами и частицами, чтобы свет и текстуры смешивались с их изображением."
     },
     "io": {
       "loadError": "Ошибка загрузки пресетов из {moduleId}: {msg}",
@@ -607,12 +655,24 @@
         "acid": "Кислотный",
         "large": "Крупные осколки",
         "fine": "Мелкие осколки",
-        "crystal": "Кристалл"
+        "crystal": "Кристалл",
+        "rotating": "Вращающиеся",
+        "floating": "Парящие",
+        "mana": "Мана",
+        "elements": "Стихии",
+        "void": "Пустота"
       },
       "groups": {
-        "css": "CSS-эффекты · лёгкие",
-        "svg": "SVG-фильтры · тяжелее"
-      }
+        "stylization": "Стилизация",
+        "signal": "Искажение сигнала"
+      },
+      "arcane": "Геометрия власти",
+      "archmage": "Архимаг",
+      "orbs": "Магические сферы",
+      "psionic": "Псионик",
+      "reality_rift": "Разлом реальности",
+      "marionette": "Марионетка",
+      "living_engraving": "Живая гравюра"
     },
     "dialog": {
       "charFxTitle": "Эффект портрета: {name}",
@@ -963,7 +1023,9 @@
         "flash": "Вспышка",
         "black": "Через чёрный",
         "sweep": "Шторка",
-        "cut": "Мгновенно"
+        "cut": "Мгновенно",
+        "orbit": "Круговой поворот",
+        "teleport": "Телепортация"
       },
       "speeds": {
         "fast": "Быстро",
@@ -981,7 +1043,12 @@
       "editCancel": "Отмена правки",
       "editLost": "Шаг не найден — возможно, его удалили",
       "barNameTitle": "Название шага (пусто — автоматическое; Enter — применить, Esc — отмена)",
-      "stepMore": "Ещё действия"
+      "stepMore": "Ещё действия",
+      "btnEffectTest": "Тест эффектов",
+      "btnEffectTestTitle": "Создать составной пресет со всеми эффектами",
+      "effectTestFailed": "Не удалось создать тестовый пресет",
+      "testParticle": "Частицы · {effect}",
+      "testVisual": "Эффект сцены · {effect}"
     },
     "scenePresets": {
       "title": "Диалоги сцены: {scene}",
@@ -1007,6 +1074,49 @@
       "save": "Применить",
       "count": "Выбрано: {count}",
       "missing": "Нет в этом мире (привязка сохранена)"
+    },
+    "entrance": {
+      "title": "Появление портретов",
+      "initialEntrance": "При запуске сцены",
+      "characterEntrance": "На открытой сцене",
+      "initialEntranceHint": "Появление всех портретов при запуске сцены или пресета, в том числе с выбранного шага.",
+      "characterEntranceHint": "Появление новых портретов при изменении сцены и переходе к другому шагу пресета. Уже присутствующие персонажи не анимируются заново.",
+      "types": {
+        "none": "Без анимации",
+        "auto": "Со стороны портрета",
+        "fade": "Плавное проявление",
+        "left": "Слева",
+        "right": "Справа",
+        "rise": "Снизу",
+        "drop": "Сверху",
+        "pop": "С увеличением",
+        "dramatic": "Драматичное",
+        "shadow": "Из тени"
+      }
+    },
+    "captionStyle": {
+      "title": "Оформление текста",
+      "box": "Вид поля",
+      "font": "Шрифт",
+      "defaultFont": "Шрифт интерфейса",
+      "color": "Цвет текста",
+      "customColor": "Свой цвет текста",
+      "inherit": "По пресету",
+      "preview": "История начинается с одной встречи…",
+      "presetHint": "Общее оформление для всех шагов. Без своего цвета текст подстраивается под вид поля.",
+      "stepHint": "Параметры «По пресету» и цвет без галочки наследуются от составного пресета.",
+      "boxes": {
+        "dark": "Тёмная панель",
+        "glass": "Стекло",
+        "parchment": "Пергамент",
+        "frame": "Рамка",
+        "none": "Без подложки"
+      },
+      "position": "Положение текста",
+      "positions": {
+        "bottom": "Снизу",
+        "top": "Сверху, под панелями"
+      }
     }
   },
   "settingsApp": {
@@ -1021,8 +1131,8 @@
         "desc": "Оповещения, когда кто-то поднимает руку. Только на вашем компьютере"
       },
       "camera": {
-        "title": "Камера и параллакс",
-        "desc": "Как двигаются фон и камера в диалоговой сцене. Только на вашем компьютере"
+        "title": "Диалоговые сцены",
+        "desc": "Камера, параллакс и окно редактора. Только на вашем компьютере"
       },
       "look": {
         "title": "Оформление сцен",
@@ -1040,7 +1150,8 @@
       "priorities": "Звук по приоритетам",
       "plate": "Имена на сцене",
       "characters": "Персонажи",
-      "files": "Файлы"
+      "files": "Файлы",
+      "sceneEditor": "Редактор сцены"
     },
     "autosave": "Изменения сохраняются сразу",
     "saved": "Сохранено",

@@ -62,13 +62,14 @@
                     transparent 340deg,
                     transparent 360deg
             );
-    animation: vnDivineRaysRotate 120s linear infinite;
+    transform-origin: 50% -10%;
+    animation: vnDivineRaysSway 12s ease-in-out infinite alternate;
     filter: blur(8px);
 }
 
-@keyframes vnDivineRaysRotate {
-    from { transform: rotate(0deg) scale(2); }
-    to   { transform: rotate(360deg) scale(2); }
+@keyframes vnDivineRaysSway {
+    from { transform: rotate(-2deg); }
+    to   { transform: rotate(2deg); }
 }
 
 .vn-vfx-divine .vn-fx-edges {
@@ -142,7 +143,7 @@
 }
 
 .vn-vfx-warm .vn-bg-layer {
-    filter: saturate(1.1) brightness(1.02) sepia(0.08);
+    --vn-bg-color-grade: saturate(1.1) brightness(1.02) sepia(0.08);
 }
 
 .vn-vfx-warm .vn-vignette {
@@ -194,7 +195,7 @@
 }
 
 .vn-vfx-cold .vn-bg-layer {
-    filter: saturate(0.6) brightness(0.9) contrast(1.05) hue-rotate(-5deg);
+    --vn-bg-color-grade: saturate(0.6) brightness(0.9) contrast(1.05) hue-rotate(-5deg);
 }
 
 .vn-vfx-cold .vn-fx-edges {
@@ -256,7 +257,8 @@
 }
 
 .vn-vfx-dream .vn-bg-layer {
-    filter: saturate(0.8) brightness(0.95) contrast(0.9) blur(0.5px) url(#vn-distort-dream);
+    --vn-bg-color-grade: saturate(0.8) brightness(0.95) contrast(0.9) blur(0.5px);
+    --vn-bg-distortion: dream;
 }
 
 .vn-vfx-dream .vn-fx-edges {
@@ -391,7 +393,7 @@
 }
 
 .vn-vfx-ethereal .vn-bg-layer {
-    filter: saturate(0.5) brightness(0.8) contrast(0.9);
+    --vn-bg-color-grade: saturate(0.5) brightness(0.8) contrast(0.9);
     animation: vnEtherealBg 12s ease-in-out infinite !important;
 }
 
@@ -627,7 +629,8 @@
    она то подступает, то отхлынывает. */
 
 .vn-vfx-dream-nightmare .vn-bg-layer {
-    filter: saturate(0.55) brightness(0.55) contrast(1.28) hue-rotate(-18deg) url(#vn-distort-eldritch);
+    --vn-bg-color-grade: saturate(0.55) brightness(0.55) contrast(1.28) hue-rotate(-18deg);
+    --vn-bg-distortion: eldritch;
 }
 
 .vn-vfx-dream-nightmare .vn-fx-tint {
@@ -682,7 +685,8 @@
    Никакого искажения: мягкий фокус, пастельная дымка, светящиеся края и медленно плывущие пятна света. */
 
 .vn-vfx-dream-doze .vn-bg-layer {
-    filter: saturate(0.85) brightness(1.02) contrast(0.85) blur(1.4px);
+    --vn-bg-color-grade: saturate(0.85) brightness(1.02) contrast(0.85) blur(1.4px);
+    --vn-bg-distortion: none;
 }
 
 .vn-vfx-dream-doze .vn-fx-tint {
@@ -794,9 +798,9 @@
     mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.3) 100%);
 }
 
-.vn-vfx-divine-mist .vn-fx-rays::before,
-.vn-vfx-divine-mist .vn-fx-rays::after {
-    content: '';
+.vn-vfx-divine-mist .vn-fx-rays > .vn-fx-before,
+.vn-vfx-divine-mist .vn-fx-rays > .vn-fx-after {
+    display: block;
     position: absolute;
     top: 0;
     left: 0;
@@ -808,7 +812,7 @@
     animation: vnSmokeRise 80s linear infinite;
 }
 
-.vn-vfx-divine-mist .vn-fx-rays::after {
+.vn-vfx-divine-mist .vn-fx-rays > .vn-fx-after {
     width: calc(100% + 768px);
     height: calc(100% + 768px);
     background: rgba(255, 236, 170, 0.42);
@@ -831,7 +835,7 @@
    Холодное серебро вместо золота: луна у верхнего правого угла, ровные лунные дорожки вниз и синеватая тьма. */
 
 .vn-vfx-sacred-lunar .vn-bg-layer {
-    filter: saturate(0.55) brightness(0.85) hue-rotate(-12deg) contrast(1.05);
+    --vn-bg-color-grade: saturate(0.55) brightness(0.85) hue-rotate(-12deg) contrast(1.05);
 }
 
 .vn-vfx-sacred-lunar .vn-fx-tint {
